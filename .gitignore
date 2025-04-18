@@ -1,0 +1,10 @@
+.nvim/
+
+
+# User-specific Xcode files
+*.xcuserstate
+xcuserdata/
+
+# Build Artifacts / LSP Generated
+compile_commands.json
+buildServer.json
