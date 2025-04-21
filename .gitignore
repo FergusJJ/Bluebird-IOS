@@ -1,5 +1,5 @@
+# User-specific Neovim files
 .nvim/
-
 
 # User-specific Xcode files
 *.xcuserstate
@@ -8,3 +8,18 @@ xcuserdata/
 # Build Artifacts / LSP Generated
 compile_commands.json
 buildServer.json
+build/
+DerivedData/
+
+# macOS / System files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Swift Package Manager
+.build/
+Packages/
+
+# Sensitive Data
+SupabaseCredentials.plist
+
