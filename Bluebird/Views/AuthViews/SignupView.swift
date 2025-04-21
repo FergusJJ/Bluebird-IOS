@@ -1,41 +1,129 @@
 import SwiftUI
 
 struct SignupView: View {
-    @EnvironmentObject var appState: AppState
-
-    @State private var isSigningUp = false
-    @State private var errorMessage: String?
+    @StateObject var viewModel: AuthViewModel
 
     var switchToLogin: () -> Void
 
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Login Page")
+    private var isSignupDisabled: Bool {
+        viewModel.isActionPending || viewModel.username.isEmpty || viewModel.email.isEmpty
+            || viewModel.password.isEmpty || viewModel.usernameAvailable == false
+    }
 
-            Button("Sign Up") {
-                errorMessage = nil
-                isSigningUp = true
-                Task {
-                    defer { isSigningUp = false }
-                    do {
-                        try await appState.signUp()
-                        print("Sign up complete")
-                    } catch {
-                        print("Sign up failed: \(error)")
-                        errorMessage = "Sign up failed: \(error.localizedDescription)"
+    init(switchToLogin: @escaping () -> Void, appState: AppState) {
+        self.switchToLogin = switchToLogin
+        _viewModel = StateObject(wrappedValue: AuthViewModel(appState: appState))
+    }
+
+    var body: some View {
+        ZStack {
+            Color.spotifyDarkGray
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Spacer()
+
+                Image(systemName: "bird.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
+                    .foregroundColor(Color.babyBlue)
+                Text("Create Bluebird Account")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.babyBlue)
+
+                VStack(spacing: 15) {
+                    TextField("Email", text: $viewModel.email)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .padding(.horizontal)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        TextField("Username", text: $viewModel.username)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                        HStack {
+                            if viewModel.isCheckingUsername {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                Text("Checking availability...")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            } else if let message = viewModel.usernameValidationMessage {
+                                Image(
+                                    systemName: viewModel.usernameAvailable == true
+                                        ? "checkmark.circle.fill" : "xmark.circle.fill"
+                                )
+                                .foregroundColor(
+                                    viewModel.usernameAvailable == true ? .green : .red)
+                                Text(message)
+                                    .font(.caption)
+                                    .foregroundColor(
+                                        viewModel.usernameAvailable == true ? .green : .red)
+                            }
+                            Spacer()
+                        }
+                        .frame(height: 20)
+                    }
+                    .padding(.horizontal)
+
+                    SecureField("Password", text: $viewModel.password)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                }
+                .padding(.vertical)
+
+                if let errorMsg = viewModel.errorMessage {
+                    Text(errorMsg)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+
+                Button {
+                    Task {
+                        await viewModel.signUp()
+                    }
+                } label: {
+                    if viewModel.isActionPending {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(height: 20)
+                    } else {
+                        Text("Sign Up")
+                            .fontWeight(.semibold)
                     }
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.babyBlue)
+                .foregroundColor(Color.spotifyDarkGray)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .cornerRadius(10)
+                .padding(.horizontal)
+                .disabled(isSignupDisabled)
+
+                Button("Already have an account? Log In") {
+                    viewModel.email = ""
+                    viewModel.username = ""
+                    viewModel.password = ""
+                    viewModel.errorMessage = nil
+                    viewModel.usernameAvailable = nil
+                    viewModel.usernameValidationMessage = nil
+                    switchToLogin()
+                }
+                .foregroundColor(Color.babyBlue)
+                .padding(.top)
+
+                Spacer()
+                Spacer()
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(isSigningUp)
-            if isSigningUp {
-                ProgressView()
-                    .padding(.top, 10)
-            }
-            Button("Already have an account? Switch to Login") {
-                switchToLogin()
-            }
-            Spacer()
+            .padding()
         }
     }
 }

@@ -19,18 +19,7 @@ struct NavigationView: View {
                     switch appState.isSpotifyConnected {
                     case .isfalse:
 
-                        VStack(spacing: 20) {
-                            Text("Connect Spotify")
-                                .font(.title)
-                            Text("Please connect your Spotify account.")
-                            Button("Simulate Connect") {
-                                appState.isSpotifyConnected = .istrue
-                                print("Simulated Spotify Connect -> isSpotifyConnected = .istrue")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.green)
-                        }
-                        .padding()
+                        SpotifyView()
 
                     case .istrue: // Logged in AND Spotify IS connected
                         VStack(spacing: 20) {
@@ -65,7 +54,7 @@ struct NavigationView: View {
             }
         }
         .task {
-            await appState.initAppState()
+            appState.initAppState()
         }
     }
 }
