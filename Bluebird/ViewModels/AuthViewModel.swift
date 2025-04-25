@@ -6,6 +6,10 @@ class AuthViewModel: ObservableObject {
     @Published var email: String = ""
     @Published var password: String = ""
     @Published var isActionPending = false
+
+    // might want to change this and use AppState.errorToDisplay instead?
+    // would require changing appState signup/login functions to set the error
+    // as it doesn't currently set one before returning it
     @Published var errorMessage: String?
 
     @Published var isCheckingUsername: Bool = false
@@ -105,7 +109,7 @@ class AuthViewModel: ObservableObject {
                 .eq("username", value: username)
                 .execute()
             guard (200 ..< 300).contains(usernameResponse.status) else {
-                throw QueryError.unexpectedStatusCode(usernameResponse.status)
+                throw BluebirdAPIError.apiError(statusCode: usernameResponse.status, message: usernameResponse.string())
             }
             let count = usernameResponse.count ?? 0
             if count == 0 {

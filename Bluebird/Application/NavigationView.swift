@@ -18,7 +18,6 @@ struct NavigationView: View {
                 case .istrue:
                     switch appState.isSpotifyConnected {
                     case .isfalse:
-
                         SpotifyView()
 
                     case .istrue: // Logged in AND Spotify IS connected
@@ -27,11 +26,9 @@ struct NavigationView: View {
                                 .font(.title)
                             Spacer()
                             Button("Simulate Logout") {
-                                appState.isLoggedIn = .isfalse
-                                appState.isSpotifyConnected = .isfalse
-                                print(
-                                    "Simulated Logout -> isLoggedIn = .isfalse, isSpotifyConnected = .isfalse"
-                                )
+                                Task {
+                                    await appState.logoutUser()
+                                }
                             }
                             .buttonStyle(.bordered)
                             .tint(.red)
@@ -52,9 +49,6 @@ struct NavigationView: View {
                     }
                 }
             }
-        }
-        .task {
-            appState.initAppState()
         }
     }
 }

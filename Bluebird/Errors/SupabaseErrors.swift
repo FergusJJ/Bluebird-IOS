@@ -1,41 +1,40 @@
-import Foundation
-import Supabase
+import SwiftUI
 
 enum SignUpError: Error, LocalizedError {
     case authFailed(Error)
-    case missingUserID
     case profileInsertFailed(Error)
-    case profileInsertUnexpectedStatusCode(Int)
-    case couldNotParseResponseDetails
 
     var errorDescription: String? {
         switch self {
-        case let .authFailed(underlyingError):
-            return "Authentication sign up failed: \(underlyingError.localizedDescription)"
-        case .missingUserID:
-            return "Sign up succeeded but no user ID was returned."
-        case let .profileInsertFailed(underlyingError):
-            // Check if it's a PostgrestError for more details
-            if let pgError = underlyingError as? PostgrestError {
-                return
-                    "Failed to create user profile: \(pgError.message ?? pgError.localizedDescription)"
-                        + "(Hint: \(pgError.hint ?? "None"), Code: \(pgError.code ?? "N/A"))"
-            }
-            return "Failed to create user profile: \(underlyingError.localizedDescription)"
-        case let .profileInsertUnexpectedStatusCode(code):
-            return "Profile creation returned unexpected status code: \(code)."
-        case .couldNotParseResponseDetails:
-            return "Could not parse HTTP response details after profile creation attempt."
+        case .authFailed(let error):
+            // Provide a user-friendly message, potentially hiding internal details
+            return "Sign up failed. Please check your details and try again. (\(error.localizedDescription))"
+        case .profileInsertFailed(let error):
+             // This might indicate a server-side issue
+            return "Failed to create user profile after sign up. Please contact support. (\(error.localizedDescription))"
         }
     }
 }
 
-enum QueryError: Error, LocalizedError {
-    case unexpectedStatusCode(Int)
+enum SignOutError: Error, LocalizedError {
+    case unexpectedError
+
     var errorDescription: String? {
         switch self {
-        case let .unexpectedStatusCode(code):
-            return "Query returned unexpected status code: \(code)."
+        case .unexpectedError:
+            return "An unexpected error occurred during sign out."
+        }
+    }
+}
+
+enum DatabaseError: Error, LocalizedError {
+    case uploadFailed(Error)
+    // Add other DB errors like fetchFailed, deleteFailed if needed
+
+     var errorDescription: String? {
+        switch self {
+        case .uploadFailed(let error):
+            return "Database operation failed: \(error.localizedDescription)"
         }
     }
 }

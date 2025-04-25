@@ -28,18 +28,14 @@ class SupabaseClientManager {
 
         client = SupabaseClient(supabaseURL: supabaseURL, supabaseKey: supabaseKey)
 
-        Task {
-            print("Setting up auth state change listener...")
-            for await event in self.client.auth.authStateChanges {
-                let sess = event.session.debugDescription
-                print("Auth event: \(event.event) - Session: \(sess)")
-                if let session = event.session {
-                    print("  Access Token: \(session.accessToken.prefix(10))...")
-                    print("  User ID: \(session.user.id)")
-                    print("  User Email: \(session.user.email ?? "N/A")")
-                }
-            }
-            print("Auth state change listener finished.") // Should ideally not happen unless stream ends
-        }
+        // this was just for logging stuff
+        // Task {
+        //    print("Setting up auth state change listener...")
+        //    for await event in self.client.auth.authStateChanges {
+        //        let sess = event.session.debugDescription
+        //        print("Auth event: \(event.event) - Session: \(sess)")
+        //    }
+        //    print("Auth state change listener finished.")
+        // }
     }
 }
