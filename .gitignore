@@ -22,4 +22,5 @@ Packages/
 
 # Sensitive Data
 SupabaseCredentials.plist
+APICredentials.plist
 
