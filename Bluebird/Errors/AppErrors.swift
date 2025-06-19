@@ -14,8 +14,8 @@ enum AppStateError: Error, LocalizedError {
             return "A keychain operation failed: \(message)"
         case .missingUserID:
             return "Could not determine the current user ID."
-        case .genericError(let message):
-            return message 
+        case let .genericError(message):
+            return message
         }
     }
 }

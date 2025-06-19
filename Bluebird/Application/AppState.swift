@@ -13,10 +13,11 @@ class AppState: ObservableObject {
     @Published var errorToDisplay: DisplayableError?
 
     private var authListener: Task<Void, Never>?
-    private var apiManager: BluebirdAPIManager
+    private var authAPIService: BluebirdAuthAPIService
     private var currentUserId: UUID?
     private var spotifyAccessToken: String?
     private var isEstablishingSpotifySession = false
+    private var justSignedUp = false
 
     private let serviceID = "com.fergusjj.Bluebird"
     private func keychainAccountName(for type: String, userId: String) -> String {
@@ -28,12 +29,14 @@ class AppState: ObservableObject {
 
     init() {
         do {
-            apiManager = try BluebirdAPIManager()
+            authAPIService = try BluebirdAPIManager()
         } catch {
             print(
                 "FATAL ERROR: Failed to initialize BluebirdAPIManager: \(error.localizedDescription)"
             )
-            fatalError("Failed to initialize BluebirdAPIManager: \(error.localizedDescription)")
+            fatalError(
+                "Failed to initialize BluebirdAPIManager: \(error.localizedDescription)"
+            )
         }
 
         setupAuthListener()
@@ -43,6 +46,10 @@ class AppState: ObservableObject {
     deinit {
         print("AppState deinit: Cancelling auth listener.")
         authListener?.cancel()
+    }
+
+    func getSpotifyAccessToken() -> String? {
+        return spotifyAccessToken
     }
 
     private func setError(_ error: Error) {
@@ -56,7 +63,9 @@ class AppState: ObservableObject {
     func handleAppDidBecomeActive() async {
         print("AppState: Handling app becoming active.")
         guard isLoggedIn == .istrue else {
-            print("AppState: App active, but user not logged in. Skipping Spotify check.")
+            print(
+                "AppState: App active, but user not logged in. Skipping Spotify check."
+            )
             if isSpotifyConnected != .isfalse {
                 isSpotifyConnected = .isfalse
                 spotifyAccessToken = nil
@@ -64,7 +73,9 @@ class AppState: ObservableObject {
             return
         }
 
-        print("AppState: User logged in. Re-establishing Spotify session on foreground.")
+        print(
+            "AppState: User logged in. Re-establishing Spotify session on foreground."
+        )
         let (connected, error) = await establishSpotifySession()
 
         isSpotifyConnected = connected ? .istrue : .isfalse
@@ -73,7 +84,9 @@ class AppState: ObservableObject {
         }
 
         if connected {
-            print("AppState: Spotify session re-established successfully on foreground.")
+            print(
+                "AppState: Spotify session re-established successfully on foreground."
+            )
         } else {
             print(
                 "AppState: Failed to re-establish Spotify session on foreground. Error: \(error?.localizedDescription ?? "N/A")"
@@ -81,10 +94,51 @@ class AppState: ObservableObject {
         }
     }
 
+    // only used when no spotify connection linked to account, saves spotify client id
+    func handleInitialSpotifyConnection(
+        accessToken: String,
+        refreshToken: String,
+        tokenExpiry: String
+    ) async {
+        print("AppState: Handling initial spotify connection")
+        guard isLoggedIn == .istrue else {
+            print(
+                "AppState: App active, but user not logged in. Cannot save initial spotify connection"
+            )
+            if isSpotifyConnected != .isfalse {
+                isSpotifyConnected = .isfalse
+                spotifyAccessToken = nil
+            }
+            return
+        }
+        print(
+            "AppState: User logged in. Proceeding with initial spotify connection"
+        )
+        let (connected, error) = await establishSpotifySessionClientID(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            tokenExpiry: tokenExpiry
+        )
+        isSpotifyConnected = connected ? .istrue : .isfalse
+        if error != nil {
+            setError(error!)
+        }
+        if connected {
+            print(
+                "AppState: Spotify intial session established successfully on foreground."
+            )
+        } else {
+            print(
+                "AppState: Failed to establish Spotify initial session on foreground. Error: \(error?.localizedDescription ?? "N/A")"
+            )
+        }
+    }
+
     func initAppState() {
         Task {
             do {
-                _ = try await SupabaseClientManager.shared.client.auth.refreshSession()
+                _ = try await SupabaseClientManager.shared.client.auth
+                    .refreshSession()
             } catch {
                 print(
                     "AppState init: Failed to refresh Supabase session: \(error.localizedDescription)"
@@ -99,10 +153,14 @@ class AppState: ObservableObject {
 
     private func setupAuthListener() {
         authListener = Task { [weak self] in
-            for await event in SupabaseClientManager.shared.client.auth.authStateChanges {
+            for await event in SupabaseClientManager.shared.client.auth
+                .authStateChanges
+            {
                 print("AUTH-LISTENER: EVENT RECIEVED: \(event.event)")
                 guard let self = self else {
-                    print("Auth listener exiting: AppState instance deallocated.")
+                    print(
+                        "Auth listener exiting: AppState instance deallocated."
+                    )
                     return
                 }
 
@@ -117,23 +175,35 @@ class AppState: ObservableObject {
                         newLoggedInState = .istrue
                         newUserID = user.id
                         self.currentUserId = newUserID
-                        if self.isSpotifyConnected != .istrue {
+
+                        if justSignedUp {
+                            print("Auth Listener: User just signed up, skipping Spotify session establishment.")
+                            justSignedUp = false // Reset the flag
+                            newSpotifyState = .isfalse
+                        } else if self.isSpotifyConnected != .istrue {
                             print(
                                 "Auth Listener: Spotify not connected for \(event.event), attempting to establish session..."
                             )
                             let (spotifyConnected, spotifyError) =
                                 await self.establishSpotifySession()
-                            newSpotifyState = spotifyConnected ? .istrue : .isfalse
+                            newSpotifyState =
+                                spotifyConnected ? .istrue : .isfalse
                             connectionError = spotifyError
-                            if !spotifyConnected {
+                            if !spotifyConnected && spotifyError != nil {
                                 print(
                                     "Auth Listener: Failed to establish Spotify session. Error: \(spotifyError?.localizedDescription ?? "N/A")"
                                 )
+                            } else if !spotifyConnected && spotifyError == nil {
+                                print(
+                                    "Auth Listener: Spotify session needs to be fully initialized."
+                                )
+                                // need to make sure that spotify client id is saved?
                             } else {
                                 print(
                                     "Auth Listener: Spotify session established successfully via listener for \(event.event)."
                                 )
                             }
+
                         } else {
                             print(
                                 "Auth Listener: Spotify already connected during \(event.event), skipping establish call."
@@ -196,7 +266,9 @@ class AppState: ObservableObject {
                 self.currentUserId = newUserID
                 if let error = connectionError {
                     self.setError(error)
-                } else if newLoggedInState == .istrue && newSpotifyState == .istrue {
+                } else if newLoggedInState == .istrue
+                    && newSpotifyState == .istrue
+                {
                     self.clearError()
                 }
             }
@@ -204,56 +276,43 @@ class AppState: ObservableObject {
         }
     }
 
-    func signUp(email: String, username: String, password: String) async -> SignUpError? {
-        var createdAuthUserId: UUID?
+    func signUp(email: String, username: String, password: String) async
+        -> Error?
+    {
+        // auth.signUp emits the event, so justSignedUp has to be set first
+        justSignedUp = true
         do {
-            let authResponse = try await SupabaseClientManager.shared.client.auth.signUp(
-                email: email, password: password
-            )
+            let authResponse = try await SupabaseClientManager.shared.client
+                .auth.signUp(
+                    email: email,
+                    password: password
+                )
             let userId = authResponse.user.id
-            createdAuthUserId = userId
-
-            struct SignUpProfile: Encodable {
-                let id: UUID
-                let username: String
+            let result = await authAPIService.userSignUp(username: username)
+            switch result {
+            case .success:
+                print("Profile Insert successful for user ID \(userId)")
+                return nil
+            case let .failure(error):
+                print("Failed to create user profile: \(error)")
+                return error
             }
-            let signUpProfile = SignUpProfile(id: userId, username: username)
-
-            try await SupabaseClientManager.shared.client
-                .from("profiles")
-                .insert(signUpProfile)
-                .execute()
-
-            print("Profile Insert successful for user ID \(userId).")
-            return nil // Success
-
         } catch let authError as AuthError {
             print("Auth Sign Up Error: \(authError.localizedDescription)")
             return SignUpError.authFailed(authError)
-        } catch let postgrestError as PostgrestError {
-            print("Profile Insert Error: \(postgrestError.localizedDescription)")
-            if let createdUserId = createdAuthUserId {
-                print(
-                    "Error occurred after Auth User \(createdUserId) was created. Profile insert failed."
-                )
-                return SignUpError.profileInsertFailed(postgrestError)
-            } else {
-                return SignUpError.profileInsertFailed(postgrestError)
-            }
         } catch {
-            print("Sign Up Error: An unexpected error occurred - \(error.localizedDescription)")
-            if createdAuthUserId != nil {
-                return SignUpError.profileInsertFailed(error)
-            } else {
-                return SignUpError.authFailed(error)
-            }
+            print(
+                "Sign Up Error: An unexpected error occurred - \(error.localizedDescription)"
+            )
+            return SignUpError.authFailed(error)
         }
     }
 
     func loginUser(email: String, password: String) async -> Error? {
         do {
             _ = try await SupabaseClientManager.shared.client.auth.signIn(
-                email: email, password: password
+                email: email,
+                password: password
             )
             return nil
         } catch {
@@ -281,7 +340,7 @@ class AppState: ObservableObject {
             return error
         }
 
-        let result = await apiManager.initiateSpotifyConnection()
+        let result = await authAPIService.initiateSpotifyConnection()
 
         switch result {
         case .success:
@@ -289,15 +348,19 @@ class AppState: ObservableObject {
             clearError()
             return nil
         case let .failure(error):
-            print("Error initiating Spotify authorization flow: \(error.localizedDescription)")
+            print(
+                "Error initiating Spotify authorization flow: \(error.localizedDescription)"
+            )
             let err = AppStateError.genericError(
-                "Failed to connect spotify: \(error.localizedDescription)")
-            self.setError(err)
+                "Failed to connect spotify: \(error.localizedDescription)"
+            )
+            setError(err)
             return err
         }
+        // previously returned here, but want to make sure that spotify client id is fetched
     }
 
-    func saveSpotifyCredentials(access: String, refresh: String) -> Error? {
+    func saveSpotifyCredentials(access: String, refresh: String, tokenExpiry: String) -> Error? {
         guard let userId = currentUserId else {
             let error = AppStateError.userNotLoggedIn
             setError(error)
@@ -305,28 +368,40 @@ class AppState: ObservableObject {
         }
         let userIdString = userId.uuidString
 
-        let accessAccount = keychainAccountName(for: keychainAccessTokenType, userId: userIdString)
+        let accessAccount = keychainAccountName(
+            for: keychainAccessTokenType,
+            userId: userIdString
+        )
         let refreshAccount = keychainAccountName(
-            for: keychainRefreshTokenType, userId: userIdString
+            for: keychainRefreshTokenType,
+            userId: userIdString
         )
 
         guard let accessTokenData = access.data(using: .utf8),
               let refreshTokenData = refresh.data(using: .utf8)
         else {
-            print("SaveSpotifyCredentials Error: Could not encode tokens to Data.")
+            print(
+                "SaveSpotifyCredentials Error: Could not encode tokens to Data."
+            )
             let error = AppStateError.keychainError("Token encoding failed")
             setError(error)
             return error
         }
         let accessSuccess = KeychainManager.storeData(
-            data: accessTokenData, service: serviceID, account: accessAccount
+            data: accessTokenData,
+            service: serviceID,
+            account: accessAccount
         )
         let refreshSuccess = KeychainManager.storeData(
-            data: refreshTokenData, service: serviceID, account: refreshAccount
+            data: refreshTokenData,
+            service: serviceID,
+            account: refreshAccount
         )
 
         if accessSuccess && refreshSuccess {
-            print("SaveSpotifyCredentials: Tokens saved successfully to keychain.")
+            print(
+                "SaveSpotifyCredentials: Tokens saved successfully to keychain."
+            )
 
             spotifyAccessToken = access
             isSpotifyConnected = .istrue
@@ -334,36 +409,137 @@ class AppState: ObservableObject {
 
             Task {
                 await uploadSpotifyRefreshTokenToDatabase(
-                    refreshToken: refresh, userId: userIdString
+                    refreshToken: refresh,
+                    tokenExpiry: tokenExpiry,
                 )
             }
-
             return nil // Success
         } else {
             print(
                 "SaveSpotifyCredentials Error: Failed to store one or both tokens in Keychain. accessSuccess=\(accessSuccess), refreshSuccess=\(refreshSuccess)"
             )
-            _ = KeychainManager.deleteData(service: serviceID, account: accessAccount)
-            _ = KeychainManager.deleteData(service: serviceID, account: refreshAccount)
+            _ = KeychainManager.deleteData(
+                service: serviceID,
+                account: accessAccount
+            )
+            _ = KeychainManager.deleteData(
+                service: serviceID,
+                account: refreshAccount
+            )
 
             isSpotifyConnected = .isfalse
             spotifyAccessToken = nil
             let error = AppStateError.keychainError(
-                "Failed to save Spotify credentials to keychain.")
+                "Failed to save Spotify credentials to keychain."
+            )
             setError(error)
             return error
         }
     }
 
     @MainActor
-    private func establishSpotifySession() async -> (connected: Bool, err: Error?) {
+    private func establishSpotifySessionClientID(
+        accessToken: String,
+        refreshToken: String,
+        tokenExpiry: String
+    ) async -> (connected: Bool, err: Error?) {
         guard !isEstablishingSpotifySession else {
-            print("EstablishSpotifySession SKIPPED: Already in progress.")
-            return (isSpotifyConnected == .istrue, errorToDisplay?.underlyingError)
+            print(
+                "EstablishSpotifySessionClientID SKIPPED: Already in progress."
+            )
+            return (
+                isSpotifyConnected == .istrue, errorToDisplay?.underlyingError
+            )
         }
         isEstablishingSpotifySession = true
         defer {
-            print("EstablishSpotifySession: Resetting isEstablishingSpotifySession flag.")
+            print(
+                "EstablishSpotifySessionClientID: Resetting isEstablishingSpotifySession flag."
+            )
+            isEstablishingSpotifySession = false
+        }
+        guard let userId = currentUserId else {
+            print("EstablishSpotifySession Error: Missing User ID.")
+            return (false, AppStateError.missingUserID)
+        }
+        let userIdString = userId.uuidString
+        print(
+            "EstablishSpotifySessionClientID: Attempting to fetch/refresh Spotify access token via API..."
+        )
+        let result = await authAPIService.saveSpotifyAccessTokenClientID(
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            tokenExpiry: tokenExpiry
+        )
+        switch result {
+        case let .success(newAccessToken):
+            print(
+                "EstablishSpotifySessionClientID: Successfully fetched new access token."
+            )
+            spotifyAccessToken = newAccessToken
+            let accessAccount = keychainAccountName(
+                for: keychainAccessTokenType,
+                userId: userIdString
+            )
+            if let accessTokenData = newAccessToken.data(using: .utf8) {
+                let success = KeychainManager.storeData(
+                    data: accessTokenData,
+                    service: serviceID,
+                    account: accessAccount
+                )
+                if success {
+                    print(
+                        "EstablishSpotifySessionClientID: Saved new access token to keychain."
+                    )
+                } else {
+                    print(
+                        "EstablishSpotifySessionClientID Warning: Failed to save new access token to keychain."
+                    )
+                }
+            } else {
+                print(
+                    "EstablishSpotifySessionClientID Warning: Could not encode access token to save to keychain."
+                )
+            }
+            return (true, nil)
+        case let .failure(error):
+            print(
+                "EstablishSpotifySessionClientID Error: Failed to establish session via API - \(error.localizedDescription)"
+            )
+            setError(error)
+            spotifyAccessToken = nil
+            let accessAccount = keychainAccountName(
+                for: keychainAccessTokenType,
+                userId: userIdString
+            )
+            let deleted = KeychainManager.deleteData(
+                service: serviceID,
+                account: accessAccount
+            )
+            if !deleted {
+                print(
+                    "EstablishSpotifySessionClientID Warning: Failed to delete access token from keychain (it might not have existed)."
+                )
+            }
+            return (false, error)
+        }
+    }
+
+    @MainActor
+    private func establishSpotifySession() async -> (
+        connected: Bool, err: Error?
+    ) {
+        guard !isEstablishingSpotifySession else {
+            print("EstablishSpotifySession SKIPPED: Already in progress.")
+            return (
+                isSpotifyConnected == .istrue, errorToDisplay?.underlyingError
+            )
+        }
+        isEstablishingSpotifySession = true
+        defer {
+            print(
+                "EstablishSpotifySession: Resetting isEstablishingSpotifySession flag."
+            )
             isEstablishingSpotifySession = false
         }
 
@@ -372,24 +548,31 @@ class AppState: ObservableObject {
             return (false, AppStateError.missingUserID)
         }
         let userIdString = userId.uuidString
-
         print(
-            "EstablishSpotifySession: Attempting to fetch/refresh Spotify access token via API...")
-        let result = await apiManager.refreshSpotifyAccessToken()
+            "EstablishSpotifySession: Attempting to fetch/refresh Spotify access token via API..."
+        )
+        let result = await authAPIService.refreshSpotifyAccessToken()
 
         switch result {
         case let .success(newAccessToken):
-            print("EstablishSpotifySession: Successfully fetched new access token.")
+            print(
+                "EstablishSpotifySession: Successfully fetched new access token."
+            )
             spotifyAccessToken = newAccessToken
             let accessAccount = keychainAccountName(
-                for: keychainAccessTokenType, userId: userIdString
+                for: keychainAccessTokenType,
+                userId: userIdString
             )
             if let accessTokenData = newAccessToken.data(using: .utf8) {
                 let success = KeychainManager.storeData(
-                    data: accessTokenData, service: serviceID, account: accessAccount
+                    data: accessTokenData,
+                    service: serviceID,
+                    account: accessAccount
                 )
                 if success {
-                    print("EstablishSpotifySession: Saved new access token to keychain.")
+                    print(
+                        "EstablishSpotifySession: Saved new access token to keychain."
+                    )
                 } else {
                     print(
                         "EstablishSpotifySession Warning: Failed to save new access token to keychain."
@@ -404,43 +587,74 @@ class AppState: ObservableObject {
             return (true, nil)
 
         case let .failure(error):
-            print(
-                "EstablishSpotifySession Error: Failed to establish session via API - \(error.localizedDescription)"
-            )
-            setError(error)
-            spotifyAccessToken = nil
-            let accessAccount = keychainAccountName(
-                for: keychainAccessTokenType, userId: userIdString
-            )
-            let deleted = KeychainManager.deleteData(service: serviceID, account: accessAccount)
-            if !deleted {
+            switch error {
+            case .notFound:
+                print("User first login, no alert")
+                return (false, nil)
+            default:
+                //
                 print(
-                    "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
+                    "EstablishSpotifySession Error: Failed to establish session via API - \(error.localizedDescription)"
                 )
+                setError(error)
+                spotifyAccessToken = nil
+                let accessAccount = keychainAccountName(
+                    for: keychainAccessTokenType,
+                    userId: userIdString
+                )
+                let deleted = KeychainManager.deleteData(
+                    service: serviceID,
+                    account: accessAccount
+                )
+                if !deleted {
+                    print(
+                        "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
+                    )
+                }
+                return (false, error)
             }
-            return (false, error)
         }
     }
 
-    private func uploadSpotifyRefreshTokenToDatabase(refreshToken: String, userId: String) async {
-        struct SpotifyDataUpdate: Encodable {
-            let id: String
-            let refresh_token: String
-        }
-        let dataToUpload = SpotifyDataUpdate(id: userId, refresh_token: refreshToken)
-
-        do {
-            try await SupabaseClientManager.shared.client
-                .from("spotify")
-                .upsert(dataToUpload)
-                .execute()
+    private func uploadSpotifyRefreshTokenToDatabase(
+        refreshToken: String,
+        tokenExpiry: String,
+    ) async {
+        let result = await authAPIService.upsertSpotifyRefreshToken(
+            refreshToken: refreshToken, tokenExipryString: tokenExpiry
+        )
+        switch result {
+        case .success:
             print("Successfully uploaded/updated refresh token in DB.")
-        } catch let err as PostgrestError {
-            print("Error uploading refresh token to DB: \(err.localizedDescription)")
-            let error = DatabaseError.uploadFailed(err)
-            self.setError(error)
-        } catch {
-            print("Error uploading refresh token to DB (unexpected): \(error.localizedDescription)")
+        case let .failure(error):
+            switch error {
+            case .invalidEndpoint:
+                let error = APIError.endpointError
+                setError(error)
+            case .notAuthenticated:
+                let error = APIError.unauthorized
+                setError(error)
+            case .encodingError:
+                let error = APIError.encodingError(error)
+                setError(error)
+            case .decodingError:
+                let error = APIError.decodingError(error)
+                setError(error)
+            case .unknownError:
+                let error = APIError.unknownError
+                setError(error)
+            // TODO: find out why this error occurs on initial connection
+            case let .apiError(statusCode, message):
+                let error = APIError.serverError(statusCode: statusCode, message: message)
+                setError(error)
+            case .notFound:
+                let error = APIError.notFound
+                setError(error)
+            default:
+                print("Uncaught error in uploadSpotifyRefreshTokenToDatabase.")
+                let error = APIError.unknownError
+                setError(error)
+            }
         }
     }
 
@@ -454,16 +668,26 @@ class AppState: ObservableObject {
         }
         let userIdString = userId.uuidString
 
-        let accessAccount = keychainAccountName(for: keychainAccessTokenType, userId: userIdString)
-        let refreshAccount = keychainAccountName(
-            for: keychainRefreshTokenType, userId: userIdString
+        let accessAccount = keychainAccountName(
+            for: keychainAccessTokenType,
+            userId: userIdString
         )
-        if !KeychainManager.deleteData(service: serviceID, account: accessAccount) {
+        let refreshAccount = keychainAccountName(
+            for: keychainRefreshTokenType,
+            userId: userIdString
+        )
+        if !KeychainManager.deleteData(
+            service: serviceID,
+            account: accessAccount
+        ) {
             print(
                 "ClearSpotifyTokens Info: Failed to delete access token from keychain (or not found)."
             )
         }
-        if !KeychainManager.deleteData(service: serviceID, account: refreshAccount) {
+        if !KeychainManager.deleteData(
+            service: serviceID,
+            account: refreshAccount
+        ) {
             print(
                 "ClearSpotifyTokens Info: Failed to delete refresh token from keychain (or not found)."
             )

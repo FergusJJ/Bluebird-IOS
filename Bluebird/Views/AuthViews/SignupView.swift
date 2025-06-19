@@ -19,111 +19,114 @@ struct SignupView: View {
         ZStack {
             Color.spotifyDarkGray
                 .ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 20) {
+                    Spacer()
 
-            VStack(spacing: 20) {
-                Spacer()
+                    Image(systemName: "bird.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 80, height: 80)
+                        .foregroundColor(Color.babyBlue)
+                    Text("Create Bluebird Account")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color.babyBlue)
 
-                Image(systemName: "bird.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 80, height: 80)
-                    .foregroundColor(Color.babyBlue)
-                Text("Create Bluebird Account")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color.babyBlue)
-
-                VStack(spacing: 15) {
-                    TextField("Email", text: $viewModel.email)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .padding(.horizontal)
-
-                    VStack(alignment: .leading, spacing: 5) {
-                        TextField("Username", text: $viewModel.username)
+                    VStack(spacing: 15) {
+                        TextField("Email", text: $viewModel.email)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
-                        HStack {
-                            if viewModel.isCheckingUsername {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                Text("Checking availability...")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            } else if let message = viewModel.usernameValidationMessage {
-                                Image(
-                                    systemName: viewModel.usernameAvailable == true
-                                        ? "checkmark.circle.fill" : "xmark.circle.fill"
-                                )
-                                .foregroundColor(
-                                    viewModel.usernameAvailable == true ? .green : .red)
-                                Text(message)
-                                    .font(.caption)
+                            .padding(.horizontal)
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            TextField("Username", text: $viewModel.username)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                            HStack {
+                                if viewModel.isCheckingUsername {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                    Text("Checking availability...")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                } else if let message = viewModel.usernameValidationMessage {
+                                    Image(
+                                        systemName: viewModel.usernameAvailable == true
+                                            ? "checkmark.circle.fill" : "xmark.circle.fill"
+                                    )
                                     .foregroundColor(
                                         viewModel.usernameAvailable == true ? .green : .red)
+                                    Text(message)
+                                        .font(.caption)
+                                        .foregroundColor(
+                                            viewModel.usernameAvailable == true ? .green : .red)
+                                }
+                                Spacer()
                             }
-                            Spacer()
-                        }
-                        .frame(height: 20)
-                    }
-                    .padding(.horizontal)
-
-                    SecureField("Password", text: $viewModel.password)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .padding(.horizontal)
-                }
-                .padding(.vertical)
-
-                if let errorMsg = viewModel.errorMessage {
-                    Text(errorMsg)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-
-                Button {
-                    Task {
-                        await viewModel.signUp()
-                    }
-                } label: {
-                    if viewModel.isActionPending {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .frame(height: 20)
-                    } else {
-                        Text("Sign Up")
-                            .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal)
+
+                        SecureField("Password", text: $viewModel.password)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(.horizontal)
                     }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.babyBlue)
-                .foregroundColor(Color.spotifyDarkGray)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .disabled(isSignupDisabled)
+                    .padding(.vertical)
 
-                Button("Already have an account? Log In") {
-                    viewModel.email = ""
-                    viewModel.username = ""
-                    viewModel.password = ""
-                    viewModel.errorMessage = nil
-                    viewModel.usernameAvailable = nil
-                    viewModel.usernameValidationMessage = nil
-                    switchToLogin()
-                }
-                .foregroundColor(Color.babyBlue)
-                .padding(.top)
+                    if let errorMsg = viewModel.errorMessage {
+                        Text(errorMsg)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
 
-                Spacer()
-                Spacer()
+                    Button {
+                        Task {
+                            await viewModel.signUp()
+                        }
+                    } label: {
+                        if viewModel.isActionPending {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .frame(height: 20)
+                        } else {
+                            Text("Sign Up")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.babyBlue)
+                    .foregroundColor(Color.spotifyDarkGray)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .disabled(isSignupDisabled)
+
+                    Button("Already have an account? Log In") {
+                        viewModel.email = ""
+                        viewModel.username = ""
+                        viewModel.password = ""
+                        viewModel.errorMessage = nil
+                        viewModel.usernameAvailable = nil
+                        viewModel.usernameValidationMessage = nil
+                        switchToLogin()
+                    }
+                    .foregroundColor(Color.babyBlue)
+                    .padding(.top)
+
+                    Spacer()
+                    Spacer()
+                }
+                .padding()
+                // .frame(minHeight: UIScreen.main.bounds.height)
             }
-            .padding()
+            .ignoresSafeArea(.keyboard)
         }
     }
 }
