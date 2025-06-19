@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 
+@MainActor
 class AuthViewModel: ObservableObject {
     @Published var username: String = ""
     @Published var email: String = ""
@@ -26,7 +27,7 @@ class AuthViewModel: ObservableObject {
         setupUsernameCheckSubscription()
     }
 
-    @MainActor
+    // @MainActor
     func login() async {
         errorMessage = nil
         isActionPending = true
@@ -42,7 +43,8 @@ class AuthViewModel: ObservableObject {
         }
     }
 
-    @MainActor
+    // FUTURE TODO: switch in appState.signUp to provide more finegrained error?
+    // @MainActor
     func signUp() async {
         errorMessage = nil
         isActionPending = true
@@ -69,36 +71,41 @@ class AuthViewModel: ObservableObject {
                 self.usernameCheckTask?.cancel()
 
                 guard !currentUsername.isEmpty else {
-                    self.isCheckingUsername = false
-                    self.usernameAvailable = nil
-                    self.usernameValidationMessage = nil
+                    self.updateUsernameCheckState(isChecking: false, isAvailable: nil, message: nil)
                     return
                 }
 
                 guard currentUsername.count >= self.minUsernameLength else {
-                    self.isCheckingUsername = false
-                    self.usernameAvailable = false
-                    // probably not going to enforce this properly, idk what min length is for supabase
-                    self.usernameValidationMessage =
-                        "Username must be at least \(self.minUsernameLength) characters."
+                    self.updateUsernameCheckState(
+                        isChecking: false,
+                        isAvailable: false,
+                        message: "Username must be at least \(self.minUsernameLength) characters."
+                    )
                     return
                 }
 
-                self.isCheckingUsername = true
-                self.usernameAvailable = nil
-                self.usernameValidationMessage = nil
+                self.updateUsernameCheckState(isChecking: true, isAvailable: nil, message: nil)
 
                 self.usernameCheckTask = Task {
                     let isAvailable = await self.performUsernameAvailabilityCheck(
                         username: currentUsername)
                     if Task.isCancelled { return }
-                    self.isCheckingUsername = false
-                    self.usernameAvailable = isAvailable
-                    self.usernameValidationMessage =
-                        isAvailable ? "Username available!" : "Username taken."
+                    // await MainActor.run {
+                    self.updateUsernameCheckState(
+                        isChecking: false,
+                        isAvailable: isAvailable,
+                        message: isAvailable ? "Username available!" : "Username taken."
+                    )
+                    // }
                 }
             }
             .store(in: &cancellables)
+    }
+
+    private func updateUsernameCheckState(isChecking: Bool, isAvailable: Bool?, message: String?) {
+        isCheckingUsername = isChecking
+        usernameAvailable = isAvailable
+        usernameValidationMessage = message
     }
 
     private func performUsernameAvailabilityCheck(username: String) async -> Bool {
