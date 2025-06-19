@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		A72A6B392DB500160094FC9E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A72A6B382DB500160094FC9E /* Supabase */; };
+		A7594DCC2DB9884900E2B5B7 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A7594DCB2DB9884900E2B5B7 /* Security.framework */; };
+		A7B4D0F62DB6591000F03CCD /* APICredentials.plist in Resources */ = {isa = PBXBuildFile; fileRef = A7B4D0F52DB6590100F03CCD /* APICredentials.plist */; };
 		A7B966312DB59BD900927924 /* SupabaseCredentials.plist in Resources */ = {isa = PBXBuildFile; fileRef = A7B966302DB59BCB00927924 /* SupabaseCredentials.plist */; };
 /* End PBXBuildFile section */
 
@@ -32,12 +34,27 @@
 		A736A8102DB2519E00ED0B6F /* Bluebird.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bluebird.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A736A81D2DB2519E00ED0B6F /* BluebirdTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BluebirdTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A736A8272DB2519E00ED0B6F /* BluebirdUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BluebirdUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A7594DCB2DB9884900E2B5B7 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		A7B4D0F52DB6590100F03CCD /* APICredentials.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = APICredentials.plist; sourceTree = "<group>"; };
 		A7B966302DB59BCB00927924 /* SupabaseCredentials.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = SupabaseCredentials.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A7B4D0F82DB66A6800F03CCD /* Exceptions for "Bluebird" folder in "Bluebird" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A736A80F2DB2519E00ED0B6F /* Bluebird */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A736A8122DB2519E00ED0B6F /* Bluebird */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A7B4D0F82DB66A6800F03CCD /* Exceptions for "Bluebird" folder in "Bluebird" target */,
+			);
 			path = Bluebird;
 			sourceTree = "<group>";
 		};
@@ -58,6 +75,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7594DCC2DB9884900E2B5B7 /* Security.framework in Frameworks */,
 				A72A6B392DB500160094FC9E /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -87,6 +105,8 @@
 				A736A82A2DB2519E00ED0B6F /* BluebirdUITests */,
 				A736A8112DB2519E00ED0B6F /* Products */,
 				A7B966302DB59BCB00927924 /* SupabaseCredentials.plist */,
+				A7B4D0F52DB6590100F03CCD /* APICredentials.plist */,
+				A7594DCA2DB9884900E2B5B7 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -98,6 +118,14 @@
 				A736A8272DB2519E00ED0B6F /* BluebirdUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A7594DCA2DB9884900E2B5B7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A7594DCB2DB9884900E2B5B7 /* Security.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -225,6 +253,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A7B966312DB59BD900927924 /* SupabaseCredentials.plist in Resources */,
+				A7B4D0F62DB6591000F03CCD /* APICredentials.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -408,8 +437,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9Y66Q8JP5C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Bluebird/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -421,7 +452,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fergusjj.Bluebird;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fergusjj.Bluebird;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -436,8 +467,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9Y66Q8JP5C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Bluebird/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -449,7 +482,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fergusjj.Bluebird;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fergusjj.Bluebird;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
