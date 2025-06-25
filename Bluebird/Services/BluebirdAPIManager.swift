@@ -45,6 +45,7 @@ struct SpotifyRefreshResponse: Decodable {
 }
 
 struct APIErrorResponse: Decodable {
+    let errorCode: String
     let error: String
 }
 
@@ -72,7 +73,7 @@ enum BluebirdInitializationError: Error, LocalizedError {
 enum BluebirdAPIError: Error {
     case networkError(Error)
     case invalidEndpoint
-    case decodingError(Error)
+    case decodingError(statusCode: Int, error: Error)
     case encodingError(Error)
     case apiError(statusCode: Int, message: String?)
     case notAuthenticated
@@ -514,30 +515,26 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                     )
                     return .success(decodedResponse)
                 } catch {
-                    return .failure(.decodingError(error))
+                    return .failure(.decodingError(statusCode: httpResponse.statusCode, error: error))
                 }
 
-            case 404:
+            case 204:
                 return .success(nil)
 
-            case 400:
-                return .failure(.apiError(statusCode: 400, message: "no spotify access token"))
-
-            case 401:
-                return .failure(.notAuthenticated)
-
-            case 500:
-                // api failed, nothing to do with client
-                return .failure(.apiError(statusCode: 500, message: "Internal Server Error."))
-
             default:
-                print("Refresh Error: Unexpected status code \(httpResponse.statusCode)")
-                let message = try? JSONDecoder().decode(APIErrorResponse.self, from: data).error
-                return .failure(
-                    .apiError(
-                        statusCode: httpResponse.statusCode,
-                        message: message ?? "Unexpected status code"
-                    ))
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self, from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message: "\(errorResponse.errorCode): \(errorResponse.error)"
+                        ))
+                } catch {
+                    print("Unknown response received from API")
+                    return .failure(.decodingError(statusCode: httpResponse.statusCode, error: error))
+                }
             }
 
         } catch let error as URLError {
