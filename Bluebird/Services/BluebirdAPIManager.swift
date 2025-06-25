@@ -379,29 +379,45 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
             switch httpResponse.statusCode {
             case 200:
                 return .success(())
-            case 400, 500:
+            default:
                 do {
-                    let decodedResponse = try JSONDecoder().decode(
+                    let errorResponse = try JSONDecoder().decode(
                         APIErrorResponse.self, from: data
                     )
                     return .failure(
                         .apiError(
-                            statusCode: httpResponse.statusCode, message: decodedResponse.error
+                            statusCode: httpResponse.statusCode,
+                            message: "\(errorResponse.errorCode): \(errorResponse.error)"
                         ))
+
                 } catch {
-                    print("Error decoding JSON response:  \(error)")
-                    return .failure(.decodingError(error))
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error)
+                    )
                 }
-            case 401:
-                return .failure(.notAuthenticated)
-            case 404:
-                return .failure(.notFound)
-            default:
-                return .failure(
-                    .apiError(
-                        statusCode: httpResponse.statusCode,
-                        message: "An unexpected error occurred."
-                    ))
+                /* case 400, 500:
+                     do {
+                         let decodedResponse = try JSONDecoder().decode(
+                             APIErrorResponse.self, from: data
+                         )
+                         return .failure(
+                             .apiError(
+                                 statusCode: httpResponse.statusCode, message: decodedResponse.error
+                             ))
+                     } catch {
+                         print("Error decoding JSON response:  \(error)")
+                         return .failure(.decodingError(error))
+                     }
+                 case 401:
+                     return .failure(.notAuthenticated)
+                 case 404:
+                     return .failure(.notFound)
+                 default:
+                     return .failure(
+                         .apiError(
+                             statusCode: httpResponse.statusCode,
+                             message: "An unexpected error occurred."
+                         )) */
             }
 
         } catch {

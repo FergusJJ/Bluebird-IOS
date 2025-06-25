@@ -1,6 +1,60 @@
 import SwiftUI // Import Foundation for LocalizedError
 
 enum APIError: Error, LocalizedError {
+    init(from appStateError: AppStateError) {
+        switch appStateError {
+        case .userNotLoggedIn:
+            self = .unauthorized
+
+        case .keychainError, .missingUserID, .genericError:
+            self = .internalStateError(appStateError)
+        }
+    }
+
+    // some of these will be unused and removed
+    init(from serviceError: BluebirdAPIError) {
+        switch serviceError {
+        case let .networkError(error):
+            self = .networkError(error)
+
+        case .invalidEndpoint:
+            self = .endpointError
+
+        case let .decodingError(_, error):
+            self = .decodingError(error)
+
+        case let .encodingError(error):
+            self = .encodingError(error)
+
+        case .notAuthenticated:
+            self = .unauthorized
+
+        case .notFound:
+            self = .notFound
+
+        case let .apiError(statusCode, message):
+            switch statusCode {
+            case 401:
+                self = .unauthorized
+            case 403:
+                self = .forbidden
+            case 404:
+                self = .notFound
+            default:
+                self = .serverError(statusCode: statusCode, message: message)
+            }
+
+        case .spotifyAPIError:
+            self = .serverError(
+                statusCode: 502, message: "A problem occurred while communicating with Spotify."
+            )
+
+        case .unknownError:
+            self = .unknownError
+        }
+    }
+
+    case internalStateError(Error)
     case invalidURL
     case networkError(Error)
     case endpointError
@@ -20,6 +74,8 @@ enum APIError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case let .internalStateError(error):
+            return "An internal application error occurred: \(error.localizedDescription)"
         case .invalidURL:
             return "The request could not be sent because the URL is invalid."
         case let .networkError(error):
@@ -40,11 +96,17 @@ enum APIError: Error, LocalizedError {
         case .endpointError:
             return "The API endpoint could not be properly constructed or is invalid."
         case let .serverError(statusCode, message):
-            let baseMessage = "The server returned an error (\(statusCode))."
-            return message != nil ? "\(baseMessage) Details: \(message!)" : baseMessage
+            var baseMessage = "The server returned an error (\(statusCode))."
+            if let details = message {
+                baseMessage += " Details: \(details)"
+            }
+            return baseMessage
         case let .badRequest(message):
-            let baseMessage = "The request was malformed (400 Bad Request)."
-            return message != nil ? "\(baseMessage) Details: \(message!)" : baseMessage
+            var baseMessage = "The request was malformed (400 Bad Request)."
+            if let details = message {
+                baseMessage += " Details: \(details)"
+            }
+            return baseMessage
         case .unauthorized:
             return "You are not authorized to perform this action. Please log in again."
         case .forbidden:
@@ -52,9 +114,12 @@ enum APIError: Error, LocalizedError {
         case .notFound:
             return "The requested resource was not found (404 Not Found)."
         case let .conflict(message):
-            let baseMessage =
+            var baseMessage =
                 "A conflict occurred with the current state of the resource (409 Conflict)."
-            return message != nil ? "\(baseMessage) Details: \(message!)" : baseMessage
+            if let details = message {
+                baseMessage += " Details: \(details)"
+            }
+            return baseMessage
         case let .encodingError(error):
             return "Failed to prepare data for the request: \(error.localizedDescription)"
         case let .decodingError(error):

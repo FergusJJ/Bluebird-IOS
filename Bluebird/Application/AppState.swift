@@ -76,20 +76,16 @@ class AppState: ObservableObject {
         print(
             "AppState: User logged in. Re-establishing Spotify session on foreground."
         )
-        let (connected, error) = await establishSpotifySession()
+        let connected = await establishSpotifySession()
 
         isSpotifyConnected = connected ? .istrue : .isfalse
-        if error != nil {
-            setError(error!)
-        }
-
         if connected {
             print(
                 "AppState: Spotify session re-established successfully on foreground."
             )
         } else {
             print(
-                "AppState: Failed to re-establish Spotify session on foreground. Error: \(error?.localizedDescription ?? "N/A")"
+                "AppState: Failed to re-establish Spotify session on foreground."
             )
         }
     }
@@ -167,7 +163,6 @@ class AppState: ObservableObject {
                 var newLoggedInState = self.isLoggedIn
                 var newSpotifyState = self.isSpotifyConnected
                 var newUserID = self.currentUserId
-                var connectionError: Error? = nil
 
                 switch event.event {
                 case .signedIn, .initialSession:
@@ -186,20 +181,14 @@ class AppState: ObservableObject {
                             print(
                                 "Auth Listener: Spotify not connected for \(event.event), attempting to establish session..."
                             )
-                            let (spotifyConnected, spotifyError) =
+                            let spotifyConnected =
                                 await self.establishSpotifySession()
                             newSpotifyState =
                                 spotifyConnected ? .istrue : .isfalse
-                            connectionError = spotifyError
-                            if !spotifyConnected && spotifyError != nil {
+                            if !spotifyConnected {
                                 print(
-                                    "Auth Listener: Failed to establish Spotify session. Error: \(spotifyError?.localizedDescription ?? "N/A")"
+                                    "Auth Listener: Failed to establish Spotify session."
                                 )
-                            } else if !spotifyConnected && spotifyError == nil {
-                                print(
-                                    "Auth Listener: Spotify session needs to be fully initialized."
-                                )
-                                // need to make sure that spotify client id is saved?
                             } else {
                                 print(
                                     "Auth Listener: Spotify session established successfully via listener for \(event.event)."
@@ -266,9 +255,7 @@ class AppState: ObservableObject {
                 self.isLoggedIn = newLoggedInState
                 self.isSpotifyConnected = newSpotifyState
                 self.currentUserId = newUserID
-                if let error = connectionError {
-                    self.setError(error)
-                } else if newLoggedInState == .istrue
+                if newLoggedInState == .istrue
                     && newSpotifyState == .istrue
                 {
                     self.clearError()
@@ -528,14 +515,12 @@ class AppState: ObservableObject {
     }
 
     @MainActor
-    private func establishSpotifySession() async -> (
-        connected: Bool, err: Error?
-    ) {
+    private func establishSpotifySession() async -> Bool {
         guard !isEstablishingSpotifySession else {
             print("EstablishSpotifySession SKIPPED: Already in progress.")
-            return (
-                isSpotifyConnected == .istrue, errorToDisplay?.underlyingError
-            )
+
+            return
+                isSpotifyConnected == .istrue // , errorToDisplay?.underlyingError
         }
         isEstablishingSpotifySession = true
         defer {
@@ -547,7 +532,10 @@ class AppState: ObservableObject {
 
         guard let userId = currentUserId else {
             print("EstablishSpotifySession Error: Missing User ID.")
-            return (false, AppStateError.missingUserID)
+            let appError = AppStateError.missingUserID
+            let presentationError = APIError(from: appError)
+            setError(presentationError)
+            return false
         }
         let userIdString = userId.uuidString
         print(
@@ -586,7 +574,7 @@ class AppState: ObservableObject {
                 )
             }
 
-            return (true, nil)
+            return true
 
         case let .failure(error):
             switch error {
@@ -594,7 +582,7 @@ class AppState: ObservableObject {
                 print(
                     "EstablishSpotifySession: User has not spotify session in DB. Assuming first login."
                 )
-                return (false, nil)
+                return false
             default:
                 print(
                     "EstablishSpotifySession Error: Failed to establish spotify session - \(error.localizedDescription)"
@@ -614,8 +602,9 @@ class AppState: ObservableObject {
                     "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
                 )
             }
-            setError(error)
-            return (false, error)
+            let presentationError = APIError(from: error)
+            setError(presentationError)
+            return false
         }
     }
 
@@ -629,7 +618,8 @@ class AppState: ObservableObject {
         switch result {
         case .success:
             print("Successfully uploaded/updated refresh token in DB.")
-        case let .failure(error):
+        case let .failure(serviceError):
+            let presentationError = APIError(from: serviceError)
             switch error {
             case .invalidEndpoint:
                 let error = APIError.endpointError
