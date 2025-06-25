@@ -177,7 +177,9 @@ class AppState: ObservableObject {
                         self.currentUserId = newUserID
 
                         if justSignedUp {
-                            print("Auth Listener: User just signed up, skipping Spotify session establishment.")
+                            print(
+                                "Auth Listener: User just signed up, skipping Spotify session establishment."
+                            )
                             justSignedUp = false // Reset the flag
                             newSpotifyState = .isfalse
                         } else if self.isSpotifyConnected != .istrue {
@@ -588,31 +590,32 @@ class AppState: ObservableObject {
 
         case let .failure(error):
             switch error {
-            case .notFound:
-                print("User first login, no alert")
+            case let .apiError(statusCode, _) where statusCode == 404:
+                print(
+                    "EstablishSpotifySession: User has not spotify session in DB. Assuming first login."
+                )
                 return (false, nil)
             default:
-                //
                 print(
-                    "EstablishSpotifySession Error: Failed to establish session via API - \(error.localizedDescription)"
+                    "EstablishSpotifySession Error: Failed to establish spotify session - \(error.localizedDescription)"
                 )
-                setError(error)
-                spotifyAccessToken = nil
-                let accessAccount = keychainAccountName(
-                    for: keychainAccessTokenType,
-                    userId: userIdString
-                )
-                let deleted = KeychainManager.deleteData(
-                    service: serviceID,
-                    account: accessAccount
-                )
-                if !deleted {
-                    print(
-                        "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
-                    )
-                }
-                return (false, error)
             }
+            spotifyAccessToken = nil
+            let accessAccount = keychainAccountName(
+                for: keychainAccessTokenType,
+                userId: userIdString
+            )
+            let deleted = KeychainManager.deleteData(
+                service: serviceID,
+                account: accessAccount
+            )
+            if !deleted {
+                print(
+                    "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
+                )
+            }
+            setError(error)
+            return (false, error)
         }
     }
 

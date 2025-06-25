@@ -92,13 +92,17 @@ enum BluebirdAPIError: Error {
             return "A network error occurred: \(error.localizedDescription)"
         case .invalidEndpoint:
             return "The API endpoint is misconfigured. Please contact support."
-        case let .decodingError(error):
-            return "Failed to process server response: \(error.localizedDescription)"
+        case let .decodingError(statusCode, error):
+            return
+                "Failed to process server response (\(statusCode)): \(error.localizedDescription)"
         case let .encodingError(error):
             return "Failed to prepare request data: \(error.localizedDescription)"
         case let .apiError(statusCode, message):
-            let baseMessage = "Server responded with an error (\(statusCode))."
-            return message != nil ? "\(baseMessage) Details: \(message!)" : baseMessage
+            var baseMessage = "Server responded with an error (\(statusCode))."
+            if let details = message {
+                baseMessage += " Details: \(details)"
+            }
+            return baseMessage
         case .notAuthenticated:
             return "You are not authenticated. Please log in again."
         case .notFound:
@@ -446,29 +450,28 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                     )
                     return .success(decodedResponse.accessToken)
                 } catch {
-                    return .failure(.decodingError(error))
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error)
+                    )
                 }
-            case 401, 403:
-                print("Refresh Error: Not Authenticated (Status \(httpResponse.statusCode))")
-                return .failure(.notAuthenticated)
-            case 404:
-                print("Refresh Error: Refresh token not found in DB (Status 404)")
-                return .failure(.notFound)
-            case 500:
-                print("Refresh Error: Internal Server Error (Status 500)")
-                let message = try? JSONDecoder().decode(APIErrorResponse.self, from: data).error
-                return .failure(
-                    .apiError(statusCode: 500, message: message ?? "Internal server error"))
-            default:
-                print("Refresh Error: Unexpected status code \(httpResponse.statusCode)")
-                let message = try? JSONDecoder().decode(APIErrorResponse.self, from: data).error
-                return .failure(
-                    .apiError(
-                        statusCode: httpResponse.statusCode,
-                        message: message ?? "Unexpected status code"
-                    ))
-            }
 
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self, from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message: "\(errorResponse.errorCode): \(errorResponse.error)"
+                        ))
+
+                } catch {
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error)
+                    )
+                }
+            }
         } catch let error as URLError {
             print("Refresh Error: Network Error - \(error.localizedDescription)")
             return .failure(.networkError(error))
@@ -515,7 +518,8 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                     )
                     return .success(decodedResponse)
                 } catch {
-                    return .failure(.decodingError(statusCode: httpResponse.statusCode, error: error))
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error))
                 }
 
             case 204:
@@ -533,7 +537,8 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                         ))
                 } catch {
                     print("Unknown response received from API")
-                    return .failure(.decodingError(statusCode: httpResponse.statusCode, error: error))
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error))
                 }
             }
 
