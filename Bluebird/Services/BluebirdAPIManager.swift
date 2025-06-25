@@ -4,7 +4,7 @@ import UIKit
 protocol BluebirdAuthAPIService {
     func userSignUp(username: String) async -> Result<Void, BluebirdAPIError>
     func initiateSpotifyConnection() async -> Result<Void, BluebirdAPIError>
-    func upsertSpotifyRefreshToken(refreshToken: String, tokenExipryString: String) async -> Result<
+    func upsertSpotifyRefreshToken(accessToken: String, refreshToken: String, tokenExipryString: String) async -> Result<
         Void, BluebirdAPIError
     >
     func saveSpotifyAccessTokenClientID(
@@ -320,7 +320,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         }
     }
 
-    func upsertSpotifyRefreshToken(refreshToken: String, tokenExipryString: String) async -> Result<
+    func upsertSpotifyRefreshToken(accessToken: String, refreshToken: String, tokenExipryString: String) async -> Result<
         Void, BluebirdAPIError
     > {
         guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
@@ -342,16 +342,20 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         }
 
         struct UpsertRefreshToken: Encodable {
+            let accessToken: String
             let refreshToken: String
             let tokenExpiry: String
             enum CodingKeys: String, CodingKey {
+                case accessToken = "access_token"
                 case refreshToken = "refresh_token"
                 case tokenExpiry = "token_expiry"
             }
         }
 
         let upsertRefreshToken = UpsertRefreshToken(
-            refreshToken: refreshToken, tokenExpiry: tokenExipryString
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            tokenExpiry: tokenExipryString
         )
 
         do {
@@ -395,29 +399,6 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                         .decodingError(statusCode: httpResponse.statusCode, error: error)
                     )
                 }
-                /* case 400, 500:
-                     do {
-                         let decodedResponse = try JSONDecoder().decode(
-                             APIErrorResponse.self, from: data
-                         )
-                         return .failure(
-                             .apiError(
-                                 statusCode: httpResponse.statusCode, message: decodedResponse.error
-                             ))
-                     } catch {
-                         print("Error decoding JSON response:  \(error)")
-                         return .failure(.decodingError(error))
-                     }
-                 case 401:
-                     return .failure(.notAuthenticated)
-                 case 404:
-                     return .failure(.notFound)
-                 default:
-                     return .failure(
-                         .apiError(
-                             statusCode: httpResponse.statusCode,
-                             message: "An unexpected error occurred."
-                         )) */
             }
 
         } catch {
@@ -432,7 +413,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
             return .failure(.invalidEndpoint)
         }
-
+        // HandleSpotifyRefreshAuth
         let refreshPath = "/api/spotify/refresh"
         components.path = refreshPath
         guard let url = components.url else {

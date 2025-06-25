@@ -398,6 +398,7 @@ class AppState: ObservableObject {
 
             Task {
                 await uploadSpotifyRefreshTokenToDatabase(
+                    accessToken: access,
                     refreshToken: refresh,
                     tokenExpiry: tokenExpiry,
                 )
@@ -609,45 +610,21 @@ class AppState: ObservableObject {
     }
 
     private func uploadSpotifyRefreshTokenToDatabase(
+        accessToken: String,
         refreshToken: String,
         tokenExpiry: String,
     ) async {
         let result = await authAPIService.upsertSpotifyRefreshToken(
-            refreshToken: refreshToken, tokenExipryString: tokenExpiry
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            tokenExipryString: tokenExpiry
         )
         switch result {
         case .success:
             print("Successfully uploaded/updated refresh token in DB.")
         case let .failure(serviceError):
             let presentationError = APIError(from: serviceError)
-            switch error {
-            case .invalidEndpoint:
-                let error = APIError.endpointError
-                setError(error)
-            case .notAuthenticated:
-                let error = APIError.unauthorized
-                setError(error)
-            case .encodingError:
-                let error = APIError.encodingError(error)
-                setError(error)
-            case .decodingError:
-                let error = APIError.decodingError(error)
-                setError(error)
-            case .unknownError:
-                let error = APIError.unknownError
-                setError(error)
-            // TODO: find out why this error occurs on initial connection
-            case let .apiError(statusCode, message):
-                let error = APIError.serverError(statusCode: statusCode, message: message)
-                setError(error)
-            case .notFound:
-                let error = APIError.notFound
-                setError(error)
-            default:
-                print("Uncaught error in uploadSpotifyRefreshTokenToDatabase.")
-                let error = APIError.unknownError
-                setError(error)
-            }
+            setError(presentationError)
         }
     }
 
