@@ -9,12 +9,12 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
 
     init(from supabaseError: SupabaseError) {
         switch supabaseError {
-        case .signupFailed:
-            self = .signupFailed
-        case .loginFailed:
-            self = .loginFailed
-        case .logoutFailed:
-            self = .logoutFailed
+        case let .signupFailed(error):
+            self = .signupFailed(error.localizedDescription)
+        case let .loginFailed(error):
+            self = .loginFailed(error.localizedDescription)
+        case let .logoutFailed(error):
+            self = .logoutFailed(error.localizedDescription)
         case .unacceptableStatusCode:
             self = .unacceptableStatusCode
         case .genericError:
@@ -79,9 +79,9 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
     }
 
     // SupabaseErrors
-    case signupFailed
-    case loginFailed
-    case logoutFailed
+    case signupFailed(String)
+    case loginFailed(String)
+    case logoutFailed(String)
     case unacceptableStatusCode
     case genericSupabaseError
 
@@ -107,12 +107,12 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .signupFailed:
-            return "An error occurred during sign up."
-        case .loginFailed:
-            return "An error occurred whilst logging in."
-        case .logoutFailed:
-            return "An error occurred whilst logging out."
+        case let .signupFailed(reason):
+            return "An error occurred during sign up. \(reason)"
+        case let .loginFailed(reason):
+            return "An error occurred whilst logging in. \(reason)"
+        case let .logoutFailed(reason):
+            return "An error occurred whilst logging out. \(reason)"
         case .unacceptableStatusCode:
             return "Bad response received whilst reading database."
         case .genericSupabaseError:
@@ -175,4 +175,18 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
             return "The server did not send any response."
         }
     }
+
+    var presentationStyle: ErrorPresentationStyle {
+        switch self {
+        case .signupFailed, .loginFailed:
+            return .inline
+        default:
+            return .generic
+        }
+    }
+}
+
+enum ErrorPresentationStyle: Equatable {
+    case generic // Global pop-up alerts
+    case inline
 }
