@@ -272,7 +272,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
             return .failure(.invalidEndpoint)
         }
-        components.path = "/api/spotify/refresh"
+        components.path = "/api/spotify/data"
         guard let url = components.url else {
             return .failure(.invalidEndpoint)
         }
