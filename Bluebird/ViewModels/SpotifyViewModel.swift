@@ -33,9 +33,8 @@ class SpotifyViewModel: ObservableObject {
             )
 
         case let .failure(serviceError):
-            // this needs to use APIError from bluebirderror
             currentlyPlaying = nil
-            let presentationError = APIError(from: serviceError)
+            let presentationError = AppError(from: serviceError)
             // want some modal to show an error, dont want an error screen
             // because info might still be on there, i.e. song history that was
             // fetched earlier

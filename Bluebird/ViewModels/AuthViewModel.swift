@@ -8,11 +8,6 @@ class AuthViewModel: ObservableObject {
     @Published var password: String = ""
     @Published var isActionPending = false
 
-    // might want to change this and use AppState.errorToDisplay instead?
-    // would require changing appState signup/login functions to set the error
-    // as it doesn't currently set one before returning it
-    @Published var errorMessage: String?
-
     @Published var isCheckingUsername: Bool = false
     @Published var usernameAvailable: Bool?
     @Published var usernameValidationMessage: String?
@@ -27,37 +22,31 @@ class AuthViewModel: ObservableObject {
         setupUsernameCheckSubscription()
     }
 
-    // @MainActor
     func login() async {
-        errorMessage = nil
         isActionPending = true
         defer { isActionPending = false }
 
-        let err = await appState.loginUser(
+        let success = await appState.loginUser(
             email: email,
             password: password
         )
-
-        if err != nil {
-            errorMessage = err?.localizedDescription
+        if success {
+            print("Login successful")
         }
     }
 
     // FUTURE TODO: switch in appState.signUp to provide more finegrained error?
-    // @MainActor
     func signUp() async {
-        errorMessage = nil
         isActionPending = true
         defer { isActionPending = false }
 
-        let err = await appState.signUp(
+        let success = await appState.signUp(
             email: email,
             username: username,
             password: password
         )
-
-        if err != nil {
-            errorMessage = err?.localizedDescription
+        if success {
+            print("Signup successful")
         }
     }
 
@@ -87,16 +76,22 @@ class AuthViewModel: ObservableObject {
                 self.updateUsernameCheckState(isChecking: true, isAvailable: nil, message: nil)
 
                 self.usernameCheckTask = Task {
-                    let isAvailable = await self.performUsernameAvailabilityCheck(
+                    let isAvailableOrError = await self.performUsernameAvailabilityCheck(
                         username: currentUsername)
                     if Task.isCancelled { return }
-                    // await MainActor.run {
+                    guard let isAvailable = isAvailableOrError else {
+                        self.updateUsernameCheckState(
+                            isChecking: false,
+                            isAvailable: nil,
+                            message: "Unable to veridy username availability. Please try again later."
+                        )
+                        return
+                    }
                     self.updateUsernameCheckState(
                         isChecking: false,
                         isAvailable: isAvailable,
                         message: isAvailable ? "Username available!" : "Username taken."
                     )
-                    // }
                 }
             }
             .store(in: &cancellables)
@@ -108,25 +103,30 @@ class AuthViewModel: ObservableObject {
         usernameValidationMessage = message
     }
 
-    private func performUsernameAvailabilityCheck(username: String) async -> Bool {
+    private func performUsernameAvailabilityCheck(username: String) async -> Bool? {
+        let profileTable = "profiles"
         do {
             let usernameResponse = try await SupabaseClientManager.shared.client
-                .from("profiles")
+                .from(profileTable)
                 .select(count: .exact)
                 .eq("username", value: username)
                 .execute()
             guard (200 ..< 300).contains(usernameResponse.status) else {
-                throw BluebirdAPIError.apiError(statusCode: usernameResponse.status, message: usernameResponse.string())
+                throw SupabaseError.unacceptableStatusCode(usernameResponse.status)
             }
             let count = usernameResponse.count ?? 0
-            if count == 0 {
-                return true
-            }
-            return false
+            return count == 0
         } catch {
-            // network error?
             print("Error checking username availability: \(error)")
-            return false
+            let presentationError: AppError
+            if let supabaseError = error as? SupabaseError {
+                presentationError = AppError(from: supabaseError)
+            } else {
+                let genericSupabaseError = SupabaseError.genericError(error)
+                presentationError = AppError(from: genericSupabaseError)
+            }
+            appState.setError(presentationError)
+            return nil
         }
     }
 

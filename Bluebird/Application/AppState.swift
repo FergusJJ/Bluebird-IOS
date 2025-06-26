@@ -10,7 +10,7 @@ enum LoadingOrBool: Int {
 class AppState: ObservableObject {
     @Published var isLoggedIn: LoadingOrBool = .loading
     @Published var isSpotifyConnected: LoadingOrBool = .loading
-    @Published var errorToDisplay: DisplayableError?
+    @Published var errorToDisplay: AppError?
 
     private var authListener: Task<Void, Never>?
     private var authAPIService: BluebirdAuthAPIService
@@ -52,8 +52,8 @@ class AppState: ObservableObject {
         return spotifyAccessToken
     }
 
-    private func setError(_ error: Error) {
-        errorToDisplay = DisplayableError(underlyingError: error)
+    func setError(_ error: AppError) {
+        errorToDisplay = error
     }
 
     func clearError() {
@@ -263,7 +263,7 @@ class AppState: ObservableObject {
     }
 
     func signUp(email: String, username: String, password: String) async
-        -> Error?
+        -> Bool
     {
         // auth.signUp emits the event, so justSignedUp has to be set first
         justSignedUp = true
@@ -278,52 +278,67 @@ class AppState: ObservableObject {
             switch result {
             case .success:
                 print("Profile Insert successful for user ID \(userId)")
-                return nil
-            case let .failure(error):
-                print("Failed to create user profile: \(error)")
-                return error
+                return true
+            case let .failure(serviceError):
+                print("Failed to create user profile: \(serviceError)")
+                let presentationError = AppError(from: serviceError)
+                setError(presentationError)
+                return false
             }
         } catch let authError as AuthError {
             print("Auth Sign Up Error: \(authError.localizedDescription)")
-            return SignUpError.authFailed(authError)
+            let supabaseError = SupabaseError.signupFailed(authError)
+            let presentationError = AppError(from: supabaseError)
+            setError(presentationError)
+            return false
         } catch {
             print(
                 "Sign Up Error: An unexpected error occurred - \(error.localizedDescription)"
             )
-            return SignUpError.authFailed(error)
+            let appError = AppStateError.genericError("An unexpected error occurred.")
+            let presentationError = AppError(from: appError)
+            setError(presentationError)
+            return false
         }
     }
 
-    func loginUser(email: String, password: String) async -> Error? {
+    func loginUser(email: String, password: String) async -> Bool {
         do {
             _ = try await SupabaseClientManager.shared.client.auth.signIn(
                 email: email,
                 password: password
             )
-            return nil
+            return true
         } catch {
             print("Error logging in: \(error.localizedDescription)")
-            return error
+            let supbaseError = SupabaseError.loginFailed(error)
+            let presentableError = AppError(from: supbaseError)
+            setError(presentableError)
+            return false
         }
     }
 
-    func logoutUser() async -> SignOutError? {
+    func logoutUser() async -> Bool {
         do {
             try await SupabaseClientManager.shared.client.auth.signOut()
             print("User logged out successfully.")
-            return nil
+            return true
         } catch {
             print("Error signing out: \(error.localizedDescription)")
-            return SignOutError.unexpectedError
+            let supabaseError = SupabaseError.logoutFailed(error)
+            let presentationError = AppError(from: supabaseError)
+            setError(presentationError)
+            return false
         }
     }
 
-    func connectSpotify() async -> Error? {
+    func connectSpotify() async -> Bool {
         guard currentUserId != nil else {
             print("Connect Spotify Error: User not logged in.")
-            let error = AppStateError.userNotLoggedIn
-            setError(error)
-            return error
+            let appStateError = AppStateError.userNotLoggedIn
+            let presentationError = AppError(from: appStateError)
+            setError(presentationError)
+            return false
         }
 
         let result = await authAPIService.initiateSpotifyConnection()
@@ -332,16 +347,17 @@ class AppState: ObservableObject {
         case .success:
             print("Spotify authorization flow initiated successfully.")
             clearError()
-            return nil
+            return true
         case let .failure(error):
             print(
                 "Error initiating Spotify authorization flow: \(error.localizedDescription)"
             )
-            let err = AppStateError.genericError(
+            let appStateErr = AppStateError.genericError(
                 "Failed to connect spotify: \(error.localizedDescription)"
             )
-            setError(err)
-            return err
+            let presentationError = AppError(from: appStateErr)
+            setError(presentationError)
+            return false
         }
         // previously returned here, but want to make sure that spotify client id is fetched
     }
@@ -349,7 +365,7 @@ class AppState: ObservableObject {
     func saveSpotifyCredentials(access: String, refresh: String, tokenExpiry: String) -> Bool {
         guard let userId = currentUserId else {
             let error = AppStateError.userNotLoggedIn
-            let presentationError = APIError(from: error)
+            let presentationError = AppError(from: error)
             setError(presentationError)
             return false
         }
@@ -371,7 +387,7 @@ class AppState: ObservableObject {
                 "SaveSpotifyCredentials Error: Could not encode tokens to Data."
             )
             let error = AppStateError.keychainError("Token encoding failed")
-            let presentationError = APIError(from: error)
+            let presentationError = AppError(from: error)
             setError(presentationError)
             return false
         }
@@ -421,7 +437,7 @@ class AppState: ObservableObject {
             let error = AppStateError.keychainError(
                 "Failed to save Spotify credentials to keychain."
             )
-            let presentationError = APIError(from: error)
+            let presentationError = AppError(from: error)
             setError(presentationError)
             return false
         }
@@ -449,7 +465,7 @@ class AppState: ObservableObject {
         guard let userId = currentUserId else {
             print("EstablishSpotifySession Error: Missing User ID.")
             let appError = AppStateError.missingUserID
-            let presentationError = APIError(from: appError)
+            let presentationError = AppError(from: appError)
             setError(presentationError)
             return false
         }
@@ -493,7 +509,7 @@ class AppState: ObservableObject {
             print(
                 "EstablishSpotifySessionClientID Error: Failed to establish session via API - \(serviceError.localizedDescription)"
             )
-            let presentationError = APIError(from: serviceError)
+            let presentationError = AppError(from: serviceError)
             setError(presentationError)
             spotifyAccessToken = nil
             let accessAccount = keychainAccountName(
@@ -530,7 +546,7 @@ class AppState: ObservableObject {
         guard let userId = currentUserId else {
             print("EstablishSpotifySession Error: Missing User ID.")
             let appError = AppStateError.missingUserID
-            let presentationError = APIError(from: appError)
+            let presentationError = AppError(from: appError)
             setError(presentationError)
             return false
         }
@@ -597,7 +613,7 @@ class AppState: ObservableObject {
                     "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
                 )
             }
-            let presentationError = APIError(from: serviceError)
+            let presentationError = AppError(from: serviceError)
             setError(presentationError)
             return false
         }
@@ -617,7 +633,7 @@ class AppState: ObservableObject {
         case .success:
             print("Successfully uploaded/updated refresh token in DB.")
         case let .failure(serviceError):
-            let presentationError = APIError(from: serviceError)
+            let presentationError = AppError(from: serviceError)
             setError(presentationError)
         }
     }

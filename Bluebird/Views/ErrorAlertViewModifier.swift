@@ -5,10 +5,10 @@ struct ErrorAlertViewModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .alert(item: $appState.errorToDisplay) { displayableError in
+            .alert(item: $appState.errorToDisplay) { presentationError in
                 Alert(
                     title: Text("Error"),
-                    message: Text(displayableError.localizedDescription),
+                    message: Text(presentationError.localizedDescription),
                     dismissButton: .default(Text("OK")) {
                         print("Error alert dismissed.")
                     }
