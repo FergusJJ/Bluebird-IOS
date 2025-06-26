@@ -64,16 +64,12 @@ struct BluebirdApp: App {
                             .value
                         {
                             // HERE can just use handleInitialSpotifyConnection?
-                            let err = appState.saveSpotifyCredentials(
+                            let success = appState.saveSpotifyCredentials(
                                 access: accessToken,
                                 refresh: refreshToken,
                                 tokenExpiry: tokenExpiryString
                             )
-                            if err != nil {
-                                let localizedDescription =
-                                    err?.localizedDescription
-                                        ?? "no localizedDescription"
-                                print("\(localizedDescription)")
+                            if !success {
                                 return
                             }
                             Task {

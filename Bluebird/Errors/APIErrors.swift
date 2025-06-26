@@ -49,6 +49,9 @@ enum APIError: Error, LocalizedError {
                 statusCode: 502, message: "A problem occurred while communicating with Spotify."
             )
 
+        case .invalidResponse:
+            self = .invalidResponse
+
         case .unknownError:
             self = .unknownError
         }
@@ -69,6 +72,7 @@ enum APIError: Error, LocalizedError {
     case encodingError(Error)
     case decodingError(Error)
 
+    case invalidResponse
     case unknownError // catchall
     case noResponse
 
@@ -124,6 +128,8 @@ enum APIError: Error, LocalizedError {
             return "Failed to prepare data for the request: \(error.localizedDescription)"
         case let .decodingError(error):
             return "Failed to understand the server's response: \(error.localizedDescription)"
+        case .invalidResponse:
+            return "An invalid response was received from the server."
         case .unknownError:
             return "An unexpected error occurred. Please try again later."
         case .noResponse:

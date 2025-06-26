@@ -4,7 +4,9 @@ import UIKit
 protocol BluebirdAuthAPIService {
     func userSignUp(username: String) async -> Result<Void, BluebirdAPIError>
     func initiateSpotifyConnection() async -> Result<Void, BluebirdAPIError>
-    func upsertSpotifyRefreshToken(accessToken: String, refreshToken: String, tokenExipryString: String) async -> Result<
+    func upsertSpotifyRefreshToken(
+        accessToken: String, refreshToken: String, tokenExipryString: String
+    ) async -> Result<
         Void, BluebirdAPIError
     >
     func saveSpotifyAccessTokenClientID(
@@ -79,6 +81,7 @@ enum BluebirdAPIError: Error {
     case notAuthenticated
     case notFound
     case spotifyAPIError
+    case invalidResponse
     case unknownError
 
     // signUp can now print a BluebirdAPIError so need descriptions
@@ -109,6 +112,8 @@ enum BluebirdAPIError: Error {
             return "The requested resource was not found."
         case .spotifyAPIError:
             return "An error occurred with the Spotify API integration."
+        case .invalidResponse:
+            return "Invalid response received from server."
         case .unknownError:
             return "An unexpected error occurred. Please try again."
         }
@@ -182,11 +187,10 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
             }
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
-                return .failure(.unknownError)
+                return .failure(.invalidResponse)
             }
             switch httpResponse.statusCode {
             case 201:
-                // let decodedResponse = try JSONDecoder().decode(SignUpResponse.self, from: data)
                 return .success(())
             case 400, 500:
                 do {
@@ -199,7 +203,8 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                         ))
                 } catch {
                     print("Error decoding JSON response: \(error)")
-                    return .failure(.decodingError(error))
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error))
                 }
             case 401:
                 return .failure(.notAuthenticated)
@@ -274,7 +279,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 print("Save Error: Invalid response type")
-                return .failure(.notAuthenticated)
+                return .failure(.invalidResponse)
             }
             print("Save Token Response Status: \(httpResponse.statusCode)")
             switch httpResponse.statusCode {
@@ -286,30 +291,24 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                     return .success(decodedResponse.accessToken)
                 } catch {
                     print("Save Error: decoding error")
-                    return .failure(.decodingError(error))
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error))
                 }
-            case 401, 403:
-                print("Refresh Error: Not Authenticated (Status \(httpResponse.statusCode))")
-                return .failure(.notAuthenticated)
-            case 400:
-                print("Save Error: Missing query params")
-                return .failure(
-                    .apiError(
-                        statusCode: 400,
-                        message: "Access Token, Refresh Token, Expiry not present in query params."
-                    )
-                )
-            case 500:
-                print("Save Error: Internal Server Error (Status 500)")
-                let message = try? JSONDecoder().decode(APIErrorResponse.self, from: data).error
-                return .failure(
-                    .apiError(statusCode: 500, message: message ?? "Internal server error"))
-            case 503:
-                print("Save Error: Spotify API not available")
-                return .failure(.spotifyAPIError)
             default:
-                print("Save Error: Unexpected status code \(httpResponse.statusCode)")
-                return .failure(.unknownError)
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self, from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message: "\(errorResponse.errorCode): \(errorResponse.error)"
+                        ))
+                } catch {
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error)
+                    )
+                }
             }
         } catch let error as URLError {
             print("Save Error: Network Error - \(error.localizedDescription)")
@@ -320,7 +319,9 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         }
     }
 
-    func upsertSpotifyRefreshToken(accessToken: String, refreshToken: String, tokenExipryString: String) async -> Result<
+    func upsertSpotifyRefreshToken(
+        accessToken: String, refreshToken: String, tokenExipryString: String
+    ) async -> Result<
         Void, BluebirdAPIError
     > {
         guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
@@ -378,7 +379,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
             }
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
-                return .failure(.unknownError)
+                return .failure(.invalidResponse)
             }
             switch httpResponse.statusCode {
             case 200:
@@ -400,7 +401,6 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
                     )
                 }
             }
-
         } catch {
             print("Signup network request failed", "error", error)
             return .failure(.networkError(error))
@@ -434,7 +434,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 print("Refresh Error: Invalid response type")
-                return .failure(.unknownError)
+                return .failure(.invalidResponse)
             }
 
             print("Refresh Token Response Status: \(httpResponse.statusCode)")
@@ -505,7 +505,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 print("Refresh Error: Invalid response type")
-                return .failure(.unknownError)
+                return .failure(.invalidResponse)
             }
             switch httpResponse.statusCode {
             case 200:

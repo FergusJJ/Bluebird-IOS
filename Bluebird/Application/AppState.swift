@@ -110,22 +110,19 @@ class AppState: ObservableObject {
         print(
             "AppState: User logged in. Proceeding with initial spotify connection"
         )
-        let (connected, error) = await establishSpotifySessionClientID(
+        let connected = await establishSpotifySessionClientID(
             accessToken: accessToken,
             refreshToken: refreshToken,
             tokenExpiry: tokenExpiry
         )
         isSpotifyConnected = connected ? .istrue : .isfalse
-        if error != nil {
-            setError(error!)
-        }
         if connected {
             print(
                 "AppState: Spotify intial session established successfully on foreground."
             )
         } else {
             print(
-                "AppState: Failed to establish Spotify initial session on foreground. Error: \(error?.localizedDescription ?? "N/A")"
+                "AppState: Failed to establish Spotify initial session on foreground."
             )
         }
     }
@@ -349,11 +346,12 @@ class AppState: ObservableObject {
         // previously returned here, but want to make sure that spotify client id is fetched
     }
 
-    func saveSpotifyCredentials(access: String, refresh: String, tokenExpiry: String) -> Error? {
+    func saveSpotifyCredentials(access: String, refresh: String, tokenExpiry: String) -> Bool {
         guard let userId = currentUserId else {
             let error = AppStateError.userNotLoggedIn
-            setError(error)
-            return error
+            let presentationError = APIError(from: error)
+            setError(presentationError)
+            return false
         }
         let userIdString = userId.uuidString
 
@@ -373,8 +371,9 @@ class AppState: ObservableObject {
                 "SaveSpotifyCredentials Error: Could not encode tokens to Data."
             )
             let error = AppStateError.keychainError("Token encoding failed")
-            setError(error)
-            return error
+            let presentationError = APIError(from: error)
+            setError(presentationError)
+            return false
         }
         let accessSuccess = KeychainManager.storeData(
             data: accessTokenData,
@@ -403,7 +402,7 @@ class AppState: ObservableObject {
                     tokenExpiry: tokenExpiry,
                 )
             }
-            return nil // Success
+            return true // Success
         } else {
             print(
                 "SaveSpotifyCredentials Error: Failed to store one or both tokens in Keychain. accessSuccess=\(accessSuccess), refreshSuccess=\(refreshSuccess)"
@@ -422,8 +421,9 @@ class AppState: ObservableObject {
             let error = AppStateError.keychainError(
                 "Failed to save Spotify credentials to keychain."
             )
-            setError(error)
-            return error
+            let presentationError = APIError(from: error)
+            setError(presentationError)
+            return false
         }
     }
 
@@ -432,14 +432,12 @@ class AppState: ObservableObject {
         accessToken: String,
         refreshToken: String,
         tokenExpiry: String
-    ) async -> (connected: Bool, err: Error?) {
+    ) async -> Bool {
         guard !isEstablishingSpotifySession else {
             print(
                 "EstablishSpotifySessionClientID SKIPPED: Already in progress."
             )
-            return (
-                isSpotifyConnected == .istrue, errorToDisplay?.underlyingError
-            )
+            return isSpotifyConnected == .istrue
         }
         isEstablishingSpotifySession = true
         defer {
@@ -450,7 +448,10 @@ class AppState: ObservableObject {
         }
         guard let userId = currentUserId else {
             print("EstablishSpotifySession Error: Missing User ID.")
-            return (false, AppStateError.missingUserID)
+            let appError = AppStateError.missingUserID
+            let presentationError = APIError(from: appError)
+            setError(presentationError)
+            return false
         }
         let userIdString = userId.uuidString
         print(
@@ -477,26 +478,23 @@ class AppState: ObservableObject {
                     service: serviceID,
                     account: accessAccount
                 )
-                if success {
-                    print(
-                        "EstablishSpotifySessionClientID: Saved new access token to keychain."
-                    )
-                } else {
-                    print(
+                success
+                    ? print("EstablishSpotifySessionClientID: Saved new access token to keychain.")
+                    : print(
                         "EstablishSpotifySessionClientID Warning: Failed to save new access token to keychain."
                     )
-                }
             } else {
                 print(
                     "EstablishSpotifySessionClientID Warning: Could not encode access token to save to keychain."
                 )
             }
-            return (true, nil)
-        case let .failure(error):
+            return true
+        case let .failure(serviceError):
             print(
-                "EstablishSpotifySessionClientID Error: Failed to establish session via API - \(error.localizedDescription)"
+                "EstablishSpotifySessionClientID Error: Failed to establish session via API - \(serviceError.localizedDescription)"
             )
-            setError(error)
+            let presentationError = APIError(from: serviceError)
+            setError(presentationError)
             spotifyAccessToken = nil
             let accessAccount = keychainAccountName(
                 for: keychainAccessTokenType,
@@ -511,7 +509,7 @@ class AppState: ObservableObject {
                     "EstablishSpotifySessionClientID Warning: Failed to delete access token from keychain (it might not have existed)."
                 )
             }
-            return (false, error)
+            return false
         }
     }
 
@@ -519,9 +517,7 @@ class AppState: ObservableObject {
     private func establishSpotifySession() async -> Bool {
         guard !isEstablishingSpotifySession else {
             print("EstablishSpotifySession SKIPPED: Already in progress.")
-
-            return
-                isSpotifyConnected == .istrue // , errorToDisplay?.underlyingError
+            return isSpotifyConnected == .istrue
         }
         isEstablishingSpotifySession = true
         defer {
@@ -560,15 +556,13 @@ class AppState: ObservableObject {
                     service: serviceID,
                     account: accessAccount
                 )
-                if success {
-                    print(
+                success
+                    ? print(
                         "EstablishSpotifySession: Saved new access token to keychain."
                     )
-                } else {
-                    print(
+                    : print(
                         "EstablishSpotifySession Warning: Failed to save new access token to keychain."
                     )
-                }
             } else {
                 print(
                     "EstablishSpotifySession Warning: Could not encode access token to save to keychain."
@@ -577,8 +571,8 @@ class AppState: ObservableObject {
 
             return true
 
-        case let .failure(error):
-            switch error {
+        case let .failure(serviceError):
+            switch serviceError {
             case let .apiError(statusCode, _) where statusCode == 404:
                 print(
                     "EstablishSpotifySession: User has not spotify session in DB. Assuming first login."
@@ -586,7 +580,7 @@ class AppState: ObservableObject {
                 return false
             default:
                 print(
-                    "EstablishSpotifySession Error: Failed to establish spotify session - \(error.localizedDescription)"
+                    "EstablishSpotifySession Error: Failed to establish spotify session - \(serviceError.localizedDescription)"
                 )
             }
             spotifyAccessToken = nil
@@ -603,7 +597,7 @@ class AppState: ObservableObject {
                     "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
                 )
             }
-            let presentationError = APIError(from: error)
+            let presentationError = APIError(from: serviceError)
             setError(presentationError)
             return false
         }
