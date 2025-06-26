@@ -4,26 +4,18 @@ struct SpotifyView: View {
     @EnvironmentObject var appState: AppState
 
     @State private var isConnecting = false
-    @State private var connectionErrorMessage: String?
     @State private var showConnectionAlert = false
-
-    @State private var logoutError: String?
 
     private func initiateSpotifyConnection() {
         guard !isConnecting else { return }
 
         Task {
             isConnecting = true
-            connectionErrorMessage = nil
             showConnectionAlert = false
 
-            let error = await appState.connectSpotify()
-
+            let success = await appState.connectSpotify()
             isConnecting = false
-
-            if let error = error {
-                print("Error initiating Spotify connection: \(error.localizedDescription)")
-                connectionErrorMessage = error.localizedDescription
+            if !success {
                 showConnectionAlert = true
             } else {
                 print("Spotify connection initiation requested successfully.")
@@ -33,12 +25,10 @@ struct SpotifyView: View {
 
     private func logOut() {
         showConnectionAlert = false
-        logoutError = nil
         Task {
-            let err = await appState.logoutUser()
-            if err != nil {
-                logoutError =
-                    err?.localizedDescription ?? "An unknown error occurred during logout."
+            let success = await appState.logoutUser()
+            if !success {
+                showConnectionAlert = true
             }
         }
     }
@@ -73,7 +63,7 @@ struct SpotifyView: View {
                     .padding(.vertical)
                 }
 
-                if let logoutErr = logoutError {
+                if let logoutErr = appState.errorToDisplay?.localizedDescription {
                     Text("Logout failed: \(logoutErr)")
                         .foregroundColor(.red)
                         .font(.caption)
@@ -91,7 +81,7 @@ struct SpotifyView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(
-                connectionErrorMessage
+                appState.errorToDisplay?.localizedDescription
                     ?? "Unable to connect spotify to your account. Please try again.")
         }
     }

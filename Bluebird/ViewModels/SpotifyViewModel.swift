@@ -32,12 +32,14 @@ class SpotifyViewModel: ObservableObject {
                 imageUrl: songData.imageUrl,
             )
 
-        case let .failure(error):
+        case let .failure(serviceError):
             currentlyPlaying = nil
+            let presentationError = AppError(from: serviceError)
             // want some modal to show an error, dont want an error screen
             // because info might still be on there, i.e. song history that was
             // fetched earlier
-            print("error \(error)")
+
+            print("error \(presentationError)")
         }
     }
 }

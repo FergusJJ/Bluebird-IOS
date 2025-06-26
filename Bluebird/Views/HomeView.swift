@@ -16,6 +16,14 @@ struct HomeView: View {
                     artists: song.artists,
                     imageURL: URL(string: song.imageUrl)
                 )
+                Spacer()
+                Button("Refresh") {
+                    Task {
+                        let spotifyAccessToken = appState.getSpotifyAccessToken()
+                        await spotifyViewModel.loadCurrentlyPlaying(
+                            spotifyAccessToken: spotifyAccessToken)
+                    }
+                }
             } else {
                 Text("Nothing playing...")
                 Button("Refresh") {

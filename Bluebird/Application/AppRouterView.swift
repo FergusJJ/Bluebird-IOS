@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct NavigationView: View {
+struct AppRouterView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var spotifyView: SpotifyViewModel
 

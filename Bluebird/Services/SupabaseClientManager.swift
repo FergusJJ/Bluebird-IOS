@@ -1,6 +1,7 @@
 import Foundation
 import Supabase
 
+// TODO: move supabase signup/read calls into this class
 class SupabaseClientManager {
     static let shared = SupabaseClientManager()
     let client: SupabaseClient

@@ -2,12 +2,15 @@ import SwiftUI
 
 struct LoginView: View {
     @StateObject var viewModel: AuthViewModel
+    // just for direct access to errors
+    @ObservedObject var appState: AppState
 
     var switchToSignup: () -> Void
 
     init(switchToSignup: @escaping () -> Void, appState: AppState) {
         self.switchToSignup = switchToSignup
         _viewModel = StateObject(wrappedValue: AuthViewModel(appState: appState))
+        self.appState = appState
     }
 
     var body: some View {
@@ -44,7 +47,7 @@ struct LoginView: View {
                 }
                 .padding(.vertical)
 
-                if let errorMsg = viewModel.errorMessage {
+                if let errorMsg = appState.errorToDisplay?.localizedDescription {
                     Text(errorMsg)
                         .foregroundColor(.red)
                         .font(.caption)
@@ -80,7 +83,7 @@ struct LoginView: View {
                 Button("Don't have an account? Sign Up") {
                     viewModel.email = ""
                     viewModel.password = ""
-                    viewModel.errorMessage = nil
+                    appState.clearError()
                     switchToSignup()
                 }
                 .foregroundColor(Color.babyBlue)
