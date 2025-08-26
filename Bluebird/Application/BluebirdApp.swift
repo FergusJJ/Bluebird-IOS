@@ -1,10 +1,9 @@
 import SwiftUI
 
-// The global factory function remains the same for now
-@MainActor func createViewModel() -> SpotifyViewModel? {
+@MainActor func createViewModel(appState: AppState) -> SpotifyViewModel? {
     do {
         let manager = try BluebirdAPIManager()
-        return SpotifyViewModel(spotifyAPIService: manager)
+        return SpotifyViewModel(appState: appState, spotifyAPIService: manager)
     } catch {
         print("FATAL ERROR: Failed to initialize BluebirdAPIManager: \(error)")
         return nil
@@ -13,12 +12,14 @@ import SwiftUI
 
 @main
 struct BluebirdApp: App {
-    // @StateObject private var appState = AppState()
-    // @State private var spotifyViewModel: SpotifyViewModel? = createViewModel()
+    @StateObject private var appState: AppState
+    @State private var spotifyViewModel: SpotifyViewModel?
 
-    // old
-    @StateObject private var appState = AppState()
-    @State private var spotifyViewModel: SpotifyViewModel? = createViewModel()
+    init() {
+        let state = AppState()
+        _appState = StateObject(wrappedValue: state)
+        _spotifyViewModel = State(initialValue: createViewModel(appState: state))
+    }
 
     var body: some Scene {
         WindowGroup {

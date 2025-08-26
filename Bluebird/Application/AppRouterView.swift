@@ -24,7 +24,12 @@ struct AppRouterView: View {
                         SpotifyView()
 
                     case .istrue: // Logged in AND Spotify IS connected
-                        HomeView()
+                        TabView {
+                            HomeView()
+                                .tabItem {
+                                    Label("Home", systemImage: "music.note.list")
+                                }
+                        }
 
                     case .loading:
                         VStack {
