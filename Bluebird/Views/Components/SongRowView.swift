@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SongRowView: View {
+    @State private var animationTrigger = 0
+
     let song: DisplayableSong
     let isPlaying: Bool
 
@@ -20,15 +22,27 @@ struct SongRowView: View {
                 Text(song.trackName)
                     .font(.headline)
                     .fontWeight(.semibold)
+                    .lineLimit(1)
                 Text(song.artistName)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .allowsTightening(true)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
 
             Spacer()
 
             if isPlaying {
-                Text("playing")
+                Image(systemName: "waveform")
+                    .symbolEffect(.bounce, options: .speed(0.5), value: animationTrigger)
+                    .frame(width: 45, alignment: .trailing)
+                    .font(.subheadline)
+                    .onAppear {
+                        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                            animationTrigger += 1
+                        }
+                    }
             } else {
                 Text(formattedTimestamp())
                     .font(.caption)

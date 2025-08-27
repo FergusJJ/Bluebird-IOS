@@ -29,6 +29,10 @@ struct AppRouterView: View {
                                 .tabItem {
                                     Label("Home", systemImage: "music.note.list")
                                 }
+                            ProfileView()
+                                .tabItem {
+                                    Label("Profile", systemImage: "person.crop.circle")
+                                }
                         }
 
                     case .loading:
