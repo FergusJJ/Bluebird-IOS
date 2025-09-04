@@ -1,30 +1,19 @@
 import SwiftUI
 
-@MainActor func createViewModel(appState: AppState) -> SpotifyViewModel? {
-    do {
-        let manager = try BluebirdAPIManager()
-        return SpotifyViewModel(appState: appState, spotifyAPIService: manager)
-    } catch {
-        print("FATAL ERROR: Failed to initialize BluebirdAPIManager: \(error)")
-        return nil
-    }
-}
-
 @main
 struct BluebirdApp: App {
     @StateObject private var appState: AppState
-    @State private var spotifyViewModel: SpotifyViewModel?
+    private let apiManager: BluebirdAPIManager
 
     init() {
-        let state = AppState()
-        _appState = StateObject(wrappedValue: state)
-        _spotifyViewModel = State(initialValue: createViewModel(appState: state))
+        apiManager = try! BluebirdAPIManager()
+        _appState = StateObject(wrappedValue: AppState())
     }
 
     var body: some Scene {
         WindowGroup {
             // If appState isnt initialized here ErrorAlertViewModifier fails
-            ContentView(appState: appState, spotifyViewModel: spotifyViewModel)
+            ContentView(appState: appState, apiManager: apiManager)
                 .environmentObject(appState)
         }
     }

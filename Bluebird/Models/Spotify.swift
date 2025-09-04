@@ -21,7 +21,7 @@ struct ViewSongExt: Identifiable, Decodable, DisplayableSong {
     let id = UUID()
 
     let trackName: String
-    let artistName: String
+    let artists: [Artist]
     let albumName: String
     let durationMillis: Int
     let imageURL: String
@@ -29,21 +29,30 @@ struct ViewSongExt: Identifiable, Decodable, DisplayableSong {
     let listenedAt: Int
     enum CodingKeys: String, CodingKey {
         case trackName
-        case artistName
+        case artists
         case albumName
         case durationMillis = "durationMs"
         case imageURL = "imageUrl"
         case spotifyURL = "spotifyUrl"
         case listenedAt
     }
+
+    var artistName: String {
+        artists.map { $0.name }.joined(separator: ", ")
+    }
+}
+
+struct Artist: Decodable {
+    let id: String
+    let name: String
 }
 
 struct ViewSong: DisplayableSong {
     let song: String
-    let artists: String
+    let artists: [String]
     let imageUrl: String
 
     var trackName: String { song }
-    var artistName: String { artists }
+    var artistName: String { artists.joined(separator: ", ") }
     var imageURL: String { imageUrl }
 }

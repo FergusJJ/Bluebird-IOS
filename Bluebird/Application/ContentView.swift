@@ -2,38 +2,30 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var appState: AppState
-    var spotifyViewModel: SpotifyViewModel?
+
+    @StateObject private var spotifyViewModel: SpotifyViewModel
+    @StateObject private var profileViewModel: ProfileViewModel
 
     @Environment(\.scenePhase) var scenePhase
 
+    init(appState: AppState, apiManager: BluebirdAPIManager) {
+        self.appState = appState
+        _spotifyViewModel = StateObject(wrappedValue: SpotifyViewModel(appState: appState, spotifyAPIService: apiManager))
+        _profileViewModel = StateObject(wrappedValue: ProfileViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
+    }
+
     var body: some View {
         Group {
-            if let spotifyVM = spotifyViewModel {
-                AppRouterView()
-                    .environmentObject(spotifyVM)
-                    .modifier(ErrorAlertViewModifier())
-                    .onOpenURL { url in
-                        handleUrl(url)
-                    }
-                    .onChange(of: scenePhase) { _, newPhase in
-                        handleScenePhase(newPhase)
-                    }
-            } else {
-                VStack(spacing: 15) {
-                    Image(systemName: "exclamationmark.octagon.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 60)
-                        .foregroundColor(.red)
-                    Text("Application Initialization Failed")
-                        .font(.title2).bold()
-                    Text("A critical service could not be started. Please restart the app or contact support.")
-                        .font(.body)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+            AppRouterView()
+                .environmentObject(spotifyViewModel)
+                .environmentObject(profileViewModel)
+                .modifier(ErrorAlertViewModifier())
+                .onOpenURL { url in
+                    handleUrl(url)
                 }
-                .padding()
-            }
+                .onChange(of: scenePhase) { _, newPhase in
+                    handleScenePhase(newPhase)
+                }
         }
     }
 

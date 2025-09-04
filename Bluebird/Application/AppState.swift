@@ -13,7 +13,7 @@ class AppState: ObservableObject {
     @Published var errorToDisplay: AppError?
 
     private var authListener: Task<Void, Never>?
-    private var authAPIService: BluebirdAuthAPIService
+    private var authAPIService: BluebirdAccountAPIService
     private var currentUserId: UUID?
     private var spotifyAccessToken: String?
     private var isEstablishingSpotifySession = false

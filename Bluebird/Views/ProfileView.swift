@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @EnvironmentObject var profileViewModel: ProfileViewModel
+
     var body: some View {
         VStack {
-            Text("Profile View")
+            ProfileHeadlineView()
+            Spacer()
         }
     }
 }

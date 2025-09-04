@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-protocol BluebirdAuthAPIService {
+protocol BluebirdAccountAPIService {
     func userSignUp(username: String) async -> Result<Void, BluebirdAPIError>
     func initiateSpotifyConnection() async -> Result<Void, BluebirdAPIError>
     func upsertSpotifyRefreshToken(
@@ -14,6 +14,8 @@ protocol BluebirdAuthAPIService {
     ) async -> Result<String, BluebirdAPIError>
     func refreshSpotifyAccessToken()
         async -> Result<String, BluebirdAPIError>
+    func getProfile() async -> Result<ProfileInfo, BluebirdAPIError>
+    func updateProfile(username: String?, bio: String?, avatarPath: String?) async -> Result<Void, BluebirdAPIError>
 }
 
 protocol SpotifyAPIService {
@@ -78,7 +80,7 @@ enum BluebirdInitializationError: Error, LocalizedError {
     }
 }
 
-class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
+class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
     private let apiURL: URL
 
     init() throws {
@@ -175,7 +177,87 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         }
     }
 
-    /* BluebirdAuthAPIService methods */
+    func updateProfile(username: String?, bio: String?, avatarPath: String?) async -> Result<Void, BluebirdAPIError> {
+        // this should never happen unless i make a mistake
+        print("in update profile, sending request")
+        guard username != nil || bio != nil || avatarPath != nil else {
+            print("Error: at least one field must be non-nil")
+            fatalError()
+        }
+        guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
+            print("Error: Could not create URLComponents from base URL: \(apiURL)")
+            return .failure(.invalidEndpoint)
+        }
+        components.path = apiURL.appendingPathComponent("/api/edge/update-profile").path
+        guard let finalURL = components.url else {
+            print("Error: Could not create final URL from URLComponents: \(components)")
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: finalURL)
+        request.httpMethod = "PATCH"
+
+        if let session = try? await SupabaseClientManager.shared.client.auth.session {
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            return .failure(.notAuthenticated)
+        }
+        do {
+            let jsonData = try JSONEncoder().encode(UpdateProfileRequest(username: username, bio: bio, avatarUrl: avatarPath))
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = jsonData
+        } catch {
+            print("Error encoding JSON: \(error)")
+            return .failure(.encodingError(error))
+        }
+        do {
+            struct UpdateProfileResponse: Decodable {
+                let message: String
+                enum CodingKeys: String, CodingKey {
+                    case message
+                }
+            }
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    // might end up sending more info back from API
+                    // so going to decode message anyways
+                    _ = try JSONDecoder().decode(
+                        UpdateProfileResponse.self, from: data
+                    )
+                    return .success(())
+                } catch {
+                    print("Save Error: decoding error")
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error))
+                }
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self, from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message: "\(errorResponse.errorCode): \(errorResponse.error)"
+                        ))
+
+                } catch {
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error)
+                    )
+                }
+            }
+        } catch {
+            print("Update profile network request failed", "error", error)
+            return .failure(.networkError(error))
+        }
+    }
+
+    /* BluebirdAccountAPIService methods */
     @MainActor
     func initiateSpotifyConnection() async -> Result<Void, BluebirdAPIError> {
         guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
@@ -429,7 +511,75 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         }
     }
 
-    /*  SpotifyAPIService methods */
+    // MARK: Profile related methods
+
+    func getProfile() async -> Result<ProfileInfo, BluebirdAPIError> {
+        guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
+            return .failure(.invalidEndpoint)
+        }
+        let profilePath = "/api/me"
+        components.path = profilePath
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        print("attempting to get api token from supabase")
+        if let session = try? await SupabaseClientManager.shared.client.auth.session {
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("ProfileInfo Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let decodedResponse = try JSONDecoder().decode(
+                        ProfileInfo.self, from: data
+                    )
+                    return .success(decodedResponse)
+                } catch {
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error)
+                    )
+                }
+
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self, from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message: "\(errorResponse.errorCode): \(errorResponse.error)"
+                        ))
+
+                } catch {
+                    return .failure(
+                        .decodingError(statusCode: httpResponse.statusCode, error: error)
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print("ProfileInfo Error: Network Error - \(error.localizedDescription)")
+            return .failure(.networkError(error))
+        } catch {
+            print("ProfileInfo Error: Unknown error - \(error.localizedDescription)")
+            return .failure(.unknownError)
+        }
+    }
+
+    // MARK: -  SpotifyAPIService methods
+
     func getCurrentlyPlaying(spotifyAccessToken: String) async -> Result<
         CurrentlyPlayingSongResponse?, BluebirdAPIError
     > {
@@ -499,6 +649,7 @@ class BluebirdAPIManager: BluebirdAuthAPIService, SpotifyAPIService {
         }
     }
 
+    //
     func getSongHistoryPaginate(before: Int) async -> Result<[ViewSongExt], BluebirdAPIError> {
         guard var components = URLComponents(url: apiURL, resolvingAgainstBaseURL: true) else {
             return .failure(.invalidEndpoint)

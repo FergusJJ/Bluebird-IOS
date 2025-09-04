@@ -39,7 +39,7 @@ class SpotifyViewModel: ObservableObject {
             }
             currentlyPlaying = ViewSong(
                 song: songData.trackName,
-                artists: songData.artistNames.joined(separator: ", "),
+                artists: songData.artistNames,
                 imageUrl: songData.imageUrl
             )
         case let .failure(serviceError):
