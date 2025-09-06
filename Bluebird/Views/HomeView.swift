@@ -2,8 +2,19 @@ import SwiftUI
 
 struct HomeView: View {
     var body: some View {
-        VStack {
-            SongHistoryView()
+        NavigationStack {
+            VStack {
+                SongHistoryView()
+            }
+            .background(Color.darkBackground.ignoresSafeArea(edges: .top))
+            .navigationTitle("History")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // empty for now
+            }
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.darkBackground, for: .navigationBar)
+            .toolbarBackgroundVisibility(.visible, for: .navigationBar)
         }
     }
 }

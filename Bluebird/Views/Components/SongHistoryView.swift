@@ -11,12 +11,14 @@ struct SongHistoryView: View {
                     song: currentlyPlayingSong,
                     isPlaying: true
                 )
+                .listRowBackground(Color.darkElement)
             }
             ForEach(spotifyViewModel.sortedSongs) { song in
                 SongRowView(
                     song: song,
                     isPlaying: false
                 )
+                .listRowBackground(Color.darkElement)
                 .onAppear {
                     if song.id == spotifyViewModel.sortedSongs.last?.id {
                         Task {
@@ -30,8 +32,10 @@ struct SongHistoryView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
+                    .listRowBackground(Color.clear)
             }
         }
+        .scrollContentBackground(.hidden)
         .refreshable {
             await spotifyViewModel.loadCurrentlyPlaying()
             await spotifyViewModel.refreshHistory()
@@ -44,6 +48,5 @@ struct SongHistoryView: View {
                 }
             }
         }
-        .navigationTitle("Song History")
     }
 }

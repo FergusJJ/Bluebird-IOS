@@ -42,6 +42,8 @@ class SpotifyViewModel: ObservableObject {
                 artists: songData.artistNames,
                 imageUrl: songData.imageUrl
             )
+            appState.currentSong = songData.trackName
+            appState.currentArtist = songData.artistNames.joined(separator: ", ")
         case let .failure(serviceError):
             currentlyPlaying = nil
             let presentationError = AppError(from: serviceError)

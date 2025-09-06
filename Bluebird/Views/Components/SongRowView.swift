@@ -8,24 +8,19 @@ struct SongRowView: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            AsyncImage(url: URL(string: song.imageURL)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Image(systemName: "photo.fill")
-            }
-            .frame(width: 50, height: 50)
-            .cornerRadius(4)
-
+            CachedAsyncImage(url: URL(string: song.imageURL)!)
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 50, height: 50)
+                .cornerRadius(4)
             VStack(alignment: .leading, spacing: 4) {
                 Text(song.trackName)
                     .font(.headline)
                     .fontWeight(.semibold)
                     .lineLimit(1)
+                    .foregroundStyle(Color.nearWhite)
                 Text(song.artistName)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.lightGray)
                     .allowsTightening(true)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -35,18 +30,26 @@ struct SongRowView: View {
 
             if isPlaying {
                 Image(systemName: "waveform")
-                    .symbolEffect(.bounce, options: .speed(0.5), value: animationTrigger)
+                    .symbolEffect(
+                        .bounce,
+                        options: .speed(0.5),
+                        value: animationTrigger
+                    )
                     .frame(width: 45, alignment: .trailing)
                     .font(.subheadline)
+                    .foregroundStyle(Color.accentColor)
                     .onAppear {
-                        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                        Timer.scheduledTimer(
+                            withTimeInterval: 0.5,
+                            repeats: true
+                        ) { _ in
                             animationTrigger += 1
                         }
                     }
             } else {
                 Text(formattedTimestamp())
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.lightGray)
                     .frame(width: 45, alignment: .trailing)
             }
         }

@@ -26,13 +26,8 @@ struct ProfilePictureView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } else if let imageUrl = profileViewModel.avatarURL {
-                        AsyncImage(url: imageUrl) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Color.darkElement.opacity(0.3)
-                        }
+                        CachedAsyncImage(url: imageUrl)
+                            .aspectRatio(contentMode: .fill)
                     } else {
                         Image(systemName: "person.fill")
                             .resizable()
@@ -50,7 +45,7 @@ struct ProfilePictureView: View {
                 .clipShape(Circle())
 
                 Circle()
-                    .stroke(Color.babyBlue, lineWidth: 2)
+                    .stroke(Color.accentColor, lineWidth: 2)
                     .frame(width: 80, height: 80)
 
                 Image(systemName: "plus.circle.fill")
@@ -65,7 +60,7 @@ struct ProfilePictureView: View {
         .onChange(of: profileImage) { _, newImage in
             if let image = newImage {
                 Task {
-                    let success = await profileViewModel.updateProfilePicture(with: image)
+                    await profileViewModel.updateProfilePicture(with: image)
                 }
             }
         }

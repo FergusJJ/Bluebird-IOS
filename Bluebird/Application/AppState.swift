@@ -27,6 +27,9 @@ class AppState: ObservableObject {
     private let keychainAccessTokenType = "SPOTIFY_ACCESS_TOKEN"
     private let keychainRefreshTokenType = "SPOTIFY_REFRESH_TOKEN"
 
+    @Published var currentSong: String = ""
+    @Published var currentArtist: String = ""
+
     init() {
         do {
             authAPIService = try BluebirdAPIManager()
@@ -58,6 +61,11 @@ class AppState: ObservableObject {
 
     func clearError() {
         errorToDisplay = nil
+    }
+
+    func setArtistSong(songName: String, songArtist: String) {
+        currentSong = songName
+        currentArtist = songArtist
     }
 
     func handleAppDidBecomeActive() async {

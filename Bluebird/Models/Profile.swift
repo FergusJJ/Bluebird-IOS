@@ -17,3 +17,9 @@ struct ProfileInfo: Decodable {
     let bio: String
     let avatarUrl: String
 }
+
+struct ScrollViewObject: Identifiable {
+    let id = UUID()
+    let imageURL: URL
+    let name: String
+}
