@@ -7,7 +7,7 @@ struct ProfileHeadlineView: View {
     @State var editingBio = ""
 
     var body: some View {
-        VStack(alignment: .center, spacing: 10) {
+        VStack(alignment: .center, spacing: 15) {
             HStack(spacing: 15) {
                 ProfilePictureView()
                 VStack(spacing: 15) {
@@ -70,6 +70,13 @@ struct ProfileHeadlineView: View {
                     }
                 }
             }
+
+            HeadlineStatsView(
+                totalMinutesListened: profileViewModel.totalMinutesListened,
+                totalPlays: profileViewModel.totalPlays,
+                totalUniqueArtists: profileViewModel.totalUniqueArtists
+            )
+
             Spacer()
             Text(profileViewModel.getCurrentlyPlayingHeadline())
                 .font(.subheadline)
@@ -80,8 +87,7 @@ struct ProfileHeadlineView: View {
         .onAppear {
             Task {
                 await profileViewModel.loadProfile()
-                // maybe can use appState to store currently playing song
-                // want to have it moving left to right showing the full name
+                await profileViewModel.loadHeadlineStats()
             }
         }
     }

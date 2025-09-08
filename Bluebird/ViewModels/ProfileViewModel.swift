@@ -5,11 +5,19 @@ class ProfileViewModel: ObservableObject {
     // may want to add stuff here for all time song plays/number of artists listened to etc.
     // but not sure how/where im going to store that yet
 
+    // MARK: User profile vars
+
     @Published var username: String = ""
     @Published var bio: String = ""
     @Published var avatarPath = ""
     @Published var avatarURL: URL?
     @Published var selectedImage: UIImage?
+
+    // MARK: User stats vars
+
+    @Published var totalMinutesListened: Int = 0
+    @Published var totalPlays: Int = 0
+    @Published var totalUniqueArtists: Int = 0
 
     @Published var isLoading = false
 
@@ -157,6 +165,19 @@ class ProfileViewModel: ObservableObject {
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading profile info: \(presentationError)")
+        }
+    }
+
+    func loadHeadlineStats() async {
+        let result = await bluebirdAccountAPIService.getHeadlineStats()
+        switch result {
+        case let .success(stats):
+            totalPlays = stats.total_plays
+            totalUniqueArtists = stats.unique_artists
+            totalMinutesListened = (stats.total_duration_millis / (60 * 1000))
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error loading headline stats info: \(presentationError)")
         }
     }
 

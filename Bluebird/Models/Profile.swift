@@ -18,6 +18,12 @@ struct ProfileInfo: Decodable {
     let avatarUrl: String
 }
 
+struct HeadlineViewStats: Decodable {
+    let total_plays: Int
+    let unique_artists: Int
+    let total_duration_millis: Int
+}
+
 struct ScrollViewObject: Identifiable {
     let id = UUID()
     let imageURL: URL
