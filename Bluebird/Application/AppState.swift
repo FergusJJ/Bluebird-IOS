@@ -13,7 +13,7 @@ class AppState: ObservableObject {
     @Published var errorToDisplay: AppError?
 
     private var authListener: Task<Void, Never>?
-    private var authAPIService: BluebirdAuthAPIService
+    private var authAPIService: BluebirdAccountAPIService
     private var currentUserId: UUID?
     private var spotifyAccessToken: String?
     private var isEstablishingSpotifySession = false
@@ -26,6 +26,9 @@ class AppState: ObservableObject {
 
     private let keychainAccessTokenType = "SPOTIFY_ACCESS_TOKEN"
     private let keychainRefreshTokenType = "SPOTIFY_REFRESH_TOKEN"
+
+    @Published var currentSong: String = ""
+    @Published var currentArtist: String = ""
 
     init() {
         do {
@@ -58,6 +61,11 @@ class AppState: ObservableObject {
 
     func clearError() {
         errorToDisplay = nil
+    }
+
+    func setArtistSong(songName: String, songArtist: String) {
+        currentSong = songName
+        currentArtist = songArtist
     }
 
     func handleAppDidBecomeActive() async {

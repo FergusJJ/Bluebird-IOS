@@ -1,10 +1,13 @@
 import Foundation
 import Supabase
+import UIKit
 
 // TODO: move supabase signup/read calls into this class
 class SupabaseClientManager {
     static let shared = SupabaseClientManager()
     let client: SupabaseClient
+
+    private let avatarsPublicBucket = "bluebird-avatars"
 
     private init() {
         guard let path = Bundle.main.path(forResource: "SupabaseCredentials", ofType: "plist"),
@@ -38,5 +41,43 @@ class SupabaseClientManager {
         //    }
         //    print("Auth state change listener finished.")
         // }
+    }
+
+    // Might change this to only perform upload and move resize stuff but leaving it for now
+    func uploadAvatar(avatar: UIImage) async -> Result<String, Error> {
+        guard let resized = avatar.resize(to: CGSize(width: 400, height: 400)) else {
+            return .failure(NSError(domain: "MyApp", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to resize image."]))
+        }
+
+        guard let imageData = resized.jpegData(compressionQuality: 0.8) else {
+            return .failure(NSError(domain: "MyApp", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unable to convert to JPEG."]))
+        }
+
+        let fileName = "public/\(UUID().uuidString).jpg"
+
+        do {
+            let fileOptions = FileOptions(contentType: "image/jpeg")
+            _ = try await client.storage
+                .from(avatarsPublicBucket)
+                .upload(fileName, data: imageData, options: fileOptions)
+
+            return .success(fileName)
+
+        } catch {
+            print("Error: unable to save profile picture to bucket: \(error)")
+            return .failure(error)
+        }
+    }
+
+    func getAvatarUrl(for fileName: String) -> URL? {
+        do {
+            let avatarUrl = try client.storage
+                .from(avatarsPublicBucket)
+                .getPublicURL(path: fileName)
+            return avatarUrl
+        } catch {
+            print("Error: unable to get bucket \(error)")
+            return nil
+        }
     }
 }

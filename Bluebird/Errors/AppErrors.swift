@@ -15,6 +15,8 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
             self = .loginFailed(error.localizedDescription)
         case let .logoutFailed(error):
             self = .logoutFailed(error.localizedDescription)
+        case let .storageError(error):
+            self = .storageError(error.localizedDescription)
         case .unacceptableStatusCode:
             self = .unacceptableStatusCode
         case .genericError:
@@ -82,6 +84,7 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
     case signupFailed(String)
     case loginFailed(String)
     case logoutFailed(String)
+    case storageError(String)
     case unacceptableStatusCode
     case genericSupabaseError
 
@@ -113,6 +116,8 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
             return "An error occurred whilst logging in. \(reason)"
         case let .logoutFailed(reason):
             return "An error occurred whilst logging out. \(reason)"
+        case let .storageError(reason):
+            return "An error occurred whilst uploading asset. \(reason)"
         case .unacceptableStatusCode:
             return "Bad response received whilst reading database."
         case .genericSupabaseError:

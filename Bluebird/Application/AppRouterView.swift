@@ -5,50 +5,37 @@ struct AppRouterView: View {
     @EnvironmentObject var spotifyView: SpotifyViewModel
 
     var body: some View {
-        Group {
-            if appState.isLoggedIn == .loading
-                || appState.isSpotifyConnected == .loading
-            {
-                VStack {
-                    Text("Loading...")
-                    ProgressView()
+        if appState.isLoggedIn == .loading || appState.isSpotifyConnected == .loading {
+            VStack {
+                Text("Loading...")
+                ProgressView()
+            }
+        } else if appState.isLoggedIn == .isfalse {
+            AuthFlowView()
+        } else if appState.isSpotifyConnected == .isfalse {
+            SpotifyView()
+        } else {
+            TabView {
+                NavigationStack {
+                    HomeView()
                 }
-            } else {
-                switch appState.isLoggedIn {
-                case .isfalse:
-                    AuthFlowView()
-
-                case .istrue:
-                    switch appState.isSpotifyConnected {
-                    case .isfalse:
-                        SpotifyView()
-
-                    case .istrue: // Logged in AND Spotify IS connected
-                        TabView {
-                            HomeView()
-                                .tabItem {
-                                    Label("Home", systemImage: "music.note.list")
-                                }
-                            ProfileView()
-                                .tabItem {
-                                    Label("Profile", systemImage: "person.crop.circle")
-                                }
-                        }
-
-                    case .loading:
-                        VStack {
-                            Text("Checking Spotify Status...")
-                            ProgressView()
-                        }
-                    }
-
-                case .loading:
-                    VStack {
-                        Text("Unexpected Loading State...")
-                        ProgressView()
-                    }
+                .toolbarBackground(Color.darkBackground, for: .tabBar)
+                .toolbarColorScheme(.dark, for: .tabBar)
+                .tabItem {
+                    Label("Home", systemImage: "music.note.list")
+                }
+                NavigationStack {
+                    ProfileView()
+                }
+                .toolbarBackground(Color.darkBackground, for: .tabBar)
+                .toolbarColorScheme(.dark, for: .tabBar)
+                .tabItem {
+                    Label("Profile", systemImage: "person.crop.circle")
                 }
             }
+            .toolbarBackground(Color.darkBackground, for: .tabBar)
+            .toolbarColorScheme(.dark, for: .tabBar)
+            .applyDarkNavigationBar()
         }
     }
 }

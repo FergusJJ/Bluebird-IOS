@@ -4,8 +4,8 @@ import SwiftUI
 
 @MainActor
 class SpotifyViewModel: ObservableObject {
-    @Published var currentlyPlaying: ViewSong?
-    @Published var songHistory: [Int: ViewSongExt] = [:]
+    @Published var currentlyPlaying: SongDetail?
+    @Published var songHistory: [Int: SongDetail] = [:]
 
     @Published var isLoading: Bool = false
     @Published var canLoadMore: Bool = true
@@ -13,8 +13,8 @@ class SpotifyViewModel: ObservableObject {
     private var appState: AppState
     private let spotifyAPIService: SpotifyAPIService
 
-    var sortedSongs: [ViewSongExt] {
-        songHistory.values.sorted { $0.listenedAt > $1.listenedAt }
+    var sortedSongs: [SongDetail] {
+        songHistory.values.sorted { $0.listened_at! > $1.listened_at! }
     }
 
     init(appState: AppState, spotifyAPIService: SpotifyAPIService) {
@@ -29,7 +29,9 @@ class SpotifyViewModel: ObservableObject {
             return
         }
 
-        let result = await spotifyAPIService.getCurrentlyPlaying(spotifyAccessToken: accessToken)
+        let result = await spotifyAPIService.getCurrentlyPlaying(
+            spotifyAccessToken: accessToken
+        )
 
         switch result {
         case let .success(response):
@@ -37,11 +39,11 @@ class SpotifyViewModel: ObservableObject {
                 currentlyPlaying = nil
                 return
             }
-            currentlyPlaying = ViewSong(
-                song: songData.trackName,
-                artists: songData.artistNames.joined(separator: ", "),
-                imageUrl: songData.imageUrl
+            appState.currentSong = songData.name
+            appState.currentArtist = songData.artists.map { $0.name }.joined(
+                separator: ", "
             )
+            currentlyPlaying = songData
         case let .failure(serviceError):
             currentlyPlaying = nil
             let presentationError = AppError(from: serviceError)
@@ -49,7 +51,6 @@ class SpotifyViewModel: ObservableObject {
         }
     }
 
-    /// Fetches the latest songs, intended for pull-to-refresh or initial load.
     func refreshHistory() async {
         guard let accessToken = appState.getSpotifyAccessToken() else {
             print("Refresh failed: Access token is nil.")
@@ -68,9 +69,11 @@ class SpotifyViewModel: ObservableObject {
             }
 
             print("Refreshed and found \(songArray.count) new songs.")
-            print("first: \(songArray.first!.trackName)")
-            print("last: \(songArray.last!.trackName)")
-            let newSongs = Dictionary(uniqueKeysWithValues: songArray.map { ($0.listenedAt, $0) })
+            print("first: \(songArray.first!.name)")
+            print("last: \(songArray.last!.name)")
+            let newSongs = Dictionary(
+                uniqueKeysWithValues: songArray.map { ($0.listened_at!, $0) }
+            )
             songHistory.merge(newSongs) { existing, _ in existing }
 
         case let .failure(serviceError):
@@ -88,7 +91,9 @@ class SpotifyViewModel: ObservableObject {
         defer { isLoading = false }
 
         guard let oldestTimestamp = songHistory.keys.min() else {
-            print("Cannot paginate further, history is empty or not yet loaded.")
+            print(
+                "Cannot paginate further, history is empty or not yet loaded."
+            )
             canLoadMore = false
             return
         }
@@ -105,13 +110,92 @@ class SpotifyViewModel: ObservableObject {
                 canLoadMore = false
                 return
             }
-
-            let newSongs = Dictionary(uniqueKeysWithValues: songArray.map { ($0.listenedAt, $0) })
+            let newSongs = Dictionary(
+                uniqueKeysWithValues: songArray.map { ($0.listened_at!, $0) }
+            )
             songHistory.merge(newSongs) { existing, _ in existing }
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error fetching older history: \(presentationError)")
+        }
+    }
+
+    func fetchArtistDetail(for artistID: String) async -> ArtistDetail? {
+        guard let accessToken = appState.getSpotifyAccessToken() else {
+            print("Refresh failed: Access token is nil.")
+            return nil
+        }
+        guard !isLoading else {
+            return nil
+        }
+        defer {
+            isLoading = false
+        }
+        isLoading = true
+        let result = await spotifyAPIService.getArtistDetail(
+            spotifyAccessToken: accessToken,
+            id: artistID
+        )
+        switch result {
+        case let .success(artistDetail):
+            return artistDetail
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching artist detail: \(presentationError)")
+            return nil
+        }
+    }
+
+    func fetchSongDetail(for songID: String) async -> SongDetail? {
+        guard let accessToken = appState.getSpotifyAccessToken() else {
+            print("Refresh failed: Access token is nil.")
+            return nil
+        }
+        guard !isLoading else {
+            return nil
+        }
+        defer {
+            isLoading = false
+        }
+        isLoading = true
+        let result = await spotifyAPIService.getSongDetail(
+            spotifyAccessToken: accessToken,
+            id: songID
+        )
+        switch result {
+        case let .success(artistDetail):
+            return artistDetail
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching song detail: \(presentationError)")
+            return nil
+        }
+    }
+
+    func fetchAlbumDetail(for albumID: String) async -> AlbumDetail? {
+        guard let accessToken = appState.getSpotifyAccessToken() else {
+            print("Refresh failed: Access token is nil.")
+            return nil
+        }
+        guard !isLoading else {
+            return nil
+        }
+        defer {
+            isLoading = false
+        }
+        isLoading = true
+        let result = await spotifyAPIService.getAlbumDetail(
+            spotifyAccessToken: accessToken,
+            id: albumID
+        )
+        switch result {
+        case let .success(albumDetail):
+            return albumDetail
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching album detail: \(presentationError)")
+            return nil
         }
     }
 }
