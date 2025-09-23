@@ -38,7 +38,6 @@ class KeychainManager {
         }
     }
 
-    // Optional: Add a delete function for cleanup or updates
     static func deleteData(service: String, account: String) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

@@ -19,6 +19,10 @@ class ProfileViewModel: ObservableObject {
     @Published var totalPlays: Int = 0
     @Published var totalUniqueArtists: Int = 0
 
+    // MARK: extra
+
+    @Published var searchQuery: String = ""
+
     @Published var isLoading = false
 
     @Published var pinnedArtists: [ScrollViewObject] = [

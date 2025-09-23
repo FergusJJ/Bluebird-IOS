@@ -1,58 +1,60 @@
 import Foundation
 
-protocol DisplayableSong {
-    var trackName: String { get }
-    var artistName: String { get }
-    var imageURL: String { get }
+struct ArtistDetail: Codable, Identifiable {
+    var id: String { artist_id }
+    let artist_id: String
+    let name: String
+    let followers: Int
+    let spotify_uri: String
+    let albums: [AlbumSummary]
+    let top_tracks: [TopTrack]
 }
 
-struct CurrentlyPlayingSongResponse: Decodable {
-    let trackName: String
-    let artistNames: [String]
-    let imageUrl: String
-    enum CodingKeys: String, CodingKey {
-        case trackName = "track_name"
-        case artistNames = "artist_names"
-        case imageUrl = "image_url"
-    }
+struct AlbumDetail: Codable, Identifiable {
+    var id: String { album_id }
+    let album_id: String
+    let name: String
+    let artists: [SongDetailArtist]
+    let image_url: String
+    let release_date: String
+    let total_tracks: Int
+    let spotify_uri: String
+
+    let tracks: [AlbumDetailTrack]
 }
 
-struct ViewSongExt: Identifiable, Decodable, DisplayableSong {
-    let id = UUID()
-
-    let trackName: String
-    let artists: [Artist]
-    let albumName: String
-    let durationMillis: Int
-    let imageURL: String
-    let spotifyURL: String
-    let listenedAt: Int
-    enum CodingKeys: String, CodingKey {
-        case trackName
-        case artists
-        case albumName
-        case durationMillis = "durationMs"
-        case imageURL = "imageUrl"
-        case spotifyURL = "spotifyUrl"
-        case listenedAt
-    }
-
-    var artistName: String {
-        artists.map { $0.name }.joined(separator: ", ")
-    }
-}
-
-struct Artist: Decodable {
+struct AlbumDetailTrack: Codable, Identifiable {
     let id: String
     let name: String
+    let track_number: Int
 }
 
-struct ViewSong: DisplayableSong {
-    let song: String
-    let artists: [String]
-    let imageUrl: String
+struct AlbumSummary: Codable, Identifiable, Hashable {
+    var id: String { album_id }
+    let album_id: String
+    let name: String
+    let image_url: String
+    let spotify_uri: String
+    let artists: [SongDetailArtist]
 
-    var trackName: String { song }
-    var artistName: String { artists.joined(separator: ", ") }
-    var imageURL: String { imageUrl }
+    static func == (lhs: AlbumSummary, rhs: AlbumSummary) -> Bool {
+        return lhs.album_id == rhs.album_id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+/* struct Artist: Codable, Identifiable {
+     let id: String
+     let name: String
+     let spotify_uri: String?
+ } */
+
+struct TopTrack: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let spotify_uri: String
+    let image_url: String
 }

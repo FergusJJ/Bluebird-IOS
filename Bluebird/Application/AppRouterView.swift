@@ -16,19 +16,26 @@ struct AppRouterView: View {
             SpotifyView()
         } else {
             TabView {
-                HomeView()
-                    .toolbarBackground(Color.darkBackground, for: .tabBar)
-                    .toolbarColorScheme(.dark, for: .tabBar)
-                    .tabItem {
-                        Label("Home", systemImage: "music.note.list")
-                    }
-                ProfileView()
-                    .toolbarBackground(Color.darkBackground, for: .tabBar)
-                    .toolbarColorScheme(.dark, for: .tabBar)
-                    .tabItem {
-                        Label("Profile", systemImage: "person.crop.circle")
-                    }
+                NavigationStack {
+                    HomeView()
+                }
+                .toolbarBackground(Color.darkBackground, for: .tabBar)
+                .toolbarColorScheme(.dark, for: .tabBar)
+                .tabItem {
+                    Label("Home", systemImage: "music.note.list")
+                }
+                NavigationStack {
+                    ProfileView()
+                }
+                .toolbarBackground(Color.darkBackground, for: .tabBar)
+                .toolbarColorScheme(.dark, for: .tabBar)
+                .tabItem {
+                    Label("Profile", systemImage: "person.crop.circle")
+                }
             }
+            .toolbarBackground(Color.darkBackground, for: .tabBar)
+            .toolbarColorScheme(.dark, for: .tabBar)
+            .applyDarkNavigationBar()
         }
     }
 }

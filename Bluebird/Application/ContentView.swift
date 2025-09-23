@@ -5,6 +5,7 @@ struct ContentView: View {
 
     @StateObject private var spotifyViewModel: SpotifyViewModel
     @StateObject private var profileViewModel: ProfileViewModel
+    @StateObject private var searchViewModel: SearchViewModel
 
     @Environment(\.scenePhase) var scenePhase
 
@@ -12,6 +13,7 @@ struct ContentView: View {
         self.appState = appState
         _spotifyViewModel = StateObject(wrappedValue: SpotifyViewModel(appState: appState, spotifyAPIService: apiManager))
         _profileViewModel = StateObject(wrappedValue: ProfileViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
+        _searchViewModel = StateObject(wrappedValue: SearchViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
     }
 
     var body: some View {
@@ -19,6 +21,7 @@ struct ContentView: View {
             AppRouterView()
                 .environmentObject(spotifyViewModel)
                 .environmentObject(profileViewModel)
+                .environmentObject(searchViewModel)
                 .modifier(ErrorAlertViewModifier())
                 .onOpenURL { url in
                     handleUrl(url)
