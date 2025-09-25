@@ -8,21 +8,32 @@ struct ProfileView: View {
             VStack(spacing: 20) {
                 ProfileHeadlineView()
                 Divider()
+                // TODO: - need to fix the horizontal padding
                 VStack {
-                    HorizontalScrollView(
-                        horizontalScrollViewTitle: "Pinned Tracks",
-                        scrollViewObjects: profileViewModel.pinnedTracks
-                    )
+                    VStack {
+                        HorizontalScrollSection.tracks(
+                            title: "Your Pinned Tracks",
+                            items: profileViewModel.pinnedTracks
+                        )
+                        .padding(.horizontal)
+                    }
                     Divider()
-                    HorizontalScrollView(
-                        horizontalScrollViewTitle: "Pinned Albums",
-                        scrollViewObjects: profileViewModel.pinnedAlbums
-                    )
+                    VStack {
+                        HorizontalScrollSection.albums(
+                            title: "Your Pinned Albums",
+                            items: profileViewModel.pinnedAlbums
+                        )
+                        .padding(.horizontal)
+                    }
                     Divider()
-                    HorizontalScrollView(
-                        horizontalScrollViewTitle: "Pinned Artists",
-                        scrollViewObjects: profileViewModel.pinnedArtists
-                    )
+                    VStack {
+                        HorizontalScrollSection.artists(
+                            title: "Your Pinned Artists",
+                            items: profileViewModel.pinnedArtists
+                        )
+                        .padding(.horizontal)
+                    }
+                    Divider()
                 }
                 .padding()
                 .cornerRadius(10)
@@ -39,9 +50,24 @@ struct ProfileView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 NavigationLink(destination: SettingsView()) {
                     Image(systemName: "gearshape.fill")
-                        .foregroundColor(Color.accentColor)
+                        .foregroundColor(Color.babyBlue)
                 }
             }
         }
     }
+
+    /* @ViewBuilder
+     func pinnedAlbumsSection() -> some View {
+         if let pinnedAlbums = profileViewModel.pinnedAlbums,
+             !pinnedAlbums.isEmpty
+         {
+             VStack {
+                 HorizontalScrollSection.albums(
+                     title: "Your Pinned Albums",
+                     items: pinnedAlbums
+                 )
+             }
+         }
+     }
+     */
 }

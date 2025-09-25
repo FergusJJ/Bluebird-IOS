@@ -11,6 +11,8 @@ struct AlbumDetailView: View {
     @State private var isPinned = false
 
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
+    // use to check pins
+    @EnvironmentObject var profileViewModel: ProfileViewModel
 
     // MARK: - Convenience initializers
 
@@ -21,6 +23,7 @@ struct AlbumDetailView: View {
         initialName = album.name
     }
 
+    // need to check whether pinned first, maybe just hold ids of pinned albums in viewModel?
     init(albumID: String, albumName: String, albumImageURL: String) {
         self.albumID = albumID
         initialAlbum = nil
@@ -121,7 +124,6 @@ struct AlbumDetailView: View {
                     HStack {
                         Spacer()
                         CircleIconButton(systemName: isPinned ? "pin.fill" : "pin") {
-                            isPinned.toggle()
                             onPinTapped()
                         }
                     }
@@ -160,11 +162,24 @@ struct AlbumDetailView: View {
     }
 
     private func onPinTapped() {
-        print("Pinning album \(albumID)")
+        if let loadedID = album?.album_id {
+            Task {
+                let isDelete = isPinned
+                isPinned.toggle()
+                let success = await profileViewModel.updatePin(for: loadedID, entity: "album", isDelete: isDelete)
+                if !success {
+                    isPinned.toggle()
+                }
+            }
+        }
     }
 
     private func fetchAlbumIfNeeded() async {
-        guard album == nil, initialAlbum == nil else { return }
+        let pin = Pin(entity_id: albumID, entity_type: .album)
+        isPinned = profileViewModel.isPinned(pin)
+        guard album == nil, initialAlbum == nil else {
+            return
+        }
         isLoading = true
         album = await spotifyViewModel.fetchAlbumDetail(for: albumID)
         isLoading = false

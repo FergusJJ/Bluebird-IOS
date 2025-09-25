@@ -10,6 +10,7 @@ struct SongDetailView: View {
     @State private var isLoading = false
     @State private var isPinned = false
 
+    @EnvironmentObject var profileViewModel: ProfileViewModel
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
 
     // Convenience initializers
@@ -51,26 +52,6 @@ struct SongDetailView: View {
 
     @ViewBuilder
     private func detailContent(for song: SongDetail) -> some View {
-        /* VStack(alignment: .center) {
-             ZStack(alignment: .bottomTrailing) {
-                 CachedAsyncImage(url: URL(string: song.album_image_url)!)
-                     .aspectRatio(contentMode: .fit)
-                     .padding(.horizontal, 10)
-
-                 Button {
-                     isPinned.toggle()
-                     onPinTapped()
-                 } label: {
-                     Image(systemName: isPinned ? "pin.fill" : "pin")
-                         .font(.title2)
-                         .padding(8)
-                         .background(Color.black.opacity(0.6))
-                         .clipShape(Circle())
-                         .foregroundStyle(.white)
-                         .padding([.trailing, .bottom], 12)
-                 }
-             }
-         } */
         HeaderView(for: song)
 
         VStack(alignment: .leading, spacing: 8) {
@@ -130,7 +111,6 @@ struct SongDetailView: View {
                 HStack {
                     Spacer()
                     CircleIconButton(systemName: isPinned ? "pin.fill" : "pin") {
-                        isPinned.toggle()
                         onPinTapped()
                     }
                 }
@@ -158,10 +138,23 @@ struct SongDetailView: View {
     }
 
     private func onPinTapped() {
-        print("Pinning track \(trackID)")
+        if let loadedID = song?.track_id ?? initialSong?.track_id {
+            Task {
+                let isDelete = isPinned
+                isPinned.toggle()
+                let success = await profileViewModel.updatePin(for: loadedID, entity: "track", isDelete: isDelete)
+                if !success {
+                    isPinned.toggle()
+                }
+            }
+        } else {
+            print("SongDetailView - song and initailSong not loaded")
+        }
     }
 
     private func fetchSongIfNeeded() async {
+        let pin = Pin(entity_id: trackID, entity_type: .track)
+        isPinned = profileViewModel.isPinned(pin)
         guard song == nil, initialSong == nil else { return }
         isLoading = true
         song = await spotifyViewModel.fetchSongDetail(for: trackID)

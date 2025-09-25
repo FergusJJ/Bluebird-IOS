@@ -5,6 +5,7 @@ struct ArtistDetailView: View {
     @State private var isPinned = false
     @State private var artistDetail: ArtistDetail?
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
+    @EnvironmentObject var profileViewModel: ProfileViewModel
 
     @State private var selectedTrack: TopTrack?
     @State private var selectedAlbum: AlbumSummary?
@@ -35,8 +36,17 @@ struct ArtistDetailView: View {
     }
 
     private func onPinTapped() {
-        print("Pinning artist")
-        // Add pinning logic here
+        // probably going to change this condition to whether the pins havbe loaded or smth
+        if let loadedID = artistDetail?.id {
+            Task {
+                let isDelete = isPinned
+                isPinned.toggle()
+                let success = await profileViewModel.updatePin(for: loadedID, entity: "artist", isDelete: isDelete)
+                if !success {
+                    isPinned.toggle()
+                }
+            }
+        }
     }
 
     private func onOpenSpotifyTapped(_ uri: String) {
@@ -48,6 +58,10 @@ struct ArtistDetailView: View {
 
     private func fetchData() async {
         artistDetail = await spotifyViewModel.fetchArtistDetail(for: artist.id)
+        if let artistId = artistDetail?.artist_id {
+            let pin = Pin(entity_id: artistId, entity_type: .artist)
+            isPinned = profileViewModel.isPinned(pin)
+        }
     }
 }
 
@@ -76,7 +90,6 @@ private extension ArtistDetailView {
                 HStack {
                     Spacer()
                     CircleIconButton(systemName: isPinned ? "pin.fill" : "pin") {
-                        isPinned.toggle()
                         onPinTapped()
                     }
                 }
@@ -126,7 +139,6 @@ private extension ArtistDetailView {
                     albumID: album.album_id, albumName: album.name, albumImageURL: album.image_url
                 )
             }
-            .padding(.horizontal)
             Divider()
         }
     }

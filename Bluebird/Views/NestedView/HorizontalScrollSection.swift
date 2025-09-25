@@ -67,7 +67,8 @@ struct ItemView: View {
         VStack(spacing: 4) {
             CachedAsyncImage(url: URL(string: imageURL)!)
                 .aspectRatio(contentMode: .fill)
-                .frame(width: 80, height: 80)
+                // .frame(width: 80, height: 80)
+                .frame(width: 100, height: 100)
                 .clipShape(clipShapeView)
 
             Text(name)
@@ -130,18 +131,55 @@ extension HorizontalScrollSection where T == TopTrack {
     }
 }
 
-extension HorizontalScrollSection where T == SongDetailArtist {
+// Note: do not use if expecting spotify_uri to be the actual spotify URI
+// if called with ArtistDetail as T (i.e. after fetchign pins) then spotify_uri is most likely
+// an image
+extension HorizontalScrollSection where T == ArtistDetail {
     static func artists(
         title: String,
-        items: [SongDetailArtist],
-        onTap: ((SongDetailArtist) -> Void)? = nil
-    ) -> HorizontalScrollSection<SongDetailArtist> {
+        items: [ArtistDetail],
+        onTap: ((ArtistDetail) -> Void)? = nil
+    ) -> HorizontalScrollSection<ArtistDetail> {
         HorizontalScrollSection(
             title: title,
             items: items,
             clipShape: .circle,
             getName: { $0.name },
-            getImageURL: { _ in "https://via.placeholder.com/300" }, // You'll need to add image_url to Artist
+            getImageURL: { $0.spotify_uri }, // This is a mistake on my part, should be renamed.
+            onTap: onTap
+        )
+    }
+}
+
+extension HorizontalScrollSection where T == SongDetail {
+    static func tracks(
+        title: String,
+        items: [SongDetail],
+        onTap: ((SongDetail) -> Void)? = nil
+    ) -> HorizontalScrollSection<SongDetail> {
+        HorizontalScrollSection(
+            title: title,
+            items: items,
+            clipShape: .square,
+            getName: { $0.name },
+            getImageURL: { $0.album_image_url },
+            onTap: onTap
+        )
+    }
+}
+
+extension HorizontalScrollSection where T == AlbumDetail {
+    static func albums(
+        title: String,
+        items: [AlbumDetail],
+        onTap: ((AlbumDetail) -> Void)? = nil
+    ) -> HorizontalScrollSection<AlbumDetail> {
+        HorizontalScrollSection(
+            title: title,
+            items: items,
+            clipShape: .square,
+            getName: { $0.name },
+            getImageURL: { $0.image_url },
             onTap: onTap
         )
     }

@@ -25,6 +25,18 @@ protocol BluebirdAccountAPIService {
     func SearchSongs(query: String) async -> Result<
         SearchSongResult, BluebirdAPIError
     >
+    func updatePin(
+        accessToken: String,
+        id: String,
+        entity: EntityType,
+        isDelete: Bool
+    ) async -> Result<Void, BluebirdAPIError>
+    func getPins(query: String) async -> Result<GetPinsResponse, BluebirdAPIError>
+    func getEntityDetails(
+        trackIDs: [String],
+        albumIDs: [String],
+        artistIDs: [String]
+    ) async -> Result<GetEntityDetailsResponse, BluebirdAPIError>
 }
 
 protocol SpotifyAPIService {
@@ -45,7 +57,9 @@ protocol SpotifyAPIService {
         -> Result<
             SongDetail, BluebirdAPIError
         >
-    func getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<AlbumDetail, BluebirdAPIError>
+    func getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<
+        AlbumDetail, BluebirdAPIError
+    >
 }
 
 struct SpotifySaveResponse: Decodable {
@@ -1074,7 +1088,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getSongDetail(spotifyAccessToken: String, id: String) async -> Result<SongDetail, BluebirdAPIError> {
+    func getSongDetail(spotifyAccessToken: String, id: String) async -> Result<
+        SongDetail, BluebirdAPIError
+    > {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -1170,7 +1186,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<AlbumDetail, BluebirdAPIError> {
+    func getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<
+        AlbumDetail, BluebirdAPIError
+    > {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -1547,6 +1565,328 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         } catch {
             print(
                 "SearchSongs Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func updatePin(
+        accessToken: String,
+        id: String,
+        entity: EntityType,
+        isDelete: Bool
+    ) async -> Result<Void, BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var updatePinPath = "/api/me/add-pin"
+        if isDelete {
+            updatePinPath = "/api/me/delete-pin"
+        }
+        let queryItems = [
+            URLQueryItem(name: "type", value: entity.rawValue),
+            URLQueryItem(name: "accessToken", value: accessToken),
+        ]
+        components.path = updatePinPath
+        components.queryItems = queryItems
+
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+
+        struct SavePin: Encodable {
+            let id: String
+        }
+        let savePinBody = SavePin(
+            id: id
+        )
+
+        do {
+            let jsonData = try JSONEncoder().encode(savePinBody)
+            request.setValue(
+                "application/json",
+                forHTTPHeaderField: "Content-Type"
+            )
+            request.httpBody = jsonData
+        } catch {
+            print("Error encoding JSON: \(error)")
+            return .failure(.encodingError(error))
+        }
+
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("UpdatePin Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            print("UpdatePin status code: \(httpResponse.statusCode)")
+            switch httpResponse.statusCode {
+            case 200:
+                return .success(())
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "UpdatePin Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "UpdatePin Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getPins(query: String) async -> Result<GetPinsResponse, BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        let getPinsPath = "/api/me/pins"
+        let queryItems = [
+            URLQueryItem(name: "type", value: query),
+        ]
+        components.path = getPinsPath
+        components.queryItems = queryItems
+
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("SearchSongs Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let pins = try JSONDecoder().decode(
+                        GetPinsResponse.self,
+                        from: data
+                    )
+                    return .success(pins)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "UpdatePin Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "UpdatePin Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getEntityDetails(
+        trackIDs: [String],
+        albumIDs: [String],
+        artistIDs: [String]
+    ) async -> Result<GetEntityDetailsResponse, BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        let entityDetailPath = "/api/details"
+        components.path = entityDetailPath
+
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        struct GetEntityDetailsRequest: Encodable {
+            let tracks: [String]
+            let albums: [String]
+            let artists: [String]
+        }
+
+        let getEntityDetailsBody = GetEntityDetailsRequest(
+            tracks: trackIDs, albums: albumIDs, artists: artistIDs
+        )
+
+        do {
+            let jsonData = try JSONEncoder().encode(getEntityDetailsBody)
+            request.setValue(
+                "application/json",
+                forHTTPHeaderField: "Content-Type"
+            )
+            request.httpBody = jsonData
+        } catch {
+            print("Error encoding JSON: \(error)")
+            return .failure(.encodingError(error))
+        }
+
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetEntityDetails Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let response = try JSONDecoder().decode(
+                        GetEntityDetailsResponse.self,
+                        from: data
+                    )
+                    return .success(response)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "GetEntityDetails Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetEntityDetails Error: Unknown error - \(error.localizedDescription)"
             )
             return .failure(.unknownError)
         }
