@@ -46,12 +46,6 @@ struct AlbumSummary: Codable, Identifiable, Hashable {
     }
 }
 
-/* struct Artist: Codable, Identifiable {
-     let id: String
-     let name: String
-     let spotify_uri: String?
- } */
-
 struct TopTrack: Codable, Identifiable, Hashable {
     let id: String
     let name: String

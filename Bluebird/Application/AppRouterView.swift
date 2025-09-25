@@ -25,6 +25,14 @@ struct AppRouterView: View {
                     Label("Home", systemImage: "music.note.list")
                 }
                 NavigationStack {
+                    StatsView()
+                }
+                .toolbarBackground(Color.darkBackground, for: .tabBar)
+                .toolbarColorScheme(.dark, for: .tabBar)
+                .tabItem {
+                    Label("Stats", systemImage: "chart.pie")
+                }
+                NavigationStack {
                     ProfileView()
                 }
                 .toolbarBackground(Color.darkBackground, for: .tabBar)
