@@ -9,9 +9,13 @@ struct SongDetailView: View {
     @State private var song: SongDetail?
     @State private var isLoading = false
     @State private var isPinned = false
+    @State private var trackTrend: [DailyPlayCount] = []
+    @State private var trackLastPlayed: Date?
+    @State private var trackUserPercenitile: Double?
 
     @EnvironmentObject var profileViewModel: ProfileViewModel
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
+    @EnvironmentObject var statsViewModel: StatsViewModel
 
     // Convenience initializers
     init(song: SongDetail) {
@@ -44,7 +48,28 @@ struct SongDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
         .task {
-            await fetchSongIfNeeded()
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await fetchSongIfNeeded() }
+                group.addTask { @MainActor in
+                    let trackTrendOpt = await statsViewModel.getTrackTrend(
+                        for: trackID
+                    )
+                    if trackTrendOpt != nil {
+                        trackTrend = trackTrendOpt!
+                    }
+                }
+                group.addTask { @MainActor in
+                    trackLastPlayed = await statsViewModel.getTrackLastPlayed(
+                        for: trackID
+                    )
+                }
+                group.addTask { @MainActor in
+                    trackUserPercenitile =
+                        await statsViewModel.getTrackUserPercentile(
+                            for: trackID
+                        )
+                }
+            }
         }
     }
 
@@ -53,6 +78,17 @@ struct SongDetailView: View {
     @ViewBuilder
     private func detailContent(for song: SongDetail) -> some View {
         HeaderView(for: song)
+        TwoStatsView(
+            leftLabel: "PLATFORM PERCENTILE",
+            leftValue: formatUserPercentile(),
+            rightLabel: "LAST PLAYED",
+            rightValue: formatLastPlayed(),
+            valueFontSize: .point(12)
+        )
+        .padding(12)
+        TrackTrendBarGraph(trackTrend: trackTrend)
+            .frame(height: 250)
+            .padding(12)
 
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: song.artists.count > 1 ? "Artists" : "Artist")
@@ -67,7 +103,7 @@ struct SongDetailView: View {
                 }
             }
         }
-        Divider()
+
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: "Album")
             RowItem(
@@ -86,9 +122,15 @@ struct SongDetailView: View {
     }
 
     private func onOpenSpotifyTapped(_ uri: String) {
-        let spotifyURL = URL(string: uri.replacingOccurrences(of: "spotify:", with: "spotify://"))!
+        let spotifyURL = URL(
+            string: uri.replacingOccurrences(of: "spotify:", with: "spotify://")
+        )!
         if UIApplication.shared.canOpenURL(spotifyURL) {
-            UIApplication.shared.open(spotifyURL, options: [:], completionHandler: nil)
+            UIApplication.shared.open(
+                spotifyURL,
+                options: [:],
+                completionHandler: nil
+            )
         }
     }
 
@@ -142,7 +184,11 @@ struct SongDetailView: View {
             Task {
                 let isDelete = isPinned
                 isPinned.toggle()
-                let success = await profileViewModel.updatePin(for: loadedID, entity: "track", isDelete: isDelete)
+                let success = await profileViewModel.updatePin(
+                    for: loadedID,
+                    entity: "track",
+                    isDelete: isDelete
+                )
                 if !success {
                     isPinned.toggle()
                 }
@@ -159,6 +205,34 @@ struct SongDetailView: View {
         isLoading = true
         song = await spotifyViewModel.fetchSongDetail(for: trackID)
         isLoading = false
+    }
+
+    private func formatLastPlayed() -> String? {
+        guard let date = trackLastPlayed else {
+            return "no plays"
+        }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .short
+        dateFormatter.timeStyle = .short
+
+        return dateFormatter.string(from: date)
+    }
+
+    private func formatUserPercentile() -> String? {
+        if trackUserPercenitile == nil {
+            return nil
+        }
+        let clampedPercentile = max(0.0, min(100.0, trackUserPercenitile!))
+        let percentileInt = Int(clampedPercentile.rounded())
+        let rank = 100 - percentileInt
+        switch percentileInt {
+        case 1 ... 100:
+            let topRankPercent = max(1, rank)
+            return "Top \(topRankPercent)% of listeners"
+        default:
+            return "One of the newest listeners"
+        }
     }
 }
 

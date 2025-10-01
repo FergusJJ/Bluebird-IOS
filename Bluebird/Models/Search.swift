@@ -12,7 +12,7 @@ struct SongDetailArtist: Encodable, Decodable, Identifiable {
     let name: String
 }
 
-struct SongDetail: Encodable, Decodable, Identifiable {
+struct SongDetail: Encodable, Decodable, Identifiable, Hashable {
     let track_id: String
     let album_id: String
     let name: String
@@ -29,5 +29,13 @@ struct SongDetail: Encodable, Decodable, Identifiable {
         } else {
             return "\(track_id)-\(UUID().uuidString)"
         }
+    }
+
+    static func == (lhs: SongDetail, rhs: SongDetail) -> Bool {
+        return lhs.track_id == rhs.track_id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }

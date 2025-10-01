@@ -70,8 +70,6 @@ struct AlbumDetailView: View {
             }
         }
 
-        Divider()
-
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: "Tracks")
             ForEach(album.tracks) { track in
@@ -123,23 +121,22 @@ struct AlbumDetailView: View {
                     Spacer()
                     HStack {
                         Spacer()
-                        CircleIconButton(systemName: isPinned ? "pin.fill" : "pin") {
+                        CircleIconButton(
+                            systemName: isPinned ? "pin.fill" : "pin"
+                        ) {
                             onPinTapped()
                         }
                     }
                 }
                 .padding(12)
             )
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Released \(album.release_date)")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                Text("\(album.total_tracks) tracks")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-            }
-            .padding(.top, 8)
+            TwoStatsView(
+                leftLabel: "RELEASE DATE",
+                leftValue: album.release_date,
+                rightLabel: "TOTAL TRACKS",
+                rightValue: String(album.total_tracks),
+                valueFontSize: .semantic(.title3)
+            ).padding(12)
         }
     }
 
@@ -166,7 +163,11 @@ struct AlbumDetailView: View {
             Task {
                 let isDelete = isPinned
                 isPinned.toggle()
-                let success = await profileViewModel.updatePin(for: loadedID, entity: "album", isDelete: isDelete)
+                let success = await profileViewModel.updatePin(
+                    for: loadedID,
+                    entity: "album",
+                    isDelete: isDelete
+                )
                 if !success {
                     isPinned.toggle()
                 }

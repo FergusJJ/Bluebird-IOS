@@ -1,6 +1,6 @@
 import Foundation
 
-struct ArtistDetail: Codable, Identifiable {
+struct ArtistDetail: Codable, Identifiable, Hashable {
     var id: String { artist_id }
     let artist_id: String
     let name: String
@@ -8,9 +8,13 @@ struct ArtistDetail: Codable, Identifiable {
     let spotify_uri: String
     let albums: [AlbumSummary]
     let top_tracks: [TopTrack]
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
-struct AlbumDetail: Codable, Identifiable {
+struct AlbumDetail: Codable, Identifiable, Hashable {
     var id: String { album_id }
     let album_id: String
     let name: String
@@ -21,6 +25,14 @@ struct AlbumDetail: Codable, Identifiable {
     let spotify_uri: String
 
     let tracks: [AlbumDetailTrack]
+
+    static func == (lhs: AlbumDetail, rhs: AlbumDetail) -> Bool {
+        return lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
 struct AlbumDetailTrack: Codable, Identifiable {

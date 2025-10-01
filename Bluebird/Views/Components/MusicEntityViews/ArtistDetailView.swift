@@ -4,8 +4,10 @@ struct ArtistDetailView: View {
     let artist: SongDetailArtist
     @State private var isPinned = false
     @State private var artistDetail: ArtistDetail?
+    @State private var userListens: Int?
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
     @EnvironmentObject var profileViewModel: ProfileViewModel
+    @EnvironmentObject var statsViewModel: StatsViewModel
 
     @State private var selectedTrack: TopTrack?
     @State private var selectedAlbum: AlbumSummary?
@@ -16,10 +18,15 @@ struct ArtistDetailView: View {
             VStack(alignment: .center) {
                 artistHeaderView()
                 Divider()
-                ArtistStats(totalFollowers: artistDetail?.followers,
-                            userListens: nil)
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
+                TwoStatsView(
+                    leftLabel: "TOTAL FOLLOWERS",
+                    leftValue: artistDetail != nil ? formatNumber(artistDetail!.followers) : nil,
+                    rightLabel: "YOUR STREAMS",
+                    rightValue: userListens != nil ? String(userListens!) : nil,
+                    valueFontSize: .semantic(.title3)
+                )
+                .padding(.horizontal)
+                .padding(.bottom, 8)
                 Divider()
                 topTracksSection()
                 albumsSection()
@@ -31,7 +38,15 @@ struct ArtistDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
         .task {
-            await fetchData()
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await fetchData() }
+                group.addTask { @MainActor in
+                    userListens = await statsViewModel.loadUserEntityListens(
+                        for: artist.id,
+                        entityType: EntityType(safeRawValue: "artist")!
+                    )
+                }
+            }
         }
     }
 
@@ -41,7 +56,11 @@ struct ArtistDetailView: View {
             Task {
                 let isDelete = isPinned
                 isPinned.toggle()
-                let success = await profileViewModel.updatePin(for: loadedID, entity: "artist", isDelete: isDelete)
+                let success = await profileViewModel.updatePin(
+                    for: loadedID,
+                    entity: "artist",
+                    isDelete: isDelete
+                )
                 if !success {
                     isPinned.toggle()
                 }
@@ -50,9 +69,15 @@ struct ArtistDetailView: View {
     }
 
     private func onOpenSpotifyTapped(_ uri: String) {
-        let spotifyURL = URL(string: uri.replacingOccurrences(of: "spotify:", with: "spotify://"))!
+        let spotifyURL = URL(
+            string: uri.replacingOccurrences(of: "spotify:", with: "spotify://")
+        )!
         if UIApplication.shared.canOpenURL(spotifyURL) {
-            UIApplication.shared.open(spotifyURL, options: [:], completionHandler: nil)
+            UIApplication.shared.open(
+                spotifyURL,
+                options: [:],
+                completionHandler: nil
+            )
         }
     }
 
@@ -67,9 +92,9 @@ struct ArtistDetailView: View {
 
 // MARK: - UI Helper Views
 
-private extension ArtistDetailView {
+extension ArtistDetailView {
     @ViewBuilder
-    func artistHeaderView() -> some View {
+    fileprivate func artistHeaderView() -> some View {
         ZStack {
             CachedAsyncImage(url: URL(string: artist.image_url)!)
                 .aspectRatio(contentMode: .fit)
@@ -99,7 +124,7 @@ private extension ArtistDetailView {
     }
 
     @ViewBuilder
-    func topTracksSection() -> some View {
+    fileprivate func topTracksSection() -> some View {
         if let topTracks = artistDetail?.top_tracks, !topTracks.isEmpty {
             VStack {
                 HorizontalScrollSection.tracks(
@@ -122,7 +147,7 @@ private extension ArtistDetailView {
     }
 
     @ViewBuilder
-    func albumsSection() -> some View {
+    fileprivate func albumsSection() -> some View {
         if let albums = artistDetail?.albums, !albums.isEmpty {
             VStack {
                 HorizontalScrollSection.albums(
@@ -136,10 +161,24 @@ private extension ArtistDetailView {
             }
             .navigationDestination(item: $selectedAlbum) { album in
                 AlbumDetailView(
-                    albumID: album.album_id, albumName: album.name, albumImageURL: album.image_url
+                    albumID: album.album_id,
+                    albumName: album.name,
+                    albumImageURL: album.image_url
                 )
             }
             Divider()
+        }
+    }
+
+    func formatNumber(_ number: Int) -> String {
+        if number >= 1_000_000 {
+            let millions = Double(number) / 1_000_000.0
+            return String(format: "%.1fm", millions)
+        } else if number >= 1000 {
+            let thousands = Double(number) / 1000.0
+            return String(format: "%.1fk", thousands)
+        } else {
+            return "\(number)"
         }
     }
 }

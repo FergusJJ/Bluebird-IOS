@@ -31,12 +31,30 @@ protocol BluebirdAccountAPIService {
         entity: EntityType,
         isDelete: Bool
     ) async -> Result<Void, BluebirdAPIError>
-    func getPins(query: String) async -> Result<GetPinsResponse, BluebirdAPIError>
+    func getPins(query: String) async -> Result<
+        GetPinsResponse, BluebirdAPIError
+    >
     func getEntityDetails(
         trackIDs: [String],
         albumIDs: [String],
         artistIDs: [String]
     ) async -> Result<GetEntityDetailsResponse, BluebirdAPIError>
+    func getHourlyPlays() async -> Result<[HourlyPlay], BluebirdAPIError>
+    func getDailyPlays() async -> Result<[DailyPlay], BluebirdAPIError>
+    func getTopArtists() async -> Result<TopArtists, BluebirdAPIError>
+    func getTopTracks() async -> Result<TopTracks, BluebirdAPIError>
+    func getEntityPlays(for id: String, entityType: EntityType) async -> Result<
+        Int, BluebirdAPIError
+    >
+    func getTrackTrend(for id: String) async -> Result<
+        TrackTrendResponse, BluebirdAPIError
+    >
+    func getTrackLastPlayed(for id: String) async -> Result<
+        Date?, BluebirdAPIError
+    >
+    func getTrackUserPercentile(for id: String) async -> Result<
+        Double, BluebirdAPIError
+    >
 }
 
 protocol SpotifyAPIService {
@@ -1681,7 +1699,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getPins(query: String) async -> Result<GetPinsResponse, BluebirdAPIError> {
+    func getPins(query: String) async -> Result<
+        GetPinsResponse, BluebirdAPIError
+    > {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -1805,7 +1825,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
 
         let getEntityDetailsBody = GetEntityDetailsRequest(
-            tracks: trackIDs, albums: albumIDs, artists: artistIDs
+            tracks: trackIDs,
+            albums: albumIDs,
+            artists: artistIDs
         )
 
         do {
@@ -1887,6 +1909,768 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         } catch {
             print(
                 "GetEntityDetails Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getHourlyPlays() async -> Result<[HourlyPlay], BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        let hourlyPlaysPath = "/api/me/hourly-plays"
+        components.path = hourlyPlaysPath
+
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetHourlyPlays Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let hourlyPlays = try JSONDecoder().decode(
+                        [HourlyPlay].self,
+                        from: data
+                    )
+                    return .success(hourlyPlays)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "GetHourlyPlays Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetHourlyPlays Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getDailyPlays() async -> Result<[DailyPlay], BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        let hourlyPlaysPath = "/api/me/daily-plays"
+        components.path = hourlyPlaysPath
+
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetDailyPlays Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let dailyPlays = try JSONDecoder().decode(
+                        [DailyPlay].self,
+                        from: data
+                    )
+                    return .success(dailyPlays)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "GetDailyPlays Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetDailyPlays Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getTopArtists() async -> Result<TopArtists, BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        let topArtistsPath = "/api/me/top-artists"
+        components.path = topArtistsPath
+
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetTopArtists Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let topArtists = try JSONDecoder().decode(
+                        TopArtists.self,
+                        from: data
+                    )
+                    return .success(topArtists)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "GetTopArtists Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetTopArtists Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getTopTracks() async -> Result<TopTracks, BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        let topTracksPath = "/api/me/top-tracks"
+        components.path = topTracksPath
+
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetTopTracks Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let topTracks = try JSONDecoder().decode(
+                        TopTracks.self,
+                        from: data
+                    )
+                    return .success(topTracks)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "GetTopTracks Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetTopTracks Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getEntityPlays(for id: String, entityType: EntityType) async -> Result<
+        Int, BluebirdAPIError
+    > {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+        let getEntityPlaysPath = "/api/me/plays"
+        components.path = getEntityPlaysPath
+        let queryItems = [
+            URLQueryItem(name: "type", value: entityType.rawValue),
+            URLQueryItem(name: "id", value: id),
+        ]
+        components.queryItems = queryItems
+        guard let url = components.url
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetEntityPlays Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    struct getEntityPlaysResponse: Decodable {
+                        let plays: Int
+                    }
+                    let decodedResponse = try JSONDecoder().decode(
+                        getEntityPlaysResponse.self,
+                        from: data
+                    )
+                    return .success(decodedResponse.plays)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    print("Unknown response received from API")
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+
+        } catch let error as URLError {
+            print(
+                "GetEntityPlays Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetEntityPlays Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getTrackTrend(for id: String) async -> Result<
+        TrackTrendResponse, BluebirdAPIError
+    > {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+        let getEntityPlaysPath = "/api/me/track-trend"
+        components.path = getEntityPlaysPath
+        let queryItems = [
+            URLQueryItem(name: "type", value: "track"), // specifically a track func so just hardcode
+            URLQueryItem(name: "id", value: id),
+        ]
+        components.queryItems = queryItems
+        guard let url = components.url
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetTrackTrend Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let str = String(decoding: data, as: UTF8.self)
+                    print(str)
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let decodedResponse = try decoder.decode(
+                        TrackTrendResponse.self,
+                        from: data
+                    )
+                    return .success(decodedResponse)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    print("Unknown response received from API")
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+
+        } catch let error as URLError {
+            print(
+                "GetTrackTrend Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetTrackTrend Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getTrackLastPlayed(for id: String) async -> Result<
+        Date?, BluebirdAPIError
+    > {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+        let getTrackLastPlayedPath = "/api/me/track-last-played"
+        components.path = getTrackLastPlayedPath
+        let queryItems = [
+            URLQueryItem(name: "id", value: id),
+        ]
+        components.queryItems = queryItems
+        guard let url = components.url
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetTrackLastPlayed Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    guard !data.isEmpty else {
+                        return .success(nil)
+                    }
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    let decodedResponse = try decoder.decode(
+                        TrackLastPlayedResponse.self,
+                        from: data
+                    )
+                    return .success(decodedResponse.last_played)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    print("Unknown response received from API")
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+
+        } catch let error as URLError {
+            print(
+                "GetTrackLastPlayed Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetTrackLastPlayed Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getTrackUserPercentile(for id: String) async -> Result<
+        Double, BluebirdAPIError
+    > {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+        let getTrackLastPlayedPath = "/api/me/track-user-percentile"
+        components.path = getTrackLastPlayedPath
+        let queryItems = [
+            URLQueryItem(name: "id", value: id),
+        ]
+        components.queryItems = queryItems
+        guard let url = components.url
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetTrackUserPercentile Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let decodedResponse = try JSONDecoder().decode(
+                        TrackUserPercentile.self,
+                        from: data
+                    )
+                    return .success(decodedResponse.percentile)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    print("Unknown response received from API")
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+
+        } catch let error as URLError {
+            print(
+                "GetTrackUserPercentile Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetTrackUserPercentile Error: Unknown error - \(error.localizedDescription)"
             )
             return .failure(.unknownError)
         }

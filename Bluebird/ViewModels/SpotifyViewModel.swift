@@ -72,7 +72,8 @@ class SpotifyViewModel: ObservableObject {
             print("first: \(songArray.first!.name)")
             print("last: \(songArray.last!.name)")
             let newSongs = Dictionary(
-                uniqueKeysWithValues: songArray.map { ($0.listened_at!, $0) }
+                songArray.map { ($0.listened_at!, $0) },
+                uniquingKeysWith: { first, _ in first }
             )
             songHistory.merge(newSongs) { existing, _ in existing }
 
@@ -111,7 +112,8 @@ class SpotifyViewModel: ObservableObject {
                 return
             }
             let newSongs = Dictionary(
-                uniqueKeysWithValues: songArray.map { ($0.listened_at!, $0) }
+                songArray.map { ($0.listened_at!, $0) },
+                uniquingKeysWith: { first, _ in first }
             )
             songHistory.merge(newSongs) { existing, _ in existing }
 

@@ -3,6 +3,10 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var profileViewModel: ProfileViewModel
 
+    @State private var selectedTrack: SongDetail?
+    @State private var selectedAlbum: AlbumDetail?
+    @State private var selectedArtist: ArtistDetail?
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -10,29 +14,11 @@ struct ProfileView: View {
                 Divider()
                 // TODO: - need to fix the horizontal padding
                 VStack {
-                    VStack {
-                        HorizontalScrollSection.tracks(
-                            title: "Your Pinned Tracks",
-                            items: profileViewModel.pinnedTracks
-                        )
-                        .padding(.horizontal)
-                    }
+                    pinnedTracksView()
                     Divider()
-                    VStack {
-                        HorizontalScrollSection.albums(
-                            title: "Your Pinned Albums",
-                            items: profileViewModel.pinnedAlbums
-                        )
-                        .padding(.horizontal)
-                    }
+                    pinnedAlbumsView()
                     Divider()
-                    VStack {
-                        HorizontalScrollSection.artists(
-                            title: "Your Pinned Artists",
-                            items: profileViewModel.pinnedArtists
-                        )
-                        .padding(.horizontal)
-                    }
+                    pinnedArtistsView()
                     Divider()
                 }
                 .padding()
@@ -40,7 +26,6 @@ struct ProfileView: View {
                 .padding(.horizontal)
             }
         }
-
         .scrollContentBackground(.hidden)
         .background(Color.darkBackground.ignoresSafeArea(edges: .all))
         .navigationTitle("Profile")
@@ -56,18 +41,108 @@ struct ProfileView: View {
         }
     }
 
-    /* @ViewBuilder
-     func pinnedAlbumsSection() -> some View {
-         if let pinnedAlbums = profileViewModel.pinnedAlbums,
-             !pinnedAlbums.isEmpty
-         {
-             VStack {
-                 HorizontalScrollSection.albums(
-                     title: "Your Pinned Albums",
-                     items: pinnedAlbums
-                 )
-             }
-         }
-     }
-     */
+    @ViewBuilder
+    fileprivate func pinnedTracksView() -> some View {
+        VStack {
+            if profileViewModel.pinnedTracks.isEmpty {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Your Pinned Tracks")
+                        .foregroundStyle(Color.white)
+                        .font(.subheadline)
+
+                    Text("Nothing to see here.")
+                        .foregroundStyle(Color.nearWhite.opacity(0.6))
+                        .font(.caption)
+                        .padding(.vertical, 10)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+            } else {
+                HorizontalScrollSection.tracks(
+                    title: "Your Pinned Tracks",
+                    items: profileViewModel.pinnedTracks
+                ) { track in
+                    selectedTrack = track
+                }
+                .padding(.horizontal)
+            }
+        }
+        .navigationDestination(item: $selectedTrack) { track in
+            SongDetailView(
+                trackID: track.track_id,
+                imageURL: track.album_image_url,
+                name: track.name
+            )
+        }
+    }
+
+    @ViewBuilder
+    fileprivate func pinnedAlbumsView() -> some View {
+        VStack {
+            if profileViewModel.pinnedAlbums.isEmpty {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Your Pinned Albums")
+                        .foregroundStyle(Color.white)
+                        .font(.subheadline)
+
+                    Text("Nothing to see here.")
+                        .foregroundStyle(Color.nearWhite.opacity(0.6))
+                        .font(.caption)
+                        .padding(.vertical, 10)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+            } else {
+                HorizontalScrollSection.albums(
+                    title: "Your Pinned Albums",
+                    items: profileViewModel.pinnedAlbums
+                ) { album in
+                    selectedAlbum = album
+                }
+                .padding(.horizontal)
+            }
+        }
+        .navigationDestination(item: $selectedAlbum) { album in
+            AlbumDetailView(
+                albumID: album.album_id,
+                albumName: album.name,
+                albumImageURL: album.image_url
+            )
+        }
+    }
+
+    @ViewBuilder
+    fileprivate func pinnedArtistsView() -> some View {
+        VStack {
+            if profileViewModel.pinnedArtists.isEmpty {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Your Pinned Artists")
+                        .foregroundStyle(Color.white)
+                        .font(.subheadline)
+
+                    Text("Nothing to see here.")
+                        .foregroundStyle(Color.nearWhite.opacity(0.6))
+                        .font(.caption)
+                        .padding(.vertical, 10)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+            } else {
+                HorizontalScrollSection.artists(
+                    title: "Your Pinned Artists",
+                    items: profileViewModel.pinnedArtists
+                ) { artist in
+                    selectedArtist = artist
+                }
+                .padding(.horizontal)
+            }
+        }
+        .navigationDestination(item: $selectedArtist) { artist in
+            ArtistDetailView(artist: SongDetailArtist(
+                id: artist.artist_id,
+                image_url: artist.spotify_uri,
+                name: artist.name
+            ))
+        }
+    }
 }
