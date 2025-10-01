@@ -27,20 +27,21 @@ struct StatsView: View {
                     .aspectRatio(1, contentMode: .fit)
                 Divider()
                 if !statsViewModel.topArtists.artists.isEmpty {
-                    Text("Top Artists")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(Color.nearWhite)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    /* Text("Top Artists")
+                         .font(.headline)
+                         .fontWeight(.bold)
+                         .foregroundColor(Color.nearWhite)
+                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Divider()
+                     Divider() */
                     VStack(spacing: 12) {
                         if let topArtist = statsViewModel.topArtists.artists[0] {
                             TopEntityCard(
                                 imageURL: topArtist.artist.spotify_uri,
                                 name: topArtist.artist.name,
                                 playCount: topArtist.play_count,
-                                isTop: true
+                                isTop: true,
+                                badgeText: "Top Artist"
                             ).onTapGesture {
                                 selectedArtist = topArtist
                             }
@@ -53,7 +54,8 @@ struct StatsView: View {
                                     imageURL: artist2.artist.spotify_uri,
                                     name: artist2.artist.name,
                                     playCount: artist2.play_count,
-                                    isTop: false
+                                    isTop: false,
+                                    badgeText: ""
                                 ).onTapGesture {
                                     selectedArtist = artist2
                                 }
@@ -65,7 +67,8 @@ struct StatsView: View {
                                     imageURL: artist3.artist.spotify_uri,
                                     name: artist3.artist.name,
                                     playCount: artist3.play_count,
-                                    isTop: false
+                                    isTop: false,
+                                    badgeText: ""
                                 ).onTapGesture {
                                     selectedArtist = artist3
                                 }
@@ -77,19 +80,21 @@ struct StatsView: View {
                 }
 
                 if !statsViewModel.topTracks.tracks.isEmpty {
-                    Text("Top Tracks")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(Color.nearWhite)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Divider()
+                    Spacer()
+                    /* Text("Top Tracks")
+                         .font(.headline)
+                         .fontWeight(.bold)
+                         .foregroundColor(Color.nearWhite)
+                         .frame(maxWidth: .infinity, alignment: .leading)
+                     Divider() */
                     VStack(spacing: 12) {
                         if let topTrack = statsViewModel.topTracks.tracks[0] {
                             TopEntityCard(
                                 imageURL: topTrack.track.album_image_url,
                                 name: topTrack.track.name,
                                 playCount: topTrack.play_count,
-                                isTop: true
+                                isTop: true,
+                                badgeText: "Top Track"
                             ).onTapGesture {
                                 selectedTrack = topTrack
                             }
@@ -100,7 +105,8 @@ struct StatsView: View {
                                     imageURL: track2.track.album_image_url,
                                     name: track2.track.name,
                                     playCount: track2.play_count,
-                                    isTop: false
+                                    isTop: false,
+                                    badgeText: ""
                                 ).onTapGesture {
                                     selectedTrack = track2
                                 }
@@ -110,7 +116,8 @@ struct StatsView: View {
                                     imageURL: track3.track.album_image_url,
                                     name: track3.track.name,
                                     playCount: track3.play_count,
-                                    isTop: false
+                                    isTop: false,
+                                    badgeText: ""
                                 ).onTapGesture {
                                     selectedTrack = track3
                                 }

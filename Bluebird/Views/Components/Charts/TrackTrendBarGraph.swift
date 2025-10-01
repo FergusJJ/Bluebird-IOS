@@ -90,6 +90,7 @@ struct TrackTrendBarGraph: View {
                 )
                 .padding(.top, 16)
                 .padding(.leading, horizontalPadding)
+                .zIndex(selectedDay == nil ? 1 : 0)
                 .onTapGesture {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                         showLast7Days.toggle()
@@ -164,6 +165,7 @@ struct TrackTrendBarGraph: View {
         let lineCount = 4
 
         VStack(spacing: 0) {
+            Spacer()
             ForEach(0 ..< lineCount, id: \.self) { index in
                 if index > 0 {
                     Spacer()
