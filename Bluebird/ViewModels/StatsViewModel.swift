@@ -8,6 +8,7 @@ class StatsViewModel: ObservableObject {
     @Published var dailyPlays: [DailyPlay] = []
     @Published var topTracks: TopTracks = .init(tracks: [:])
     @Published var topArtists: TopArtists = .init(artists: [:])
+    @Published var topGenres: GenreCounts = .init()
 
     @Published var trackTrendCache: [String: [DailyPlayCount]] = [:]
 
@@ -175,6 +176,19 @@ class StatsViewModel: ObservableObject {
             print("Error loading track user percentile for \(trackID): \(presentationError)")
             appState.setError(presentationError)
             return 0.0
+        }
+    }
+
+    func fetchTopGenres(for numDays: Int) async {
+        let result = await bluebirdAccountAPIService.getTopGenres(numDays: numDays)
+        switch result {
+        case let .success(response):
+            topGenres = response
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error loading top genres: \(presentationError)")
+            appState.setError(presentationError)
+            topGenres = GenreCounts()
         }
     }
 }

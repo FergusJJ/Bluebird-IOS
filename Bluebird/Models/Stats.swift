@@ -118,3 +118,5 @@ struct TrackLastPlayedResponse: Decodable {
 struct TrackUserPercentile: Decodable {
     let percentile: Double
 }
+
+typealias GenreCounts = [String: Int]
