@@ -6,6 +6,8 @@ struct StatsView: View {
     @State private var selectedTrack: TrackWithPlayCount?
     @State private var selectedArtist: ArtistWithPlayCount?
 
+    private var statsNumDays: Int = 14
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -27,13 +29,6 @@ struct StatsView: View {
                     .aspectRatio(1, contentMode: .fit)
                 Divider()
                 if !statsViewModel.topArtists.artists.isEmpty {
-                    /* Text("Top Artists")
-                         .font(.headline)
-                         .fontWeight(.bold)
-                         .foregroundColor(Color.nearWhite)
-                         .frame(maxWidth: .infinity, alignment: .leading)
-
-                     Divider() */
                     VStack(spacing: 12) {
                         if let topArtist = statsViewModel.topArtists.artists[0] {
                             TopEntityCard(
@@ -81,12 +76,6 @@ struct StatsView: View {
 
                 if !statsViewModel.topTracks.tracks.isEmpty {
                     Spacer()
-                    /* Text("Top Tracks")
-                         .font(.headline)
-                         .fontWeight(.bold)
-                         .foregroundColor(Color.nearWhite)
-                         .frame(maxWidth: .infinity, alignment: .leading)
-                     Divider() */
                     VStack(spacing: 12) {
                         if let topTrack = statsViewModel.topTracks.tracks[0] {
                             TopEntityCard(
@@ -127,6 +116,14 @@ struct StatsView: View {
                         }
                     }
                 }
+                Spacer()
+                Text("Top Genres (Past 2 Weeks)")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.nearWhite)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                TopGenresBarGraph(allGenres: statsViewModel.topGenres)
+                    .frame(height: 250)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -144,6 +141,10 @@ struct StatsView: View {
                 group.addTask { await statsViewModel.fetchDailyPlays() }
                 group.addTask { await statsViewModel.fetchTopTracks() }
                 group.addTask { await statsViewModel.fetchTopArtists() }
+                group.addTask {
+                    await statsViewModel.fetchTopGenres(for: statsNumDays)
+                    await print(statsViewModel.topGenres)
+                }
             }
         }
         .navigationDestination(item: $selectedArtist) { artist in
