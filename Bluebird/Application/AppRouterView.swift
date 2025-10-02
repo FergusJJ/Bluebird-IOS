@@ -33,7 +33,7 @@ struct AppRouterView: View {
                     Label("Stats", systemImage: "chart.pie")
                 }
                 NavigationStack {
-                    ProfileView()
+                    ProfileView(isCurrentUser: true)
                 }
                 .toolbarBackground(Color.darkBackground, for: .tabBar)
                 .toolbarColorScheme(.dark, for: .tabBar)

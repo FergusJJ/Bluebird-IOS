@@ -3,14 +3,22 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var profileViewModel: ProfileViewModel
 
+    let isCurrentUser: Bool
+
     @State private var selectedTrack: SongDetail?
     @State private var selectedAlbum: AlbumDetail?
     @State private var selectedArtist: ArtistDetail?
 
+    @State private var isEditing = false
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                ProfileHeadlineView()
+                if isCurrentUser {
+                    ProfileHeadlineViewEditable(editableMode: isEditing)
+                } else {
+                    ProfileHeadlineView()
+                }
                 Divider()
                 // TODO: - need to fix the horizontal padding
                 VStack {
@@ -32,10 +40,18 @@ struct ProfileView: View {
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: SettingsView()) {
-                    Image(systemName: "gearshape.fill")
-                        .foregroundColor(Color.babyBlue)
+            if isCurrentUser {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { isEditing.toggle() }) {
+                        Image(systemName: isEditing ? "pencil.line" : "pencil")
+                            .foregroundColor(Color.babyBlue)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundColor(Color.babyBlue)
+                    }
                 }
             }
         }
@@ -138,11 +154,13 @@ struct ProfileView: View {
             }
         }
         .navigationDestination(item: $selectedArtist) { artist in
-            ArtistDetailView(artist: SongDetailArtist(
-                id: artist.artist_id,
-                image_url: artist.spotify_uri,
-                name: artist.name
-            ))
+            ArtistDetailView(
+                artist: SongDetailArtist(
+                    id: artist.artist_id,
+                    image_url: artist.spotify_uri,
+                    name: artist.name
+                )
+            )
         }
     }
 }
