@@ -167,6 +167,72 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         apiURL = validURL
     }
 
+    // MARK: - request retry functions
+
+    private func executeWithSpotifyTokenRetry<T: Decodable>(
+        initialToken: String,
+        requestBuilder: @escaping (String) async -> Result<T, BluebirdAPIError>
+    ) async -> Result<T, BluebirdAPIError> {
+        let result = await requestBuilder(initialToken)
+
+        if case let .failure(error) = result,
+           case let .apiError(statusCode, message) = error,
+           statusCode == 400,
+           message?.contains("SPOTIFY_AUTH_ERROR") == true
+        {
+            let refreshResult = await refreshSpotifyAccessToken()
+
+            switch refreshResult {
+            case let .success(newToken):
+                return await requestBuilder(newToken)
+            case let .failure(refreshError):
+                return .failure(refreshError)
+            }
+        }
+
+        return result
+    }
+
+    func getCurrentlyPlaying(spotifyAccessToken: String) async -> Result<
+        SongDetail?, BluebirdAPIError
+    > {
+        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+            await self._getCurrentlyPlaying(spotifyAccessToken: token)
+        }
+    }
+
+    func getSongHistory(spotifyAccessToken: String) async -> Result<
+        [SongDetail], BluebirdAPIError
+    > {
+        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+            await self._getSongHistory(spotifyAccessToken: token)
+        }
+    }
+
+    func getArtistDetail(spotifyAccessToken: String, id: String) async -> Result<
+        ArtistDetail, BluebirdAPIError
+    > {
+        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+            await self._getArtistDetail(spotifyAccessToken: token, id: id)
+        }
+    }
+
+    func getSongDetail(spotifyAccessToken: String, id: String) async -> Result<
+        SongDetail, BluebirdAPIError
+    > {
+        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+            await self._getSongDetail(spotifyAccessToken: token, id: id)
+        }
+    }
+
+    func getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<
+        AlbumDetail, BluebirdAPIError
+    > {
+        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+            await self._getAlbumDetail(spotifyAccessToken: token, id: id)
+        }
+    }
+
     func userSignUp(username: String) async -> Result<Void, BluebirdAPIError> {
         guard
             var components = URLComponents(
@@ -812,7 +878,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
 
     // MARK: -  SpotifyAPIService methods
 
-    func getCurrentlyPlaying(spotifyAccessToken: String) async -> Result<
+    func _getCurrentlyPlaying(spotifyAccessToken: String) async -> Result<
         SongDetail?, BluebirdAPIError
     > {
         guard
@@ -1011,7 +1077,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getArtistDetail(spotifyAccessToken: String, id: String) async
+    func _getArtistDetail(spotifyAccessToken: String, id: String) async
         -> Result<ArtistDetail, BluebirdAPIError>
     {
         guard
@@ -1109,7 +1175,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getSongDetail(spotifyAccessToken: String, id: String) async -> Result<
+    func _getSongDetail(spotifyAccessToken: String, id: String) async -> Result<
         SongDetail, BluebirdAPIError
     > {
         guard
@@ -1207,7 +1273,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<
+    func _getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<
         AlbumDetail, BluebirdAPIError
     > {
         guard
@@ -1305,7 +1371,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getSongHistory(spotifyAccessToken: String) async -> Result<
+    func _getSongHistory(spotifyAccessToken: String) async -> Result<
         [SongDetail], BluebirdAPIError
     > {
         guard
@@ -1591,6 +1657,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
+    // TODO: Add retry
     func updatePin(
         accessToken: String,
         id: String,
