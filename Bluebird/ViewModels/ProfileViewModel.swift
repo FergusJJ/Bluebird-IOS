@@ -7,6 +7,8 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - User profile vars
 
+    private let numDays = 14
+
     @Published var username: String = ""
     @Published var bio: String = ""
     @Published var avatarPath = ""
@@ -81,7 +83,7 @@ class ProfileViewModel: ObservableObject {
     }
 
     func loadHeadlineStats() async {
-        let result = await bluebirdAccountAPIService.getHeadlineStats()
+        let result = await bluebirdAccountAPIService.getHeadlineStats(for: numDays)
         switch result {
         case let .success(stats):
             totalPlays = stats.total_plays

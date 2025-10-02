@@ -2,9 +2,13 @@ import SwiftUI
 
 struct ArtistDetailView: View {
     let artist: SongDetailArtist
+
+    @State private var forDays = 0
     @State private var isPinned = false
     @State private var artistDetail: ArtistDetail?
     @State private var userListens: Int?
+    @State private var forDaysCache: [Int: Int] = [:]
+
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
     @EnvironmentObject var profileViewModel: ProfileViewModel
     @EnvironmentObject var statsViewModel: StatsViewModel
@@ -27,6 +31,11 @@ struct ArtistDetailView: View {
                 )
                 .padding(.horizontal)
                 .padding(.bottom, 8)
+
+                DaysToggleButton(forDays: $forDays)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+
                 Divider()
                 topTracksSection()
                 albumsSection()
@@ -43,9 +52,24 @@ struct ArtistDetailView: View {
                 group.addTask { @MainActor in
                     userListens = await statsViewModel.loadUserEntityListens(
                         for: artist.id,
+                        forDays: forDays,
                         entityType: EntityType(safeRawValue: "artist")!
                     )
                 }
+            }
+        }
+        .onChange(of: forDays) { _, _ in
+            Task { @MainActor in
+                if let cached = forDaysCache[forDays] {
+                    userListens = cached
+                    return
+                }
+                userListens = await statsViewModel.loadUserEntityListens(
+                    for: artist.id,
+                    forDays: forDays,
+                    entityType: EntityType(safeRawValue: "artist")!
+                )
+                forDaysCache[forDays] = userListens
             }
         }
     }

@@ -21,7 +21,7 @@ protocol BluebirdAccountAPIService {
     func getProfile() async -> Result<ProfileInfo, BluebirdAPIError>
     func updateProfile(username: String?, bio: String?, avatarPath: String?)
         async -> Result<Void, BluebirdAPIError>
-    func getHeadlineStats() async -> Result<HeadlineViewStats, BluebirdAPIError>
+    func getHeadlineStats(for days: Int) async -> Result<HeadlineViewStats, BluebirdAPIError>
     func SearchSongs(query: String) async -> Result<
         SearchSongResult, BluebirdAPIError
     >
@@ -39,11 +39,11 @@ protocol BluebirdAccountAPIService {
         albumIDs: [String],
         artistIDs: [String]
     ) async -> Result<GetEntityDetailsResponse, BluebirdAPIError>
-    func getHourlyPlays() async -> Result<[HourlyPlay], BluebirdAPIError>
+    func getHourlyPlays(for days: Int) async -> Result<[HourlyPlay], BluebirdAPIError>
     func getDailyPlays() async -> Result<[DailyPlay], BluebirdAPIError>
-    func getTopArtists() async -> Result<TopArtists, BluebirdAPIError>
-    func getTopTracks() async -> Result<TopTracks, BluebirdAPIError>
-    func getEntityPlays(for id: String, entityType: EntityType) async -> Result<
+    func getTopArtists(for days: Int) async -> Result<TopArtists, BluebirdAPIError>
+    func getTopTracks(for days: Int) async -> Result<TopTracks, BluebirdAPIError>
+    func getEntityPlays(for id: String, forDays days: Int, entityType: EntityType) async -> Result<
         Int, BluebirdAPIError
     >
     func getTrackTrend(for id: String) async -> Result<
@@ -154,7 +154,13 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         else {
             throw BluebirdInitializationError.invalidCredentialsFormat
         }
-        guard let apiURLString = dict["API_URL"] as? String else {
+        #if DEV
+            let environmentKey = "DEV_API_URL"
+        #else
+            let environmentKey = "PROD_API_URL"
+        #endif
+
+        guard let apiURLString = dict[environmentKey] as? String else {
             throw BluebirdInitializationError.missingAPIURLKey
         }
         let cleanedApiURLString =
@@ -196,7 +202,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
     func getCurrentlyPlaying(spotifyAccessToken: String) async -> Result<
         SongDetail?, BluebirdAPIError
     > {
-        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+        return await executeWithSpotifyTokenRetry(
+            initialToken: spotifyAccessToken
+        ) { token in
             await self._getCurrentlyPlaying(spotifyAccessToken: token)
         }
     }
@@ -204,15 +212,21 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
     func getSongHistory(spotifyAccessToken: String) async -> Result<
         [SongDetail], BluebirdAPIError
     > {
-        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+        return await executeWithSpotifyTokenRetry(
+            initialToken: spotifyAccessToken
+        ) { token in
             await self._getSongHistory(spotifyAccessToken: token)
         }
     }
 
-    func getArtistDetail(spotifyAccessToken: String, id: String) async -> Result<
-        ArtistDetail, BluebirdAPIError
-    > {
-        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+    func getArtistDetail(spotifyAccessToken: String, id: String) async
+        -> Result<
+            ArtistDetail, BluebirdAPIError
+        >
+    {
+        return await executeWithSpotifyTokenRetry(
+            initialToken: spotifyAccessToken
+        ) { token in
             await self._getArtistDetail(spotifyAccessToken: token, id: id)
         }
     }
@@ -220,7 +234,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
     func getSongDetail(spotifyAccessToken: String, id: String) async -> Result<
         SongDetail, BluebirdAPIError
     > {
-        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+        return await executeWithSpotifyTokenRetry(
+            initialToken: spotifyAccessToken
+        ) { token in
             await self._getSongDetail(spotifyAccessToken: token, id: id)
         }
     }
@@ -228,7 +244,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
     func getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<
         AlbumDetail, BluebirdAPIError
     > {
-        return await executeWithSpotifyTokenRetry(initialToken: spotifyAccessToken) { token in
+        return await executeWithSpotifyTokenRetry(
+            initialToken: spotifyAccessToken
+        ) { token in
             await self._getAlbumDetail(spotifyAccessToken: token, id: id)
         }
     }
@@ -508,7 +526,6 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
 
-        print("attempting to get api token from supabase")
         if let session = try? await SupabaseClientManager.shared.client.auth
             .session
         {
@@ -802,7 +819,6 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        print("attempting to get api token from supabase")
         if let session = try? await SupabaseClientManager.shared.client.auth
             .session
         {
@@ -1273,9 +1289,11 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func _getAlbumDetail(spotifyAccessToken: String, id: String) async -> Result<
-        AlbumDetail, BluebirdAPIError
-    > {
+    func _getAlbumDetail(spotifyAccessToken: String, id: String) async
+        -> Result<
+            AlbumDetail, BluebirdAPIError
+        >
+    {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -1468,7 +1486,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getHeadlineStats() async -> Result<HeadlineViewStats, BluebirdAPIError> {
+    func getHeadlineStats(for days: Int) async -> Result<HeadlineViewStats, BluebirdAPIError> {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -1478,6 +1496,10 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
             return .failure(.invalidEndpoint)
         }
         let profilePath = "/api/me/stats"
+        let queryItems = [
+            URLQueryItem(name: "days", value: String(days)),
+        ]
+        components.queryItems = queryItems
         components.path = profilePath
         guard let url = components.url else {
             return .failure(.invalidEndpoint)
@@ -1485,7 +1507,6 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        print("attempting to get api token from supabase")
         if let session = try? await SupabaseClientManager.shared.client.auth
             .session
         {
@@ -1984,7 +2005,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getHourlyPlays() async -> Result<[HourlyPlay], BluebirdAPIError> {
+    func getHourlyPlays(for days: Int) async -> Result<[HourlyPlay], BluebirdAPIError> {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -1995,6 +2016,10 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
 
         let hourlyPlaysPath = "/api/me/hourly-plays"
+        let queryItems = [
+            URLQueryItem(name: "days", value: String(days)),
+        ]
+        components.queryItems = queryItems
         components.path = hourlyPlaysPath
 
         guard let url = components.url else {
@@ -2164,7 +2189,8 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getTopArtists() async -> Result<TopArtists, BluebirdAPIError> {
+    // days == 0 is all time
+    func getTopArtists(for days: Int) async -> Result<TopArtists, BluebirdAPIError> {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -2175,6 +2201,10 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
 
         let topArtistsPath = "/api/me/top-artists"
+        let query = [
+            URLQueryItem(name: "days", value: String(days)),
+        ]
+        components.queryItems = query
         components.path = topArtistsPath
 
         guard let url = components.url else {
@@ -2254,7 +2284,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getTopTracks() async -> Result<TopTracks, BluebirdAPIError> {
+    func getTopTracks(for days: Int) async -> Result<TopTracks, BluebirdAPIError> {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -2265,6 +2295,10 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
 
         let topTracksPath = "/api/me/top-tracks"
+        let query = [
+            URLQueryItem(name: "days", value: String(days)),
+        ]
+        components.queryItems = query
         components.path = topTracksPath
 
         guard let url = components.url else {
@@ -2344,7 +2378,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getEntityPlays(for id: String, entityType: EntityType) async -> Result<
+    func getEntityPlays(for id: String, forDays days: Int, entityType: EntityType) async -> Result<
         Int, BluebirdAPIError
     > {
         guard
@@ -2360,6 +2394,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         let queryItems = [
             URLQueryItem(name: "type", value: entityType.rawValue),
             URLQueryItem(name: "id", value: id),
+            URLQueryItem(name: "days", value: String(days)),
         ]
         components.queryItems = queryItems
         guard let url = components.url
@@ -2492,8 +2527,8 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
             switch httpResponse.statusCode {
             case 200:
                 do {
-                    let str = String(decoding: data, as: UTF8.self)
-                    print(str)
+                    // let str = String(decoding: data, as: UTF8.self)
+                    // print(str)
                     let decoder = JSONDecoder()
                     decoder.dateDecodingStrategy = .iso8601
                     let decodedResponse = try decoder.decode(

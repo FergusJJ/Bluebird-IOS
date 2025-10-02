@@ -15,6 +15,11 @@ class StatsViewModel: ObservableObject {
     @Published var lastWeekTotalPlays: Int = 0
     @Published var thisWeekTotalPlays: Int = 0
 
+    private var hourlyPlaysCache: [Int: [Int]] = [:]
+    private var topTracksCache: [Int: TopTracks] = [:]
+    private var topArtistsCache: [Int: TopArtists] = [:]
+    private var topGenresCache: [Int: GenreCounts] = [:]
+
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     private let supabaseManager = SupabaseClientManager.shared
 
@@ -40,8 +45,12 @@ class StatsViewModel: ObservableObject {
         return percentageChange
     }
 
-    func fetchHourlyPlays() async {
-        let result = await bluebirdAccountAPIService.getHourlyPlays()
+    func fetchHourlyPlays(for days: Int) async {
+        if let cached = hourlyPlaysCache[days] {
+            hourlyPlays = cached
+            return
+        }
+        let result = await bluebirdAccountAPIService.getHourlyPlays(for: days)
         switch result {
         case let .success(hourlyPlaysResponse):
             var newPlays = Array(repeating: 0, count: 24)
@@ -51,6 +60,7 @@ class StatsViewModel: ObservableObject {
                 newPlays[hourIndex] = play.plays
             }
             hourlyPlays = newPlays
+            hourlyPlaysCache[days] = newPlays
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
@@ -75,11 +85,16 @@ class StatsViewModel: ObservableObject {
         }
     }
 
-    func fetchTopArtists() async {
-        let result = await bluebirdAccountAPIService.getTopArtists()
+    func fetchTopArtists(for days: Int) async {
+        if let cached = topArtistsCache[days] {
+            topArtists = cached
+            return
+        }
+        let result = await bluebirdAccountAPIService.getTopArtists(for: days)
         switch result {
         case let .success(topArtistsResponse):
             topArtists = topArtistsResponse
+            topArtistsCache[days] = topArtistsResponse
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error top artists: \(presentationError)")
@@ -87,11 +102,16 @@ class StatsViewModel: ObservableObject {
         }
     }
 
-    func fetchTopTracks() async {
-        let result = await bluebirdAccountAPIService.getTopTracks()
+    func fetchTopTracks(for days: Int) async {
+        if let cached = topTracksCache[days] {
+            topTracks = cached
+            return
+        }
+        let result = await bluebirdAccountAPIService.getTopTracks(for: days)
         switch result {
         case let .success(topTracksResponse):
             topTracks = topTracksResponse
+            topTracksCache[days] = topTracksResponse
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error top artists: \(presentationError)")
@@ -99,8 +119,8 @@ class StatsViewModel: ObservableObject {
         }
     }
 
-    func loadUserEntityListens(for id: String, entityType: EntityType) async -> Int? {
-        let result = await bluebirdAccountAPIService.getEntityPlays(for: id, entityType: entityType)
+    func loadUserEntityListens(for id: String, forDays days: Int, entityType: EntityType) async -> Int? {
+        let result = await bluebirdAccountAPIService.getEntityPlays(for: id, forDays: days, entityType: entityType)
         switch result {
         case let .success(plays):
             return plays
@@ -179,11 +199,17 @@ class StatsViewModel: ObservableObject {
         }
     }
 
-    func fetchTopGenres(for numDays: Int) async {
-        let result = await bluebirdAccountAPIService.getTopGenres(numDays: numDays)
+    func fetchTopGenres(for days: Int) async {
+        if let cached = topGenresCache[days] {
+            topGenres = cached
+            return
+        }
+
+        let result = await bluebirdAccountAPIService.getTopGenres(numDays: days)
         switch result {
         case let .success(response):
             topGenres = response
+            topGenresCache[days] = response
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading top genres: \(presentationError)")

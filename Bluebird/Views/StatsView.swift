@@ -6,12 +6,16 @@ struct StatsView: View {
     @State private var selectedTrack: TrackWithPlayCount?
     @State private var selectedArtist: ArtistWithPlayCount?
 
-    private var statsNumDays: Int = 14
+    @State private var statsNumDays: Int = 14
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                percentageChange()
+                HStack {
+                    percentageChange()
+                    Spacer()
+                    DaysToggleButton(forDays: $statsNumDays)
+                }
                 Text("Weekly Plays")
                     .font(.headline)
                     .fontWeight(.bold)
@@ -137,13 +141,41 @@ struct StatsView: View {
         .applyDefaultTabBarStyling()
         .task {
             await withTaskGroup(of: Void.self) { group in
-                group.addTask { await statsViewModel.fetchHourlyPlays() }
-                group.addTask { await statsViewModel.fetchDailyPlays() }
-                group.addTask { await statsViewModel.fetchTopTracks() }
-                group.addTask { await statsViewModel.fetchTopArtists() }
+                group.addTask {
+                    await statsViewModel.fetchHourlyPlays(for: statsNumDays)
+                }
+                group.addTask {
+                    await statsViewModel.fetchDailyPlays()
+                }
+                group.addTask {
+                    await statsViewModel.fetchTopTracks(for: statsNumDays)
+                }
+                group.addTask {
+                    await statsViewModel.fetchTopArtists(for: statsNumDays)
+                }
                 group.addTask {
                     await statsViewModel.fetchTopGenres(for: statsNumDays)
-                    await print(statsViewModel.topGenres)
+                }
+            }
+        }
+        .onChange(of: statsNumDays) { _, _ in
+            Task { @MainActor in
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        await statsViewModel.fetchHourlyPlays(for: statsNumDays)
+                    }
+                    group.addTask {
+                        await statsViewModel.fetchDailyPlays()
+                    }
+                    group.addTask {
+                        await statsViewModel.fetchTopTracks(for: statsNumDays)
+                    }
+                    group.addTask {
+                        await statsViewModel.fetchTopArtists(for: statsNumDays)
+                    }
+                    group.addTask {
+                        await statsViewModel.fetchTopGenres(for: statsNumDays)
+                    }
                 }
             }
         }
