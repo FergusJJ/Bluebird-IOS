@@ -78,6 +78,7 @@ struct HomeView: View {
             if let currentlyPlayingSong = spotifyViewModel.currentlyPlaying {
                 NavigationLink(destination: destinationView(for: currentlyPlayingSong)) {
                     ClickableSongRowView(song: currentlyPlayingSong, isInHistory: true, isPlaying: true)
+                        .id(spotifyViewModel.currentlyPlaying?.track_id)
                 }
                 .listRowBackground(Color.darkElement)
             }
@@ -105,6 +106,10 @@ struct HomeView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color.darkBackground)
+        .refreshable {
+            await spotifyViewModel.loadCurrentlyPlaying()
+            await spotifyViewModel.refreshHistory()
+        }
         .onAppear {
             Task {
                 await spotifyViewModel.loadCurrentlyPlaying()
