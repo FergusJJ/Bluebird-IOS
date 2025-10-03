@@ -15,7 +15,7 @@ struct HeadlineStatsView: View {
 
             Divider()
                 .frame(height: 40)
-                .background(Color.lightGray.opacity(0.3))
+                .background(Color.themeSecondary.opacity(0.3))
 
             StatItemView(
                 value: formatNumber(totalPlays),
@@ -25,7 +25,7 @@ struct HeadlineStatsView: View {
 
             Divider()
                 .frame(height: 40)
-                .background(Color.lightGray.opacity(0.3))
+                .background(Color.themeSecondary.opacity(0.3))
 
             StatItemView(
                 value: formatNumber(totalUniqueArtists),
@@ -35,11 +35,11 @@ struct HeadlineStatsView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(Color.darkElement)
+        .background(Color.themeElement)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.lightGray.opacity(0.1), lineWidth: 1)
+                .stroke(Color.themeSecondary.opacity(0.1), lineWidth: 1)
         )
     }
 
@@ -77,17 +77,17 @@ struct StatItemView: View {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.caption2)
-                    .foregroundColor(Color.babyBlue)
+                    .foregroundColor(Color.themeAccent)
 
                 Text(value)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(Color.nearWhite)
+                    .foregroundColor(Color.themePrimary)
             }
 
             Text(label)
                 .font(.caption)
-                .foregroundColor(Color.lightGray)
+                .foregroundColor(Color.themeSecondary)
         }
         .frame(maxWidth: .infinity)
     }

@@ -51,13 +51,13 @@ struct ProfilePictureView: View {
                     Image(systemName: "person.fill")
                         .resizable()
                         .padding(15)
-                        .foregroundColor(Color.nearWhite)
-                        .background(Color.darkBackground.opacity(0.4))
+                        .foregroundColor(Color.themePrimary)
+                        .background(Color.themeBackground.opacity(0.4))
                 }
                 if profileViewModel.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.darkBackground.opacity(0.4))
+                        .background(Color.themeBackground.opacity(0.4))
                 }
             }
             .frame(width: 80, height: 80)
@@ -70,7 +70,7 @@ struct ProfilePictureView: View {
 
                 Image(systemName: "plus.circle.fill")
                     .font(.footnote)
-                    .foregroundStyle(Color.babyBlue, Color.darkElement)
+                    .foregroundStyle(Color.themeAccent, Color.themeElement)
                     .offset(x: -4, y: -4)
             }
         }

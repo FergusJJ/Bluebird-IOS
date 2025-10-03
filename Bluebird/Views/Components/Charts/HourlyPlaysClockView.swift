@@ -8,7 +8,7 @@ struct HourlyPlaysClockView: View {
         GeometryReader { geo in
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.darkElement.opacity(0.4))
+                    .fill(Color.themeElement.opacity(0.4))
                     .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
                 content(in: geo.size)
             }
@@ -32,10 +32,10 @@ struct HourlyPlaysClockView: View {
         let innerCirlceWH = max(availableSize * 0.04, 0)
         ZStack {
             Circle()
-                .fill(Color.darkElement.opacity(0.3))
+                .fill(Color.themeElement.opacity(0.3))
                 .frame(width: outerCircleWH, height: outerCircleWH)
             Circle()
-                .fill(Color.babyBlue.opacity(0.4))
+                .fill(Color.themeAccent.opacity(0.4))
                 .frame(width: innerCirlceWH, height: innerCirlceWH)
 
             ForEach(0 ..< 24, id: \.self) { hour in
@@ -56,7 +56,7 @@ struct HourlyPlaysClockView: View {
 
             Text("12am")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
                 .position(
                     x: center.x - availableSize * 0.03,
                     y: center.y - availableSize * 0.42
@@ -64,12 +64,12 @@ struct HourlyPlaysClockView: View {
 
             Text("6am")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
                 .position(x: center.x + availableSize * 0.42, y: center.y)
 
             Text("12pm")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
                 .position(
                     x: center.x + availableSize * 0.03,
                     y: center.y + availableSize * 0.42
@@ -77,7 +77,7 @@ struct HourlyPlaysClockView: View {
 
             Text("6pm")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
                 .position(x: center.x - availableSize * 0.42, y: center.y)
 
             if let selectedHour = selectedHour {
@@ -147,7 +147,7 @@ struct HourlyPlaysClockView: View {
         if plays == 0 {
             return LinearGradient(
                 colors: [
-                    Color.babyBlue.opacity(0.1), Color.babyBlue.opacity(0.05),
+                    Color.themeAccent.opacity(0.1), Color.themeAccent.opacity(0.05),
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -155,7 +155,7 @@ struct HourlyPlaysClockView: View {
         }
 
         let intensity = 0.6 + (normalizedLength * 0.4)
-        let baseColor = Color.babyBlue
+        let baseColor = Color.themeAccent
 
         return LinearGradient(
             colors: isSelected
@@ -182,16 +182,16 @@ struct HourlyPlaysClockView: View {
         VStack(spacing: 2) {
             Text("\(hourlyPlays[hour])")
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
             Text("plays at \(formatHour(hour))")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(Color.nearWhite.opacity(0.6))
+                .foregroundColor(Color.themePrimary.opacity(0.6))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.darkElement.opacity(0.95))
+                .fill(Color.themeElement.opacity(0.95))
                 .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
         )
         .position(position)

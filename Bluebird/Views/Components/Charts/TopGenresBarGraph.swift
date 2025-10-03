@@ -44,7 +44,7 @@ struct TopGenresBarGraph: View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.darkElement.opacity(0.4))
+                    .fill(Color.themeElement.opacity(0.4))
                     .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
 
                 VStack(spacing: 0) {
@@ -107,7 +107,7 @@ struct TopGenresBarGraph: View {
         HStack(spacing: 8) {
             Text(genre)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.nearWhite.opacity(isSelected ? 1.0 : 0.7))
+                .foregroundColor(.themePrimary.opacity(isSelected ? 1.0 : 0.7))
                 .lineLimit(1)
                 .frame(width: labelWidth, alignment: .leading)
 
@@ -132,7 +132,7 @@ struct TopGenresBarGraph: View {
         isSelected: Bool,
         normalizedWidth _: CGFloat
     ) -> Color {
-        return isSelected ? Color.babyBlue : Color.babyBlue.opacity(0.85)
+        return isSelected ? Color.themeAccent : Color.themeAccent.opacity(0.85)
     }
 
     @ViewBuilder
@@ -154,22 +154,22 @@ struct TopGenresBarGraph: View {
         VStack(spacing: 4) {
             Text(genreData.genre)
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(Color.nearWhite.opacity(0.8))
+                .foregroundColor(Color.themePrimary.opacity(0.8))
             HStack(spacing: 6) {
                 Text("\(genreData.count)")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(Color.babyBlue)
+                    .foregroundColor(Color.themeAccent)
 
                 Text(genreData.count == 1 ? "play" : "plays")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(Color.nearWhite.opacity(0.6))
+                    .foregroundColor(Color.themePrimary.opacity(0.6))
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.darkElement.opacity(0.95))
+                .fill(Color.themeElement.opacity(0.95))
                 .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
         )
         .position(x: size.width - 60, y: yPosition)

@@ -19,7 +19,7 @@ struct StatsView: View {
                 Text("Weekly Plays")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(Color.nearWhite)
+                    .foregroundColor(Color.themePrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 DailyPlaysBarGraph(dailyPlays: statsViewModel.dailyPlays)
                     .frame(height: 250)
@@ -27,7 +27,7 @@ struct StatsView: View {
                 Text("Listening Clock")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(Color.nearWhite)
+                    .foregroundColor(Color.themePrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 HourlyPlaysClockView(hourlyPlays: statsViewModel.hourlyPlays)
                     .aspectRatio(1, contentMode: .fit)
@@ -124,7 +124,7 @@ struct StatsView: View {
                 Text("Top Genres (Past 2 Weeks)")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(Color.nearWhite)
+                    .foregroundColor(Color.themePrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 TopGenresBarGraph(allGenres: statsViewModel.topGenres)
                     .frame(height: 250)
@@ -135,7 +135,7 @@ struct StatsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .scrollContentBackground(.hidden)
-        .background(Color.darkBackground.ignoresSafeArea(edges: .all))
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
         .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
@@ -203,7 +203,7 @@ struct StatsView: View {
             Text("\(statsViewModel.thisWeekTotalPlays) plays this week")
                 .font(.headline)
                 .fontWeight(.bold)
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
 
             HStack(spacing: 4) {
                 Image(

@@ -39,13 +39,13 @@ struct HomeView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.darkBackground.ignoresSafeArea())
+        .background(Color.themeBackground.ignoresSafeArea())
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(Color.nearWhite)
+                    .foregroundColor(Color.themePrimary)
                     .onTapGesture {
                         withAnimation { isSearching.toggle() }
                     }
@@ -60,7 +60,7 @@ struct HomeView: View {
                 NavigationLink(destination: destinationView(for: result)) {
                     ClickableSongRowView(song: result, isInHistory: false, isPlaying: false)
                 }
-                .listRowBackground(Color.darkElement)
+                .listRowBackground(Color.themeElement)
             }
             if searchViewModel.isSearchingSong {
                 ProgressView()
@@ -70,7 +70,7 @@ struct HomeView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.darkBackground)
+        .background(Color.themeBackground)
     }
 
     private var songHistoryList: some View {
@@ -80,14 +80,14 @@ struct HomeView: View {
                     ClickableSongRowView(song: currentlyPlayingSong, isInHistory: true, isPlaying: true)
                         .id(spotifyViewModel.currentlyPlaying?.track_id)
                 }
-                .listRowBackground(Color.darkElement)
+                .listRowBackground(Color.themeElement)
             }
 
             ForEach(spotifyViewModel.sortedSongs) { song in
                 NavigationLink(destination: destinationView(for: song)) {
                     ClickableSongRowView(song: song, isInHistory: true, isPlaying: false)
                 }
-                .listRowBackground(Color.darkElement)
+                .listRowBackground(Color.themeElement)
                 .onAppear {
                     if song.id == spotifyViewModel.sortedSongs.last?.id {
                         Task {
@@ -105,7 +105,7 @@ struct HomeView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.darkBackground)
+        .background(Color.themeBackground)
         .refreshable {
             await spotifyViewModel.loadCurrentlyPlaying()
             await spotifyViewModel.refreshHistory()

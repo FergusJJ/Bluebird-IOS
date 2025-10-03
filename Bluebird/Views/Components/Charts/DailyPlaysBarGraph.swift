@@ -33,7 +33,7 @@ struct DailyPlaysBarGraph: View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.darkElement.opacity(0.4))
+                    .fill(Color.themeElement.opacity(0.4))
                     .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
 
                 VStack(spacing: 0) {
@@ -72,7 +72,7 @@ struct DailyPlaysBarGraph: View {
                         ForEach(dailyPlays.indices, id: \.self) { index in
                             Text(dayLabels[index % 7])
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color.nearWhite.opacity(0.4))
+                                .foregroundColor(Color.themePrimary.opacity(0.4))
                                 .frame(width: actualBarWidth)
                         }
                     }
@@ -122,8 +122,8 @@ struct DailyPlaysBarGraph: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.babyBlue.opacity(0.15),
-                            Color.babyBlue.opacity(0.25),
+                            Color.themeAccent.opacity(0.15),
+                            Color.themeAccent.opacity(0.25),
                         ],
                         startPoint: .bottom,
                         endPoint: .top
@@ -136,8 +136,8 @@ struct DailyPlaysBarGraph: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.babyBlue.opacity(0.7),
-                            Color.babyBlue,
+                            Color.themeAccent.opacity(0.7),
+                            Color.themeAccent,
                         ],
                         startPoint: .bottom,
                         endPoint: .top
@@ -160,35 +160,35 @@ struct DailyPlaysBarGraph: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("This week")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(Color.nearWhite.opacity(0.6))
+                        .foregroundColor(Color.themePrimary.opacity(0.6))
                     Text("\(play.this_week)")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(Color.babyBlue)
+                        .foregroundColor(Color.themeAccent)
                 }
 
                 Rectangle()
-                    .fill(Color.nearWhite.opacity(0.2))
+                    .fill(Color.themePrimary.opacity(0.2))
                     .frame(width: 1, height: 30)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Last week")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(Color.nearWhite.opacity(0.6))
+                        .foregroundColor(Color.themePrimary.opacity(0.6))
                     Text("\(play.last_week)")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(Color.nearWhite.opacity(0.7))
+                        .foregroundColor(Color.themePrimary.opacity(0.7))
                 }
             }
 
             Text(dayLabels[index % 7])
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(Color.nearWhite.opacity(0.5))
+                .foregroundColor(Color.themePrimary.opacity(0.5))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.darkElement.opacity(0.95))
+                .fill(Color.themeElement.opacity(0.95))
                 .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
         )
         .position(x: xPosition, y: 50)

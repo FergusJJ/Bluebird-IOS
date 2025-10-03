@@ -35,7 +35,7 @@ struct ProfileView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.darkBackground.ignoresSafeArea(edges: .all))
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
@@ -44,13 +44,13 @@ struct ProfileView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { isEditing.toggle() }) {
                         Image(systemName: isEditing ? "pencil.line" : "pencil")
-                            .foregroundColor(Color.babyBlue)
+                            .foregroundColor(Color.themeAccent)
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     NavigationLink(destination: SettingsView()) {
                         Image(systemName: "gearshape.fill")
-                            .foregroundColor(Color.babyBlue)
+                            .foregroundColor(Color.themeAccent)
                     }
                 }
             }
@@ -63,11 +63,11 @@ struct ProfileView: View {
             if profileViewModel.pinnedTracks.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Your Pinned Tracks")
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(Color.themePrimary)
                         .font(.subheadline)
 
                     Text("Nothing to see here.")
-                        .foregroundStyle(Color.nearWhite.opacity(0.6))
+                        .foregroundStyle(Color.themePrimary.opacity(0.6))
                         .font(.caption)
                         .padding(.vertical, 10)
                 }
@@ -98,11 +98,11 @@ struct ProfileView: View {
             if profileViewModel.pinnedAlbums.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Your Pinned Albums")
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(Color.themePrimary)
                         .font(.subheadline)
 
                     Text("Nothing to see here.")
-                        .foregroundStyle(Color.nearWhite.opacity(0.6))
+                        .foregroundStyle(Color.themePrimary.opacity(0.6))
                         .font(.caption)
                         .padding(.vertical, 10)
                 }
@@ -133,11 +133,11 @@ struct ProfileView: View {
             if profileViewModel.pinnedArtists.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Your Pinned Artists")
-                        .foregroundStyle(Color.white)
+                        .foregroundStyle(Color.themePrimary)
                         .font(.subheadline)
 
                     Text("Nothing to see here.")
-                        .foregroundStyle(Color.nearWhite.opacity(0.6))
+                        .foregroundStyle(Color.themePrimary.opacity(0.6))
                         .font(.caption)
                         .padding(.vertical, 10)
                 }

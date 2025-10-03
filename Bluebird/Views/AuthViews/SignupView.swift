@@ -30,11 +30,11 @@ struct SignupView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 80, height: 80)
-                        .foregroundColor(Color.babyBlue)
+                        .foregroundColor(Color.themeAccent)
                     Text("Create Bluebird Account")
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(Color.babyBlue)
+                        .foregroundColor(Color.themeAccent)
 
                     VStack(spacing: 15) {
                         TextField("Email", text: $viewModel.email)
@@ -103,7 +103,7 @@ struct SignupView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.babyBlue)
+                    .tint(Color.themeAccent)
                     .foregroundColor(Color.spotifyDarkGray)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
@@ -120,7 +120,7 @@ struct SignupView: View {
                         viewModel.usernameValidationMessage = nil
                         switchToLogin()
                     }
-                    .foregroundColor(Color.babyBlue)
+                    .foregroundColor(Color.themeAccent)
                     .padding(.top)
 
                     Spacer()

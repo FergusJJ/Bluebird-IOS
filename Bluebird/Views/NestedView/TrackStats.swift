@@ -25,7 +25,7 @@ struct TwoStatsView: View {
             )
             Divider()
                 .frame(height: 40)
-                .background(Color.lightGray.opacity(0.3))
+                .background(Color.themeSecondary.opacity(0.3))
             statColumn(
                 label: rightLabel,
                 value: rightValue,
@@ -34,11 +34,11 @@ struct TwoStatsView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(Color.darkElement)
+        .background(Color.themeElement)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.lightGray.opacity(0.1), lineWidth: 1)
+                .stroke(Color.themeSecondary.opacity(0.1), lineWidth: 1)
         )
     }
 
@@ -52,17 +52,17 @@ struct TwoStatsView: View {
             Text(label)
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundColor(.lightGray)
+                .foregroundColor(.themeSecondary)
                 .textCase(.uppercase)
 
             if let value = value {
                 Text(value)
                     .font(resolveFont())
                     .fontWeight(.semibold)
-                    .foregroundColor(.nearWhite)
+                    .foregroundColor(.themePrimary)
             } else {
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.lightGray.opacity(0.3))
+                    .fill(Color.themeSecondary.opacity(0.3))
                     .frame(width: 50, height: 16)
                     .opacity(opacity.wrappedValue)
                     .onAppear {

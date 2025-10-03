@@ -14,17 +14,17 @@ struct ProfileHeadlineViewEditable: View {
                 VStack(spacing: 15) {
                     Text(profileViewModel.username)
                         .font(.headline)
-                        .foregroundStyle(Color.nearWhite)
+                        .foregroundStyle(Color.themePrimary)
 
                     if isEditing {
                         VStack(alignment: .trailing, spacing: 10) {
                             TextEditor(text: $editingBio)
                                 .font(.subheadline)
                                 .scrollContentBackground(.hidden)
-                                .foregroundColor(Color.nearWhite)
+                                .foregroundColor(Color.themePrimary)
                                 .frame(minHeight: 50, maxHeight: 100)
                                 .padding(5)
-                                .background(Color.darkElement)
+                                .background(Color.themeElement)
                                 .cornerRadius(10)
                                 .tint(Color.accentColor)
 
@@ -32,7 +32,7 @@ struct ProfileHeadlineViewEditable: View {
                                 Button("Discard") {
                                     withAnimation { isEditing = false }
                                 }
-                                .foregroundColor(Color.lightGray)
+                                .foregroundColor(Color.themeSecondary)
 
                                 Button("Save") {
                                     Task {
@@ -42,7 +42,7 @@ struct ProfileHeadlineViewEditable: View {
                                         }
                                     }
                                 }
-                                .foregroundColor(Color.babyBlue)
+                                .foregroundColor(Color.themeAccent)
                                 .bold()
                             }
                         }
@@ -51,7 +51,7 @@ struct ProfileHeadlineViewEditable: View {
                     } else {
                         Text(profileViewModel.bio.isEmpty ? "Tap to add a bio" : profileViewModel.bio)
                             .font(.subheadline)
-                            .foregroundColor(profileViewModel.bio.isEmpty ? Color.lightGray : Color.nearWhite)
+                            .foregroundColor(profileViewModel.bio.isEmpty ? Color.themeSecondary : Color.themePrimary)
                             .multilineTextAlignment(.center)
                             .padding(.vertical, 5)
                             .onTapGesture {
@@ -73,7 +73,7 @@ struct ProfileHeadlineViewEditable: View {
             Spacer()
             Text(profileViewModel.getCurrentlyPlayingHeadline())
                 .font(.subheadline)
-                .foregroundStyle(Color.gray)
+                .foregroundStyle(Color.themeSecondary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .center)

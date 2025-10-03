@@ -46,13 +46,13 @@ struct RowItem<Destination: View>: View {
 
             Text(title)
                 .font(.headline)
-                .foregroundStyle(Color.nearWhite)
+                .foregroundStyle(Color.themePrimary)
                 .lineLimit(1)
 
             Spacer()
 
             Image(systemName: systemImage)
-                .foregroundStyle(Color.nearWhite)
+                .foregroundStyle(Color.themePrimary)
         }
     }
 }

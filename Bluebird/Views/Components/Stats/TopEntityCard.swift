@@ -18,7 +18,7 @@ struct TopEntityCard: View {
                     .cornerRadius(12)
             } else {
                 Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(Color.themeSecondary.opacity(0.3))
                     .frame(height: isTop ? 220 : 140)
                     .cornerRadius(12)
             }
@@ -26,7 +26,7 @@ struct TopEntityCard: View {
             // Gradient overlay
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color.black.opacity(0.8),
+                    Color.themeBackground.opacity(0.8),
                     Color.clear,
                 ]),
                 startPoint: .bottom,
@@ -42,15 +42,15 @@ struct TopEntityCard: View {
                     Image(systemName: "star")
                         .font(.system(size: 14, weight: .semibold))
                 }
-                .foregroundColor(.nearWhite)
+                .foregroundColor(.themePrimary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Color.darkBackground.opacity(0.8))
+                .background(Color.themeBackground.opacity(0.8))
                 .cornerRadius(10)
                 .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.nearWhite.opacity(0.4), lineWidth: 0.3)
+                        .stroke(Color.themePrimary.opacity(0.4), lineWidth: 0.3)
                 )
                 .padding(.top, 12)
                 .padding(.leading, 12)

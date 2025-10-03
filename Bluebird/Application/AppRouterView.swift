@@ -3,6 +3,7 @@ import SwiftUI
 struct AppRouterView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var spotifyView: SpotifyViewModel
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         if appState.isLoggedIn == .loading || appState.isSpotifyConnected == .loading {
@@ -19,31 +20,31 @@ struct AppRouterView: View {
                 NavigationStack {
                     HomeView()
                 }
-                .toolbarBackground(Color.darkBackground, for: .tabBar)
-                .toolbarColorScheme(.dark, for: .tabBar)
+                .toolbarBackground(Color.themeBackground, for: .tabBar)
+                .toolbarColorScheme(colorScheme, for: .tabBar)
                 .tabItem {
                     Label("Home", systemImage: "music.note.list")
                 }
                 NavigationStack {
                     StatsView()
                 }
-                .toolbarBackground(Color.darkBackground, for: .tabBar)
-                .toolbarColorScheme(.dark, for: .tabBar)
+                .toolbarBackground(Color.themeBackground, for: .tabBar)
+                .toolbarColorScheme(colorScheme, for: .tabBar)
                 .tabItem {
                     Label("Stats", systemImage: "chart.pie")
                 }
                 NavigationStack {
                     ProfileView(isCurrentUser: true)
                 }
-                .toolbarBackground(Color.darkBackground, for: .tabBar)
-                .toolbarColorScheme(.dark, for: .tabBar)
+                .toolbarBackground(Color.themeBackground, for: .tabBar)
+                .toolbarColorScheme(colorScheme, for: .tabBar)
                 .tabItem {
                     Label("Profile", systemImage: "person.crop.circle")
                 }
             }
-            .toolbarBackground(Color.darkBackground, for: .tabBar)
-            .toolbarColorScheme(.dark, for: .tabBar)
-            .applyDarkNavigationBar()
+            .toolbarBackground(Color.themeBackground, for: .tabBar)
+            .toolbarColorScheme(colorScheme, for: .tabBar)
+            .applyAdaptiveNavigationBar()
         }
     }
 }

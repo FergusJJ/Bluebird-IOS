@@ -34,7 +34,7 @@ struct HorizontalScrollSection<T: Identifiable>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Color.themePrimary)
                 .font(.subheadline)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -75,7 +75,7 @@ struct ItemView: View {
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 100)
-                .foregroundStyle(Color.nearWhite)
+                .foregroundStyle(Color.themePrimary)
                 .lineLimit(2)
                 .truncationMode(.tail)
         }

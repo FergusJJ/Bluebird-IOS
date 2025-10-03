@@ -11,7 +11,7 @@ struct CachedAsyncImage: View {
                 Image(uiImage: image)
                     .resizable()
             } else {
-                Color.gray.opacity(0.3)
+                Color.themeSecondary.opacity(0.3)
             }
         }
         .onAppear(perform: loadImage)

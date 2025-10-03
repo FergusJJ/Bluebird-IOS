@@ -7,7 +7,7 @@ struct HorizontalScrollView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(horizontalScrollViewTitle)
-                .foregroundStyle(Color.nearWhite)
+                .foregroundStyle(Color.themePrimary)
                 .font(.subheadline)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -41,7 +41,7 @@ struct ScrollViewItemView: View {
                 )
             Text(object.name)
                 .font(.caption)
-                .foregroundStyle(Color.nearWhite)
+                .foregroundStyle(Color.themePrimary)
                 .lineLimit(1)
         }
     }

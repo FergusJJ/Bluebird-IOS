@@ -19,10 +19,10 @@ struct ClickableSongRowView: View {
                     .font(.headline)
                     .fontWeight(.semibold)
                     .lineLimit(1)
-                    .foregroundStyle(Color.nearWhite)
+                    .foregroundStyle(Color.themePrimary)
                 Text(formatArtistNames())
                     .font(.subheadline)
-                    .foregroundColor(.lightGray)
+                    .foregroundColor(.themeSecondary)
                     .allowsTightening(true)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -51,7 +51,7 @@ struct ClickableSongRowView: View {
                 } else {
                     Text(formattedTimestamp())
                         .font(.caption)
-                        .foregroundColor(.lightGray)
+                        .foregroundColor(.themeSecondary)
                         .frame(width: 45, alignment: .trailing)
                 }
             }

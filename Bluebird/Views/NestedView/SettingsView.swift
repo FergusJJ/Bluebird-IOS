@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var profileViewModel: ProfileViewModel
+    @EnvironmentObject var appState: AppState // don't want to add method for updating theme rn so just adding here
 
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
@@ -9,6 +10,17 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Spotify Connection Details")
+                        .font(.headline)
+                        .foregroundColor(Color.themePrimary)
+                    Picker("Theme", selection: $appState.userColorScheme) {
+                        Text("System").tag(nil as ColorScheme?)
+                        Text("Light").tag(ColorScheme.light as ColorScheme?)
+                        Text("Dark").tag(ColorScheme.dark as ColorScheme?)
+                    }
+                    .pickerStyle(.segmented)
+                }
                 connectedDetail()
                 Divider()
 
@@ -22,7 +34,7 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .foregroundColor(.white)
-                        .background(Color.babyBlue)
+                        .background(Color.themeAccent)
                         .cornerRadius(10)
                 }
                 .padding(.top, 8)
@@ -44,7 +56,7 @@ struct SettingsView: View {
             .padding(.horizontal)
             .padding(.top)
         }
-        .background(Color.darkBackground.ignoresSafeArea())
+        .background(Color.themeBackground.ignoresSafeArea())
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
@@ -60,7 +72,9 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This action is irreversible and will permanently delete your account.")
+            Text(
+                "This action is irreversible and will permanently delete your account."
+            )
         }
     }
 
@@ -69,31 +83,37 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Spotify Connection Details")
                 .font(.headline)
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
 
             connectedDetailRow(
                 heading: "Display Name",
-                value: profileViewModel.connectedAccountDetails?.display_name ?? "loading..."
+                value: profileViewModel.connectedAccountDetails?.display_name
+                    ?? "loading..."
             )
             connectedDetailRow(
                 heading: "Spotify Account Email",
-                value: profileViewModel.connectedAccountDetails?.email ?? "loading..."
+                value: profileViewModel.connectedAccountDetails?.email
+                    ?? "loading..."
             )
             connectedDetailRow(
                 heading: "Spotify User ID",
-                value: profileViewModel.connectedAccountDetails?.spotify_user_id ?? "loading..."
+                value: profileViewModel.connectedAccountDetails?.spotify_user_id
+                    ?? "loading..."
             )
             connectedDetailRow(
                 heading: "Enabled Scopes",
-                value: profileViewModel.connectedAccountDetails?.scopes ?? "loading..."
+                value: profileViewModel.connectedAccountDetails?.scopes
+                    ?? "loading..."
             )
             connectedDetailRow(
                 heading: "Spotify Account Link",
-                value: profileViewModel.connectedAccountDetails?.account_url ?? "loading..."
+                value: profileViewModel.connectedAccountDetails?.account_url
+                    ?? "loading..."
             )
             connectedDetailRow(
                 heading: "Spotify Account Tier",
-                value: profileViewModel.connectedAccountDetails?.product ?? "loading..."
+                value: profileViewModel.connectedAccountDetails?.product
+                    ?? "loading..."
             )
         }
     }
@@ -103,19 +123,21 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(heading)
                 .font(.caption)
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
 
-            if let url = URL(string: value), value.lowercased().hasPrefix("http") {
+            if let url = URL(string: value),
+               value.lowercased().hasPrefix("http")
+            {
                 Link(destination: url) {
                     Text(value)
                         .font(.caption)
-                        .foregroundColor(Color.babyBlue)
+                        .foregroundColor(Color.themeAccent)
                         .underline()
                 }
             } else {
                 Text(value)
                     .font(.caption)
-                    .foregroundColor(Color.nearWhite.opacity(0.8))
+                    .foregroundColor(Color.themePrimary.opacity(0.8))
             }
         }
     }

@@ -12,9 +12,9 @@ struct SearchbarView: View {
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .padding(12)
-                .background(Color.darkElement)
+                .background(Color.themeElement)
                 .cornerRadius(15)
-                .foregroundColor(Color.nearWhite)
+                .foregroundColor(Color.themePrimary)
                 .font(.system(size: 16))
                 .focused($isFocused)
                 .onChange(of: searchViewModel.searchQuery) { _, newValue in
@@ -25,12 +25,12 @@ struct SearchbarView: View {
 
             if searchViewModel.isSearchingSong {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: Color.babyBlue))
+                    .progressViewStyle(CircularProgressViewStyle(tint: Color.themeAccent))
             }
         }
         .padding(.horizontal, 20)
         .frame(height: 50)
-        .background(Color.darkBackground.opacity(0.8))
+        .background(Color.themeBackground.opacity(0.8))
         .cornerRadius(4)
         .shadow(radius: 5)
     }

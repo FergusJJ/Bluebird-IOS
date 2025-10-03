@@ -10,11 +10,11 @@ struct ProfileHeadlineView: View {
                 VStack(spacing: 15) {
                     Text(profileViewModel.username)
                         .font(.headline)
-                        .foregroundStyle(Color.nearWhite)
+                        .foregroundStyle(Color.themePrimary)
 
                     Text(profileViewModel.bio.isEmpty ? "No bio yet." : profileViewModel.bio)
                         .font(.subheadline)
-                        .foregroundColor(profileViewModel.bio.isEmpty ? Color.lightGray : Color.nearWhite)
+                        .foregroundColor(profileViewModel.bio.isEmpty ? Color.themeSecondary : Color.themePrimary)
                         .multilineTextAlignment(.center)
                         .padding(.vertical, 5)
                 }
@@ -29,7 +29,7 @@ struct ProfileHeadlineView: View {
             Spacer()
             Text(profileViewModel.getCurrentlyPlayingHeadline())
                 .font(.subheadline)
-                .foregroundStyle(Color.gray)
+                .foregroundStyle(Color.themeSecondary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .center)

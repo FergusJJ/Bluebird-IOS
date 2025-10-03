@@ -43,7 +43,7 @@ struct SongDetailView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.darkBackground.ignoresSafeArea(edges: .all))
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
         .navigationTitle(song?.name ?? initialSong?.name ?? initialName)
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
@@ -176,7 +176,7 @@ struct SongDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.darkBackground.ignoresSafeArea(edges: .all))
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
     }
 
     private func onPinTapped() {
@@ -244,11 +244,11 @@ struct SectionHeader: View {
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.bold)
-                .foregroundStyle(Color.nearWhite.opacity(0.9))
+                .foregroundStyle(Color.themePrimary.opacity(0.9))
                 .padding(.horizontal, 16)
             Rectangle()
                 .frame(height: 1)
-                .foregroundStyle(Color.nearWhite.opacity(0.2))
+                .foregroundStyle(Color.themePrimary.opacity(0.2))
                 .padding(.horizontal, 16)
         }
         .padding(.top, 16)

@@ -15,7 +15,7 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            Color.darkBackground
+            Color.themeBackground
                 .ignoresSafeArea()
 
             VStack(spacing: 20) {
@@ -26,12 +26,12 @@ struct LoginView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 80, height: 80)
-                    .foregroundColor(Color.babyBlue)
+                    .foregroundColor(Color.themeAccent)
 
                 Text("Bluebird")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(Color.babyBlue)
+                    .foregroundColor(Color.themeAccent)
 
                 VStack(spacing: 15) {
                     TextField("Email", text: $viewModel.email)
@@ -70,8 +70,8 @@ struct LoginView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.babyBlue)
-                .foregroundColor(Color.darkBackground)
+                .tint(Color.themeAccent)
+                .foregroundColor(Color.themeBackground)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
                 .cornerRadius(10)
@@ -86,7 +86,7 @@ struct LoginView: View {
                     appState.clearError()
                     switchToSignup()
                 }
-                .foregroundColor(Color.babyBlue)
+                .foregroundColor(Color.themeAccent)
                 .padding(.top)
 
                 Spacer()

@@ -1,47 +1,60 @@
 import SwiftUI
 
-struct DarkTabBarModifier: ViewModifier {
+struct AdaptiveTabBarModifier: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
+
     func body(content: Content) -> some View {
         content
-            .toolbarColorScheme(.dark, for: .tabBar)
-            .toolbarBackground(Color.darkBackground, for: .tabBar)
+            .toolbarColorScheme(colorScheme == .dark ? .dark : .light, for: .tabBar)
+            .toolbarBackground(Color.themeBackground, for: .tabBar)
             .toolbarBackgroundVisibility(.visible, for: .tabBar)
     }
 }
 
-struct DarkNavigationBarAppearance: ViewModifier {
+struct AdaptiveNavigationBarAppearance: ViewModifier {
+    @Environment(\.colorScheme) var colorScheme
+
     func body(content: Content) -> some View {
         content
             .onAppear {
-                let appearance = UINavigationBarAppearance()
-                appearance.configureWithOpaqueBackground()
-                appearance.backgroundColor = UIColor(Color.darkBackground)
-                appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
-                appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
-
-                let buttonAppearance = UIBarButtonItemAppearance()
-                buttonAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white]
-                buttonAppearance.highlighted.titleTextAttributes = [.foregroundColor: UIColor.white]
-                appearance.buttonAppearance = buttonAppearance
-                appearance.doneButtonAppearance = buttonAppearance
-                appearance.backButtonAppearance = buttonAppearance
-
-                UINavigationBar.appearance().standardAppearance = appearance
-                UINavigationBar.appearance().scrollEdgeAppearance = appearance
-                UINavigationBar.appearance().compactAppearance = appearance
-
-                UINavigationBar.appearance().tintColor = UIColor.white
-                UIBarButtonItem.appearance().tintColor = UIColor.white
+                updateAppearance()
             }
+            .onChange(of: colorScheme) { _, _ in
+                updateAppearance()
+            }
+    }
+
+    private func updateAppearance() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(Color.themeBackground)
+
+        let textColor = UIColor(Color.themePrimary)
+        appearance.titleTextAttributes = [.foregroundColor: textColor]
+        appearance.largeTitleTextAttributes = [.foregroundColor: textColor]
+
+        let buttonAppearance = UIBarButtonItemAppearance()
+        buttonAppearance.normal.titleTextAttributes = [.foregroundColor: textColor]
+        buttonAppearance.highlighted.titleTextAttributes = [.foregroundColor: textColor]
+        appearance.buttonAppearance = buttonAppearance
+        appearance.doneButtonAppearance = buttonAppearance
+        appearance.backButtonAppearance = buttonAppearance
+
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+
+        UINavigationBar.appearance().tintColor = textColor
+        UIBarButtonItem.appearance().tintColor = textColor
     }
 }
 
 extension View {
     func applyDefaultTabBarStyling() -> some View {
-        modifier(DarkTabBarModifier())
+        modifier(AdaptiveTabBarModifier())
     }
 
-    func applyDarkNavigationBar() -> some View {
-        modifier(DarkNavigationBarAppearance())
+    func applyAdaptiveNavigationBar() -> some View {
+        modifier(AdaptiveNavigationBarAppearance())
     }
 }

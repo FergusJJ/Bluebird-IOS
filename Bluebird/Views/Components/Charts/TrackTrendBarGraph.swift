@@ -70,7 +70,7 @@ struct TrackTrendBarGraph: View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.darkElement.opacity(0.4))
+                    .fill(Color.themeElement.opacity(0.4))
                     .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
                 HStack {
                     Text(showLast7Days ? "Last 7 Days" : "Last 30 Days")
@@ -78,15 +78,15 @@ struct TrackTrendBarGraph: View {
                     Image(systemName: "arrow.left.arrow.right.circle")
                         .font(.system(size: 14, weight: .semibold))
                 }
-                .foregroundColor(.nearWhite)
+                .foregroundColor(.themePrimary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Color.darkBackground.opacity(0.8))
+                .background(Color.themeBackground.opacity(0.8))
                 .cornerRadius(10)
                 .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.nearWhite.opacity(0.4), lineWidth: 0.3)
+                        .stroke(Color.themePrimary.opacity(0.4), lineWidth: 0.3)
                 )
                 .padding(.top, 16)
                 .padding(.leading, horizontalPadding)
@@ -218,8 +218,8 @@ struct TrackTrendBarGraph: View {
         if !hasData {
             return LinearGradient(
                 colors: [
-                    Color.babyBlue.opacity(0.15),
-                    Color.babyBlue.opacity(0.1),
+                    Color.themeAccent.opacity(0.15),
+                    Color.themeAccent.opacity(0.1),
                 ],
                 startPoint: .bottom,
                 endPoint: .top
@@ -230,10 +230,10 @@ struct TrackTrendBarGraph: View {
 
         return LinearGradient(
             colors: isSelected
-                ? [Color.babyBlue.opacity(0.9), Color.babyBlue]
+                ? [Color.themeAccent.opacity(0.9), Color.themeAccent]
                 : [
-                    Color.babyBlue.opacity(intensity * 0.7),
-                    Color.babyBlue.opacity(intensity),
+                    Color.themeAccent.opacity(intensity * 0.7),
+                    Color.themeAccent.opacity(intensity),
                 ],
             startPoint: .bottom,
             endPoint: .top
@@ -258,21 +258,21 @@ struct TrackTrendBarGraph: View {
         VStack(spacing: 4) {
             Text("\(play.count)")
                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(Color.babyBlue)
+                .foregroundColor(Color.themeAccent)
 
             Text(play.count == 1 ? "play" : "plays")
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(Color.nearWhite.opacity(0.6))
+                .foregroundColor(Color.themePrimary.opacity(0.6))
 
             Text(formatDayLabel(play.day))
                 .font(.system(size: 10, weight: .medium))
-                .foregroundColor(Color.nearWhite.opacity(0.5))
+                .foregroundColor(Color.themePrimary.opacity(0.5))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.darkElement.opacity(0.95))
+                .fill(Color.themeElement.opacity(0.95))
                 .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
         )
         .position(x: xPosition, y: 50)

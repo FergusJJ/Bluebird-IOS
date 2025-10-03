@@ -42,7 +42,7 @@ struct AlbumDetailView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.darkBackground.ignoresSafeArea(edges: .all))
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
         .navigationTitle(album?.name ?? initialAlbum?.name ?? initialName)
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
@@ -155,7 +155,7 @@ struct AlbumDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.darkBackground.ignoresSafeArea(edges: .all))
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
     }
 
     private func onPinTapped() {

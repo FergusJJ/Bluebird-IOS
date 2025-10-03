@@ -12,6 +12,14 @@ class AppState: ObservableObject {
     @Published var isSpotifyConnected: LoadingOrBool = .loading
     @Published var errorToDisplay: AppError?
 
+    @AppStorage("userColorScheme") private var storedScheme: String = "system"
+    @Published var userColorScheme: ColorScheme? = nil {
+        didSet {
+            storedScheme = userColorScheme == .dark ? "dark" :
+                userColorScheme == .light ? "light" : "system"
+        }
+    }
+
     private var authListener: Task<Void, Never>?
     private var authAPIService: BluebirdAccountAPIService
     private var currentUserId: UUID?
@@ -41,7 +49,11 @@ class AppState: ObservableObject {
                 "Failed to initialize BluebirdAPIManager: \(error.localizedDescription)"
             )
         }
-
+        switch storedScheme {
+        case "dark": userColorScheme = .dark
+        case "light": userColorScheme = .light
+        default: userColorScheme = nil
+        }
         setupAuthListener()
         initAppState()
     }

@@ -15,6 +15,7 @@ struct BluebirdApp: App {
             // If appState isnt initialized here ErrorAlertViewModifier fails
             ContentView(appState: appState, apiManager: apiManager)
                 .environmentObject(appState)
+                .preferredColorScheme(appState.userColorScheme)
         }
     }
 }

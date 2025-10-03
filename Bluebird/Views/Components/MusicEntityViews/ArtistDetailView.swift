@@ -42,7 +42,7 @@ struct ArtistDetailView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.darkBackground.ignoresSafeArea(edges: .all))
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
         .navigationTitle(artist.name)
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
