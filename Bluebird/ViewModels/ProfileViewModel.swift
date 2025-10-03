@@ -63,6 +63,9 @@ class ProfileViewModel: ObservableObject {
         self.appState = appState
         self.bluebirdAccountAPIService = bluebirdAccountAPIService
         Task {
+            guard appState.isLoggedIn == .istrue else {
+                return
+            }
             await syncAllPinnedContent()
             pinsFetched = true
         }
@@ -278,7 +281,7 @@ class ProfileViewModel: ObservableObject {
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print(
-                "An API error occurred: \(presentationError.localizedDescription)"
+                "An API error occurred fetching pins: \(presentationError.localizedDescription)"
             )
             appState.setError(presentationError)
             return false
