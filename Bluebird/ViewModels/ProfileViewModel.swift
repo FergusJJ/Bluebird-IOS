@@ -76,6 +76,9 @@ class ProfileViewModel: ObservableObject {
     }
 
     func loadProfile() async {
+        guard appState.isLoggedIn == .istrue else {
+            return
+        }
         let result = await bluebirdAccountAPIService.getProfile()
         switch result {
         case let .success(profileInfo):
@@ -90,6 +93,9 @@ class ProfileViewModel: ObservableObject {
     }
 
     func loadHeadlineStats() async {
+        guard appState.isLoggedIn == .istrue else {
+            return
+        }
         let result = await bluebirdAccountAPIService.getHeadlineStats(for: numDays)
         switch result {
         case let .success(stats):
