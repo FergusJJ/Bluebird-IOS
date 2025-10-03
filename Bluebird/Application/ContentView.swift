@@ -44,21 +44,15 @@ struct ContentView: View {
 
         if let accessToken = queryItems.first(where: { $0.name == "access_token" })?.value,
            let refreshToken = queryItems.first(where: { $0.name == "refresh_token" })?.value,
-           let tokenExpiryString = queryItems.first(where: { $0.name == "expires_in" })?.value
+           let tokenExpiryString = queryItems.first(where: { $0.name == "expires_in" })?.value,
+           let scopes = queryItems.first(where: { $0.name == "scopes" })?.value
         {
-            let success = appState.saveSpotifyCredentials(
-                access: accessToken,
-                refresh: refreshToken,
-                tokenExpiry: tokenExpiryString
-            )
-
-            if !success { return }
-
             Task {
                 await appState.handleInitialSpotifyConnection(
                     accessToken: accessToken,
                     refreshToken: refreshToken,
-                    tokenExpiry: tokenExpiryString
+                    tokenExpiry: tokenExpiryString,
+                    scopes: scopes
                 )
             }
         }

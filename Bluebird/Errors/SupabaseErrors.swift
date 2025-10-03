@@ -4,6 +4,7 @@ enum SupabaseError: Error, LocalizedError {
     case signupFailed(Error)
     case loginFailed(Error)
     case logoutFailed(Error)
+    case deleteAccountFailed(Error)
     case storageError(Error)
     case unacceptableStatusCode(Int)
     case genericError(Error)
@@ -16,6 +17,8 @@ enum SupabaseError: Error, LocalizedError {
             return "Login failed: \(error.localizedDescription)"
         case let .logoutFailed(error):
             return "Logout failed: \(error.localizedDescription)"
+        case let .deleteAccountFailed(error):
+            return "Delete account failed: \(error.localizedDescription)"
         case let .storageError(error):
             return "Failed to save to storage: \(error.localizedDescription)"
         case let .unacceptableStatusCode(statusCode):

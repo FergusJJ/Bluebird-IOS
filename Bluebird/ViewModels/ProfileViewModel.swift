@@ -45,6 +45,10 @@ class ProfileViewModel: ObservableObject {
     @Published var pinnedTracks: [SongDetail] = []
     @Published var pinnedAlbums: [AlbumDetail] = []
 
+    // MARK: - settings page stuff
+
+    @Published var connectedAccountDetails: ConnectedAccountDetails?
+
     @State var pinsFetched = false
 
     private var appState: AppState
@@ -163,6 +167,34 @@ class ProfileViewModel: ObservableObject {
             avatarURL = oldAvatarURL
             return false
         }
+    }
+
+    // MARK: - Settings page
+
+    func fetchConnectedSpotifyDetails() async {
+        guard let spotifyAccessToken = appState.getSpotifyAccessToken() else {
+            print("FetchConnectedSpotifyDetails failed: Access token is nil.")
+            return
+        }
+        let res = await bluebirdAccountAPIService.getConnectedAccountDetail(accessToken: spotifyAccessToken)
+        switch res {
+        case let .success(details):
+            connectedAccountDetails = details
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print(
+                "An API error occurred: \(presentationError.localizedDescription)"
+            )
+            appState.setError(presentationError)
+        }
+    }
+
+    func logOut() async {
+        _ = await appState.logoutUser()
+    }
+
+    func deleteAccount() async {
+        _ = await appState.deleteUser()
     }
 
     // MARK: - Pins

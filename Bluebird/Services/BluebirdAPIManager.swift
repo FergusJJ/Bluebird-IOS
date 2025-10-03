@@ -4,24 +4,29 @@ import UIKit
 protocol BluebirdAccountAPIService {
     func userSignUp(username: String) async -> Result<Void, BluebirdAPIError>
     func initiateSpotifyConnection() async -> Result<Void, BluebirdAPIError>
-    func upsertSpotifyRefreshToken(
-        accessToken: String,
-        refreshToken: String,
-        tokenExipryString: String
-    ) async -> Result<
-        Void, BluebirdAPIError
-    >
     func saveSpotifyAccessTokenClientID(
         accessToken: String,
         refreshToken: String,
-        tokenExpiry: String
+        tokenExpiry: String,
+        scopes: String
     ) async -> Result<String, BluebirdAPIError>
     func refreshSpotifyAccessToken()
         async -> Result<String, BluebirdAPIError>
+
+    // MARK: - Profile only routes
+
     func getProfile() async -> Result<ProfileInfo, BluebirdAPIError>
     func updateProfile(username: String?, bio: String?, avatarPath: String?)
         async -> Result<Void, BluebirdAPIError>
-    func getHeadlineStats(for days: Int) async -> Result<HeadlineViewStats, BluebirdAPIError>
+    func getHeadlineStats(for days: Int) async -> Result<
+        HeadlineViewStats, BluebirdAPIError
+    >
+    func getConnectedAccountDetail(accessToken: String) async -> Result<
+        ConnectedAccountDetails, BluebirdAPIError
+    >
+
+    // MARK: - Songs routes
+
     func SearchSongs(query: String) async -> Result<
         SearchSongResult, BluebirdAPIError
     >
@@ -39,11 +44,21 @@ protocol BluebirdAccountAPIService {
         albumIDs: [String],
         artistIDs: [String]
     ) async -> Result<GetEntityDetailsResponse, BluebirdAPIError>
-    func getHourlyPlays(for days: Int) async -> Result<[HourlyPlay], BluebirdAPIError>
+    func getHourlyPlays(for days: Int) async -> Result<
+        [HourlyPlay], BluebirdAPIError
+    >
     func getDailyPlays() async -> Result<[DailyPlay], BluebirdAPIError>
-    func getTopArtists(for days: Int) async -> Result<TopArtists, BluebirdAPIError>
-    func getTopTracks(for days: Int) async -> Result<TopTracks, BluebirdAPIError>
-    func getEntityPlays(for id: String, forDays days: Int, entityType: EntityType) async -> Result<
+    func getTopArtists(for days: Int) async -> Result<
+        TopArtists?, BluebirdAPIError
+    >
+    func getTopTracks(for days: Int) async -> Result<
+        TopTracks?, BluebirdAPIError
+    >
+    func getEntityPlays(
+        for id: String,
+        forDays days: Int,
+        entityType: EntityType
+    ) async -> Result<
         Int, BluebirdAPIError
     >
     func getTrackTrend(for id: String) async -> Result<
@@ -502,7 +517,8 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
     func saveSpotifyAccessTokenClientID(
         accessToken: String,
         refreshToken: String,
-        tokenExpiry: String
+        tokenExpiry: String,
+        scopes: String
     ) async -> Result<String, BluebirdAPIError> {
         guard
             var components = URLComponents(
@@ -518,6 +534,7 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
             URLQueryItem(name: "accessToken", value: accessToken),
             URLQueryItem(name: "refreshToken", value: refreshToken),
             URLQueryItem(name: "tokenExpiry", value: tokenExpiry),
+            URLQueryItem(name: "scopes", value: scopes),
         ]
         components.queryItems = queryItems
         guard let url = components.url else {
@@ -590,116 +607,6 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         } catch {
             print("Save Error: Unknown error - \(error.localizedDescription)")
             return .failure(.unknownError)
-        }
-    }
-
-    func upsertSpotifyRefreshToken(
-        accessToken: String,
-        refreshToken: String,
-        tokenExipryString: String
-    ) async -> Result<
-        Void, BluebirdAPIError
-    > {
-        guard
-            var components = URLComponents(
-                url: apiURL,
-                resolvingAgainstBaseURL: true
-            )
-        else {
-            return .failure(.invalidEndpoint)
-        }
-        components.path = "/api/spotify/data"
-        guard let url = components.url else {
-            return .failure(.invalidEndpoint)
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        do {
-            let session = try await SupabaseClientManager.shared.client.auth
-                .session
-            request.setValue(
-                "Bearer \(session.accessToken)",
-                forHTTPHeaderField: "Authorization"
-            )
-        } catch {
-            return .failure(.notAuthenticated)
-        }
-
-        struct UpsertRefreshToken: Encodable {
-            let accessToken: String
-            let refreshToken: String
-            let tokenExpiry: String
-            enum CodingKeys: String, CodingKey {
-                case accessToken = "access_token"
-                case refreshToken = "refresh_token"
-                case tokenExpiry = "token_expiry"
-            }
-        }
-
-        let upsertRefreshToken = UpsertRefreshToken(
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            tokenExpiry: tokenExipryString
-        )
-
-        do {
-            let jsonData = try JSONEncoder().encode(upsertRefreshToken)
-            request.setValue(
-                "application/json",
-                forHTTPHeaderField: "Content-Type"
-            )
-            request.httpBody = jsonData
-        } catch {
-            print("Error encoding JSON: \(error)")
-            return .failure(.encodingError(error))
-        }
-        do {
-            struct UpsertRefreshTokenResponse: Decodable {
-                let message: String
-                let userId: String
-
-                enum CodingKeys: String, CodingKey {
-                    case message
-                    case userId = "user_id"
-                }
-            }
-            let (data, response) = try await URLSession.shared.data(
-                for: request
-            )
-            guard let httpResponse = response as? HTTPURLResponse else {
-                return .failure(.invalidResponse)
-            }
-            switch httpResponse.statusCode {
-            case 200:
-                return .success(())
-            default:
-                do {
-                    let errorResponse = try JSONDecoder().decode(
-                        APIErrorResponse.self,
-                        from: data
-                    )
-                    return .failure(
-                        .apiError(
-                            statusCode: httpResponse.statusCode,
-                            message:
-                            "\(errorResponse.errorCode): \(errorResponse.error)"
-                        )
-                    )
-
-                } catch {
-                    return .failure(
-                        .decodingError(
-                            statusCode: httpResponse.statusCode,
-                            error: error
-                        )
-                    )
-                }
-            }
-        } catch {
-            print("Signup network request failed", "error", error)
-            return .failure(.networkError(error))
         }
     }
 
@@ -844,6 +751,102 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
                 do {
                     let decodedResponse = try JSONDecoder().decode(
                         ProfileInfo.self,
+                        from: data
+                    )
+                    return .success(decodedResponse)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+        } catch let error as URLError {
+            print(
+                "ProfileInfo Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "ProfileInfo Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getConnectedAccountDetail(accessToken: String) async -> Result<
+        ConnectedAccountDetails, BluebirdAPIError
+    > {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+        let profilePath = "/api/me/connected-account-details"
+        let queryItems = [
+            URLQueryItem(name: "accessToken", value: accessToken),
+        ]
+        components.queryItems = queryItems
+        components.path = profilePath
+        guard let url = components.url else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("ProfileInfo Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let decodedResponse = try JSONDecoder().decode(
+                        ConnectedAccountDetails.self,
                         from: data
                     )
                     return .success(decodedResponse)
@@ -1486,7 +1489,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getHeadlineStats(for days: Int) async -> Result<HeadlineViewStats, BluebirdAPIError> {
+    func getHeadlineStats(for days: Int) async -> Result<
+        HeadlineViewStats, BluebirdAPIError
+    > {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -2005,7 +2010,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getHourlyPlays(for days: Int) async -> Result<[HourlyPlay], BluebirdAPIError> {
+    func getHourlyPlays(for days: Int) async -> Result<
+        [HourlyPlay], BluebirdAPIError
+    > {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -2190,7 +2197,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
     }
 
     // days == 0 is all time
-    func getTopArtists(for days: Int) async -> Result<TopArtists, BluebirdAPIError> {
+    func getTopArtists(for days: Int) async -> Result<
+        TopArtists?, BluebirdAPIError
+    > {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -2249,6 +2258,8 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
                         )
                     )
                 }
+            case 204:
+                return .success(nil)
             default:
                 do {
                     let errorResponse = try JSONDecoder().decode(
@@ -2284,7 +2295,9 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getTopTracks(for days: Int) async -> Result<TopTracks, BluebirdAPIError> {
+    func getTopTracks(for days: Int) async -> Result<
+        TopTracks?, BluebirdAPIError
+    > {
         guard
             var components = URLComponents(
                 url: apiURL,
@@ -2343,6 +2356,8 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
                         )
                     )
                 }
+            case 204:
+                return .success(nil)
             default:
                 do {
                     let errorResponse = try JSONDecoder().decode(
@@ -2378,7 +2393,11 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         }
     }
 
-    func getEntityPlays(for id: String, forDays days: Int, entityType: EntityType) async -> Result<
+    func getEntityPlays(
+        for id: String,
+        forDays days: Int,
+        entityType: EntityType
+    ) async -> Result<
         Int, BluebirdAPIError
     > {
         guard

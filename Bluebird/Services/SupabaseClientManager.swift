@@ -6,6 +6,7 @@ import UIKit
 class SupabaseClientManager {
     static let shared = SupabaseClientManager()
     let client: SupabaseClient
+    let supabaseURL: URL
 
     private let avatarsPublicBucket = "bluebird-avatars"
 
@@ -30,17 +31,33 @@ class SupabaseClientManager {
             )
         }
 
+        self.supabaseURL = supabaseURL
         client = SupabaseClient(supabaseURL: supabaseURL, supabaseKey: supabaseKey)
+    }
 
-        // this was just for logging stuff
-        // Task {
-        //    print("Setting up auth state change listener...")
-        //    for await event in self.client.auth.authStateChanges {
-        //        let sess = event.session.debugDescription
-        //        print("Auth event: \(event.event) - Session: \(sess)")
-        //    }
-        //    print("Auth state change listener finished.")
-        // }
+    func deleteAccount() async -> Result<Void, Error> {
+        do {
+            struct DeleteResponse: Decodable {
+                let success: Bool
+                let message: String?
+                let error: String?
+            }
+            let response: DeleteResponse = try await client.functions.invoke(
+                "delete_user",
+                options: FunctionInvokeOptions()
+            )
+            if response.success {
+                return .success(())
+            } else {
+                let errorMessage = response.error ?? "Unknown error occurred"
+                print("DeleteAccount Error: \(errorMessage)")
+                return .failure(AppError.genericSupabaseError)
+            }
+
+        } catch {
+            print("Error deleting account:", error)
+            return .failure(error)
+        }
     }
 
     // Might change this to only perform upload and move resize stuff but leaving it for now

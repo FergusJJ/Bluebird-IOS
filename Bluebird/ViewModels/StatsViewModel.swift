@@ -40,7 +40,9 @@ class StatsViewModel: ObservableObject {
         if lastWeekTotalPlays == 0 {
             percentageChange = thisWeekTotalPlays > 0 ? 100.0 : 0.0
         } else {
-            percentageChange = ((Double(thisWeekTotalPlays) - Double(lastWeekTotalPlays)) / Double(lastWeekTotalPlays)) * 100
+            percentageChange =
+                ((Double(thisWeekTotalPlays) - Double(lastWeekTotalPlays))
+                        / Double(lastWeekTotalPlays)) * 100
         }
         return percentageChange
     }
@@ -93,8 +95,12 @@ class StatsViewModel: ObservableObject {
         let result = await bluebirdAccountAPIService.getTopArtists(for: days)
         switch result {
         case let .success(topArtistsResponse):
-            topArtists = topArtistsResponse
-            topArtistsCache[days] = topArtistsResponse
+            guard let topArtistsPresent = topArtistsResponse else {
+                print("No top artists")
+                return
+            }
+            topArtists = topArtistsPresent
+            topArtistsCache[days] = topArtistsPresent
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error top artists: \(presentationError)")
@@ -110,17 +116,31 @@ class StatsViewModel: ObservableObject {
         let result = await bluebirdAccountAPIService.getTopTracks(for: days)
         switch result {
         case let .success(topTracksResponse):
-            topTracks = topTracksResponse
-            topTracksCache[days] = topTracksResponse
+            guard let topTracksPresent = topTracksResponse else {
+                print("No top tracks")
+                return
+            }
+            topTracks = topTracksPresent
+            topTracksCache[days] = topTracksPresent
+            return
+
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
-            print("Error top artists: \(presentationError)")
+            print("Error top tracks: \(presentationError)")
             appState.setError(presentationError)
         }
     }
 
-    func loadUserEntityListens(for id: String, forDays days: Int, entityType: EntityType) async -> Int? {
-        let result = await bluebirdAccountAPIService.getEntityPlays(for: id, forDays: days, entityType: entityType)
+    func loadUserEntityListens(
+        for id: String,
+        forDays days: Int,
+        entityType: EntityType
+    ) async -> Int? {
+        let result = await bluebirdAccountAPIService.getEntityPlays(
+            for: id,
+            forDays: days,
+            entityType: entityType
+        )
         switch result {
         case let .success(plays):
             return plays
@@ -146,7 +166,9 @@ class StatsViewModel: ObservableObject {
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
-            print("Error loading track trend for \(trackID): \(presentationError)")
+            print(
+                "Error loading track trend for \(trackID): \(presentationError)"
+            )
             appState.setError(presentationError)
             return nil
         }
@@ -160,18 +182,26 @@ class StatsViewModel: ObservableObject {
         var filled: [DailyPlayCount] = []
         var currentDate = startDate
         while currentDate <= endDate {
-            if let existing = trend.first(where: { calendar.isDate($0.day, inSameDayAs: currentDate) }) {
+            if let existing = trend.first(where: {
+                calendar.isDate($0.day, inSameDayAs: currentDate)
+            }) {
                 filled.append(existing)
             } else {
                 filled.append(DailyPlayCount(day: currentDate, count: 0))
             }
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+            currentDate = calendar.date(
+                byAdding: .day,
+                value: 1,
+                to: currentDate
+            )!
         }
         return filled
     }
 
     func getTrackLastPlayed(for trackID: String) async -> Date? {
-        let result = await bluebirdAccountAPIService.getTrackLastPlayed(for: trackID)
+        let result = await bluebirdAccountAPIService.getTrackLastPlayed(
+            for: trackID
+        )
         switch result {
         case let .success(response):
             guard let date = response else {
@@ -180,20 +210,26 @@ class StatsViewModel: ObservableObject {
             return date
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
-            print("Error loading track last played for \(trackID): \(presentationError)")
+            print(
+                "Error loading track last played for \(trackID): \(presentationError)"
+            )
             appState.setError(presentationError)
             return nil
         }
     }
 
     func getTrackUserPercentile(for trackID: String) async -> Double {
-        let result = await bluebirdAccountAPIService.getTrackUserPercentile(for: trackID)
+        let result = await bluebirdAccountAPIService.getTrackUserPercentile(
+            for: trackID
+        )
         switch result {
         case let .success(response):
             return response
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
-            print("Error loading track user percentile for \(trackID): \(presentationError)")
+            print(
+                "Error loading track user percentile for \(trackID): \(presentationError)"
+            )
             appState.setError(presentationError)
             return 0.0
         }

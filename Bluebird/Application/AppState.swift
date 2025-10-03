@@ -63,11 +63,6 @@ class AppState: ObservableObject {
         errorToDisplay = nil
     }
 
-    func setArtistSong(songName: String, songArtist: String) {
-        currentSong = songName
-        currentArtist = songArtist
-    }
-
     func handleAppDidBecomeActive() async {
         print("AppState: Handling app becoming active.")
         guard isLoggedIn == .istrue else {
@@ -102,7 +97,8 @@ class AppState: ObservableObject {
     func handleInitialSpotifyConnection(
         accessToken: String,
         refreshToken: String,
-        tokenExpiry: String
+        tokenExpiry: String,
+        scopes: String
     ) async {
         print("AppState: Handling initial spotify connection")
         guard isLoggedIn == .istrue else {
@@ -121,7 +117,8 @@ class AppState: ObservableObject {
         let connected = await establishSpotifySessionClientID(
             accessToken: accessToken,
             refreshToken: refreshToken,
-            tokenExpiry: tokenExpiry
+            tokenExpiry: tokenExpiry,
+            scopes: scopes
         )
         isSpotifyConnected = connected ? .istrue : .isfalse
         if connected {
@@ -340,6 +337,21 @@ class AppState: ObservableObject {
         }
     }
 
+    func deleteUser() async -> Bool {
+        let result = await SupabaseClientManager.shared.deleteAccount()
+        switch result {
+        case .success():
+            _ = await logoutUser()
+            return true
+        case let .failure(error):
+            print("Error deleting account: \(error.localizedDescription)")
+            let supabaseError = SupabaseError.deleteAccountFailed(error)
+            let presentationError = AppError(from: supabaseError)
+            setError(presentationError)
+            return false
+        }
+    }
+
     func connectSpotify() async -> Bool {
         guard currentUserId != nil else {
             print("Connect Spotify Error: User not logged in.")
@@ -370,7 +382,7 @@ class AppState: ObservableObject {
         // previously returned here, but want to make sure that spotify client id is fetched
     }
 
-    func saveSpotifyCredentials(access: String, refresh: String, tokenExpiry: String) -> Bool {
+    func saveSpotifyCredentials(access: String, refresh: String, tokenExpiry: String, scopes: String) -> Bool {
         guard let userId = currentUserId else {
             let error = AppStateError.userNotLoggedIn
             let presentationError = AppError(from: error)
@@ -424,6 +436,7 @@ class AppState: ObservableObject {
                     accessToken: access,
                     refreshToken: refresh,
                     tokenExpiry: tokenExpiry,
+                    scopes: scopes
                 )
             }
             return true // Success
@@ -455,7 +468,8 @@ class AppState: ObservableObject {
     private func establishSpotifySessionClientID(
         accessToken: String,
         refreshToken: String,
-        tokenExpiry: String
+        tokenExpiry: String,
+        scopes: String
     ) async -> Bool {
         guard !isEstablishingSpotifySession else {
             print(
@@ -484,7 +498,8 @@ class AppState: ObservableObject {
         let result = await authAPIService.saveSpotifyAccessTokenClientID(
             accessToken: accessToken,
             refreshToken: refreshToken,
-            tokenExpiry: tokenExpiry
+            tokenExpiry: tokenExpiry,
+            scopes: scopes
         )
         switch result {
         case let .success(newAccessToken):
@@ -631,11 +646,13 @@ class AppState: ObservableObject {
         accessToken: String,
         refreshToken: String,
         tokenExpiry: String,
+        scopes: String
     ) async {
-        let result = await authAPIService.upsertSpotifyRefreshToken(
+        let result = await authAPIService.saveSpotifyAccessTokenClientID(
             accessToken: accessToken,
             refreshToken: refreshToken,
-            tokenExipryString: tokenExpiry
+            tokenExpiry: tokenExpiry,
+            scopes: scopes
         )
         switch result {
         case .success:
