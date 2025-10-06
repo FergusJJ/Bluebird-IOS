@@ -15,10 +15,10 @@ struct DaysToggleButton: View {
         .padding(.vertical, 8)
         .background(Color.themeElement.opacity(0.8))
         .cornerRadius(10)
-        .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+        .shadow(color: Color.themeShadow.opacity(0.3), radius: 3, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.themePrimary.opacity(0.4), lineWidth: 0.3)
+                .stroke(Color.themeAccent.opacity(0.4), lineWidth: 0.3)
         )
         .onTapGesture {
             cycleDays()

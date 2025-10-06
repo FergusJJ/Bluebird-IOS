@@ -10,6 +10,9 @@ class StatsViewModel: ObservableObject {
     @Published var topArtists: TopArtists = .init(artists: [:])
     @Published var topGenres: GenreCounts = .init()
 
+    @Published var discoveredArtists: [ArtistWithPlayCount] = []
+    @Published var discoveredTracks: [TrackWithPlayCount] = []
+
     @Published var trackTrendCache: [String: [DailyPlayCount]] = [:]
 
     @Published var lastWeekTotalPlays: Int = 0
@@ -251,6 +254,19 @@ class StatsViewModel: ObservableObject {
             print("Error loading top genres: \(presentationError)")
             appState.setError(presentationError)
             topGenres = GenreCounts()
+        }
+    }
+
+    func fetchDiscoveredTracksArtists() async {
+        let result = await bluebirdAccountAPIService.getDiscoveries()
+        switch result {
+        case let .success(discoveries):
+            discoveredTracks = discoveries.discovered_tracks
+            discoveredArtists = discoveries.discovered_artists
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error loading discoveries: \(presentationError)")
+            appState.setError(presentationError)
         }
     }
 }

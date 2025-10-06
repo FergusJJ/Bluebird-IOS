@@ -79,7 +79,7 @@ struct SongDetailView: View {
     private func detailContent(for song: SongDetail) -> some View {
         HeaderView(for: song)
         TwoStatsView(
-            leftLabel: "PLATFORM PERCENTILE",
+            leftLabel: "PLATFORM RANK",
             leftValue: formatUserPercentile(),
             rightLabel: "LAST PLAYED",
             rightValue: formatLastPlayed(),

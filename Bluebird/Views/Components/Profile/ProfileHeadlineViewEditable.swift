@@ -9,21 +9,25 @@ struct ProfileHeadlineViewEditable: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 15) {
-            HStack(spacing: 15) {
-                ProfilePictureView(editableMode: editableMode) // You could also make this tappable to change photo
-                VStack(spacing: 15) {
+            HStack(alignment: .top, spacing: 15) {
+                ProfilePictureView(editableMode: editableMode)
+                    .frame(width: 80, height: 80)
+                    .alignmentGuide(.top) { d in d[.top] }
+                VStack(alignment: .leading, spacing: 12) {
                     Text(profileViewModel.username)
                         .font(.headline)
                         .foregroundStyle(Color.themePrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     if isEditing {
-                        VStack(alignment: .trailing, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 10) {
                             TextEditor(text: $editingBio)
                                 .font(.subheadline)
                                 .scrollContentBackground(.hidden)
                                 .foregroundColor(Color.themePrimary)
                                 .frame(minHeight: 50, maxHeight: 100)
-                                .padding(5)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(6)
                                 .background(Color.themeElement)
                                 .cornerRadius(10)
                                 .tint(Color.accentColor)
@@ -36,7 +40,10 @@ struct ProfileHeadlineViewEditable: View {
 
                                 Button("Save") {
                                     Task {
-                                        let success = await profileViewModel.updateUserBio(with: editingBio)
+                                        let success =
+                                            await profileViewModel.updateUserBio(
+                                                with: editingBio
+                                            )
                                         if success {
                                             withAnimation { isEditing = false }
                                         }
@@ -47,22 +54,33 @@ struct ProfileHeadlineViewEditable: View {
                             }
                         }
                         .transition(.move(edge: .top).combined(with: .opacity))
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     } else {
-                        Text(profileViewModel.bio.isEmpty ? "Tap to add a bio" : profileViewModel.bio)
-                            .font(.subheadline)
-                            .foregroundColor(profileViewModel.bio.isEmpty ? Color.themeSecondary : Color.themePrimary)
-                            .multilineTextAlignment(.center)
-                            .padding(.vertical, 5)
-                            .onTapGesture {
-                                if editableMode {
-                                    editingBio = profileViewModel.bio
-                                    withAnimation { isEditing = true }
-                                }
+                        Text(
+                            profileViewModel.bio.isEmpty && editableMode
+                                ? "Tap to add a bio" : profileViewModel.bio
+                        )
+                        .font(.subheadline)
+                        .foregroundColor(
+                            profileViewModel.bio.isEmpty
+                                ? Color.themeSecondary : Color.themePrimary
+                        )
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 5)
+                        .onTapGesture {
+                            if editableMode {
+                                editingBio = profileViewModel.bio
+                                withAnimation { isEditing = true }
                             }
+                        }
                     }
                 }
+                .layoutPriority(1)
             }
+            Spacer()
 
             HeadlineStatsView(
                 totalMinutesListened: profileViewModel.totalMinutesListened,

@@ -23,7 +23,7 @@ struct StatsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 DailyPlaysBarGraph(dailyPlays: statsViewModel.dailyPlays)
                     .frame(height: 250)
-                Divider()
+
                 Text("Listening Clock")
                     .font(.headline)
                     .fontWeight(.bold)
@@ -128,6 +128,231 @@ struct StatsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 TopGenresBarGraph(allGenres: statsViewModel.topGenres)
                     .frame(height: 250)
+
+                // MARK: - discoveries
+
+                if !statsViewModel.discoveredArtists.isEmpty
+                    || !statsViewModel.discoveredTracks.isEmpty
+                {
+                    Divider()
+                        .padding(.vertical, 8)
+
+                    VStack(spacing: 16) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .foregroundColor(Color.themeAccent)
+                                .font(.system(size: 16))
+                            Text("New Discoveries")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(Color.themePrimary)
+                            Spacer()
+                            Text("Past 7 Days")
+                                .font(.caption)
+                                .foregroundColor(
+                                    Color.themePrimary.opacity(0.5)
+                                )
+                        }
+
+                        if !statsViewModel.discoveredArtists.isEmpty {
+                            VStack(spacing: 12) {
+                                HStack {
+                                    Text("Artists")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(
+                                            Color.themePrimary.opacity(0.7)
+                                        )
+                                    Spacer()
+                                    Text(
+                                        "\(statsViewModel.discoveredArtists.count) new"
+                                    )
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.green.opacity(0.15))
+                                    )
+                                }
+
+                                if let firstArtist = statsViewModel
+                                    .discoveredArtists.first
+                                {
+                                    TopEntityCard(
+                                        imageURL: firstArtist.artist
+                                            .spotify_uri,
+                                        name: firstArtist.artist.name,
+                                        playCount: firstArtist.play_count,
+                                        isTop: true,
+                                        badgeText: "Most Played"
+                                    )
+                                    .onTapGesture {
+                                        selectedArtist = firstArtist
+                                    }
+                                }
+
+                                HStack(spacing: 12) {
+                                    if statsViewModel.discoveredArtists.count
+                                        > 1
+                                    {
+                                        TopEntityCard(
+                                            imageURL:
+                                            statsViewModel.discoveredArtists[
+                                                1
+                                            ].artist.spotify_uri,
+                                            name:
+                                            statsViewModel.discoveredArtists[
+                                                1
+                                            ].artist.name,
+                                            playCount:
+                                            statsViewModel.discoveredArtists[
+                                                1
+                                            ].play_count,
+                                            isTop: false,
+                                            badgeText: ""
+                                        )
+                                        .onTapGesture {
+                                            selectedArtist =
+                                                statsViewModel.discoveredArtists[
+                                                    1
+                                                ]
+                                        }
+                                    }
+
+                                    if statsViewModel.discoveredArtists.count
+                                        > 2
+                                    {
+                                        TopEntityCard(
+                                            imageURL:
+                                            statsViewModel.discoveredArtists[
+                                                2
+                                            ].artist.spotify_uri,
+                                            name:
+                                            statsViewModel.discoveredArtists[
+                                                2
+                                            ].artist.name,
+                                            playCount:
+                                            statsViewModel.discoveredArtists[
+                                                2
+                                            ].play_count,
+                                            isTop: false,
+                                            badgeText: ""
+                                        )
+                                        .onTapGesture {
+                                            selectedArtist =
+                                                statsViewModel.discoveredArtists[
+                                                    2
+                                                ]
+                                        }
+                                    } else if statsViewModel.discoveredArtists
+                                        .count > 1
+                                    {
+                                        Color.clear
+                                    }
+                                }
+                            }
+                        }
+
+                        if !statsViewModel.discoveredTracks.isEmpty {
+                            VStack(spacing: 12) {
+                                HStack {
+                                    Text("Tracks")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(
+                                            Color.themePrimary.opacity(0.7)
+                                        )
+                                    Spacer()
+                                    Text(
+                                        "\(statsViewModel.discoveredTracks.count) new"
+                                    )
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.green.opacity(0.15))
+                                    )
+                                }
+
+                                if let firstTrack = statsViewModel
+                                    .discoveredTracks.first
+                                {
+                                    TopEntityCard(
+                                        imageURL: firstTrack.track
+                                            .album_image_url,
+                                        name: firstTrack.track.name,
+                                        playCount: firstTrack.play_count,
+                                        isTop: true,
+                                        badgeText: "Most Played"
+                                    )
+                                    .onTapGesture {
+                                        selectedTrack = firstTrack
+                                    }
+                                }
+
+                                HStack(spacing: 12) {
+                                    if statsViewModel.discoveredTracks.count > 1 {
+                                        TopEntityCard(
+                                            imageURL:
+                                            statsViewModel.discoveredTracks[
+                                                1
+                                            ].track.album_image_url,
+                                            name:
+                                            statsViewModel.discoveredTracks[
+                                                1
+                                            ].track.name,
+                                            playCount:
+                                            statsViewModel.discoveredTracks[
+                                                1
+                                            ].play_count,
+                                            isTop: false,
+                                            badgeText: ""
+                                        )
+                                        .onTapGesture {
+                                            selectedTrack =
+                                                statsViewModel.discoveredTracks[
+                                                    1
+                                                ]
+                                        }
+                                    }
+
+                                    if statsViewModel.discoveredTracks.count > 2 {
+                                        TopEntityCard(
+                                            imageURL:
+                                            statsViewModel.discoveredTracks[
+                                                2
+                                            ].track.album_image_url,
+                                            name:
+                                            statsViewModel.discoveredTracks[
+                                                2
+                                            ].track.name,
+                                            playCount:
+                                            statsViewModel.discoveredTracks[
+                                                2
+                                            ].play_count,
+                                            isTop: false,
+                                            badgeText: ""
+                                        )
+                                        .onTapGesture {
+                                            selectedTrack =
+                                                statsViewModel.discoveredTracks[
+                                                    2
+                                                ]
+                                        }
+                                    } else if statsViewModel.discoveredTracks
+                                        .count > 1
+                                    {
+                                        Color.clear
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -155,6 +380,9 @@ struct StatsView: View {
                 }
                 group.addTask {
                     await statsViewModel.fetchTopGenres(for: statsNumDays)
+                }
+                group.addTask {
+                    await statsViewModel.fetchDiscoveredTracksArtists()
                 }
             }
         }

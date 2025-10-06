@@ -26,7 +26,7 @@ struct TopEntityCard: View {
             // Gradient overlay
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color.themeBackground.opacity(0.8),
+                    Color.themeHighlight.opacity(0.8),
                     Color.clear,
                 ]),
                 startPoint: .bottom,
@@ -47,7 +47,8 @@ struct TopEntityCard: View {
                 .padding(.vertical, 8)
                 .background(Color.themeBackground.opacity(0.8))
                 .cornerRadius(10)
-                .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
+                .shadow(color: Color.themeShadow, radius: 3, x: 0, y: 2)
+                // .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.themePrimary.opacity(0.4), lineWidth: 0.3)
@@ -80,6 +81,6 @@ struct TopEntityCard: View {
         }
         .frame(height: isTop ? 220 : 140)
         .cornerRadius(12)
-        .shadow(radius: 3)
+        .shadow(color: Color.themeShadow, radius: 3)
     }
 }

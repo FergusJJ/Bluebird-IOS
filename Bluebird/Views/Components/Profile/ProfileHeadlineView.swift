@@ -12,7 +12,7 @@ struct ProfileHeadlineView: View {
                         .font(.headline)
                         .foregroundStyle(Color.themePrimary)
 
-                    Text(profileViewModel.bio.isEmpty ? "No bio yet." : profileViewModel.bio)
+                    Text(profileViewModel.bio)
                         .font(.subheadline)
                         .foregroundColor(profileViewModel.bio.isEmpty ? Color.themeSecondary : Color.themePrimary)
                         .multilineTextAlignment(.center)

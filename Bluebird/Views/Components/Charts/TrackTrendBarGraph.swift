@@ -71,7 +71,7 @@ struct TrackTrendBarGraph: View {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.themeElement.opacity(0.4))
-                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                    .shadow(color: .themeShadow, radius: 4, x: 0, y: 2)
                 HStack {
                     Text(showLast7Days ? "Last 7 Days" : "Last 30 Days")
                         .font(.system(size: 14, weight: .semibold))

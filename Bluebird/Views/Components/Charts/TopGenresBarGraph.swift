@@ -45,7 +45,15 @@ struct TopGenresBarGraph: View {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.themeElement.opacity(0.4))
-                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                    .overlay(
+                        VStack {
+                            LinearGradient(
+                                colors: [Color.themeHighlight, Color.clear],
+                                startPoint: .top,
+                                endPoint: .center
+                            ).cornerRadius(12)
+                        })
+                    .shadow(color: .themeShadow, radius: 4, x: 0, y: 2)
 
                 VStack(spacing: 0) {
                     ZStack(alignment: .leading) {

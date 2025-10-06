@@ -120,3 +120,8 @@ struct TrackUserPercentile: Decodable {
 }
 
 typealias GenreCounts = [String: Int]
+
+struct Discoveries: Decodable {
+    let discovered_tracks: [TrackWithPlayCount]
+    let discovered_artists: [ArtistWithPlayCount]
+}

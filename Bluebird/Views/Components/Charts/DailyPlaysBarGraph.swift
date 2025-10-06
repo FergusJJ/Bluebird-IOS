@@ -21,7 +21,9 @@ struct DailyPlaysBarGraph: View {
     @ViewBuilder
     private func content(in size: CGSize) -> some View {
         let maxPlays = max(
-            CGFloat(dailyPlays.map { max($0.this_week, $0.last_week) }.max() ?? 0),
+            CGFloat(
+                dailyPlays.map { max($0.this_week, $0.last_week) }.max() ?? 0
+            ),
             1
         )
         let horizontalPadding: CGFloat = 32
@@ -34,11 +36,32 @@ struct DailyPlaysBarGraph: View {
             ZStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.themeElement.opacity(0.4))
-                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                    .overlay(
+                        VStack {
+                            LinearGradient(
+                                colors: [
+                                    Color.themeHighlight.opacity(0.05),
+                                    Color.clear,
+                                ],
+                                startPoint: .top,
+                                endPoint: .center
+                            ).cornerRadius(20)
+                        }
+                    )
+                    .shadow(
+                        color: Color.themeShadow,
+                        radius: 4,
+                        x: 0,
+                        y: 2
+                    )
 
                 VStack(spacing: 0) {
                     ZStack(alignment: .bottom) {
-                        gridLines(in: size, maxPlays: maxPlays, horizontalPadding: horizontalPadding)
+                        gridLines(
+                            in: size,
+                            maxPlays: maxPlays,
+                            horizontalPadding: horizontalPadding
+                        )
 
                         HStack(alignment: .bottom, spacing: spacing) {
                             ForEach(dailyPlays.indices, id: \.self) { index in
@@ -53,8 +76,15 @@ struct DailyPlaysBarGraph: View {
                                     isSelected: selectedDay == play.day_of_week
                                 )
                                 .onTapGesture {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        selectedDay = selectedDay == play.day_of_week ? nil : play.day_of_week
+                                    withAnimation(
+                                        .spring(
+                                            response: 0.3,
+                                            dampingFraction: 0.7
+                                        )
+                                    ) {
+                                        selectedDay =
+                                            selectedDay == play.day_of_week
+                                                ? nil : play.day_of_week
                                     }
                                 }
                             }
@@ -63,7 +93,9 @@ struct DailyPlaysBarGraph: View {
                         .padding(.top, 16)
                         .padding(.bottom, 24)
                         if let selectedDay = selectedDay,
-                           let play = dailyPlays.first(where: { $0.day_of_week == selectedDay })
+                           let play = dailyPlays.first(where: {
+                               $0.day_of_week == selectedDay
+                           })
                         {
                             selectionPopup(for: play, in: size)
                         }
@@ -72,7 +104,9 @@ struct DailyPlaysBarGraph: View {
                         ForEach(dailyPlays.indices, id: \.self) { index in
                             Text(dayLabels[index % 7])
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color.themePrimary.opacity(0.4))
+                                .foregroundColor(
+                                    Color.themePrimary.opacity(0.4)
+                                )
                                 .frame(width: actualBarWidth)
                         }
                     }
@@ -84,7 +118,11 @@ struct DailyPlaysBarGraph: View {
     }
 
     @ViewBuilder
-    private func gridLines(in size: CGSize, maxPlays _: CGFloat, horizontalPadding: CGFloat) -> some View {
+    private func gridLines(
+        in size: CGSize,
+        maxPlays _: CGFloat,
+        horizontalPadding: CGFloat
+    ) -> some View {
         let graphHeight = size.height - 60
         let lineCount = 4
 
@@ -94,7 +132,10 @@ struct DailyPlaysBarGraph: View {
                     Spacer()
                 }
                 Rectangle()
-                    .fill(Color.primary.opacity(0.05))
+                    .fill(
+                        index == 0
+                            ? Color.clear : Color.primary.opacity(0.05)
+                    )
                     .frame(height: 1)
             }
         }
@@ -143,15 +184,22 @@ struct DailyPlaysBarGraph: View {
                         endPoint: .top
                     )
                 )
-                .frame(width: width * (isSelected ? 1.1 : 1.0), height: animateIn ? thisWeekHeight : 0)
+                .frame(
+                    width: width * (isSelected ? 1.1 : 1.0),
+                    height: animateIn ? thisWeekHeight : 0
+                )
                 .opacity(isSelected ? 1.0 : 0.85)
         }
         .frame(width: width, height: height, alignment: .bottom)
     }
 
     @ViewBuilder
-    private func selectionPopup(for play: DailyPlay, in size: CGSize) -> some View {
-        let index = dailyPlays.firstIndex(where: { $0.day_of_week == play.day_of_week }) ?? 0
+    private func selectionPopup(for play: DailyPlay, in size: CGSize)
+        -> some View
+    {
+        let index =
+            dailyPlays.firstIndex(where: { $0.day_of_week == play.day_of_week })
+                ?? 0
         let barWidth = (size.width - 80) / CGFloat(dailyPlays.count)
         let xPosition = 40 + (barWidth * CGFloat(index)) + (barWidth / 2)
 
@@ -162,7 +210,13 @@ struct DailyPlaysBarGraph: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(Color.themePrimary.opacity(0.6))
                     Text("\(play.this_week)")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(
+                            .system(
+                                size: 16,
+                                weight: .semibold,
+                                design: .rounded
+                            )
+                        )
                         .foregroundColor(Color.themeAccent)
                 }
 
@@ -175,7 +229,13 @@ struct DailyPlaysBarGraph: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(Color.themePrimary.opacity(0.6))
                     Text("\(play.last_week)")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(
+                            .system(
+                                size: 16,
+                                weight: .semibold,
+                                design: .rounded
+                            )
+                        )
                         .foregroundColor(Color.themePrimary.opacity(0.7))
                 }
             }
@@ -189,7 +249,15 @@ struct DailyPlaysBarGraph: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.themeElement.opacity(0.95))
-                .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
+                .overlay(
+                    VStack {
+                        LinearGradient(
+                            colors: [Color.themeHighlight, Color.clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        ).cornerRadius(12)
+                    })
+                .shadow(color: Color.themeShadow, radius: 12, x: 0, y: 4)
         )
         .position(x: xPosition, y: 50)
         .transition(.scale.combined(with: .opacity))

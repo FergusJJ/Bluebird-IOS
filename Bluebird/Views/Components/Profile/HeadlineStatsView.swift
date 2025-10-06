@@ -38,9 +38,14 @@ struct HeadlineStatsView: View {
         .background(Color.themeElement)
         .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.themeSecondary.opacity(0.1), lineWidth: 1)
-        )
+            VStack {
+                LinearGradient(
+                    colors: [Color.themeHighlight, Color.clear],
+                    startPoint: .top,
+                    endPoint: .center
+                ).cornerRadius(12)
+            }
+        ).shadow(color: Color.themeShadow, radius: 4, x: 0, y: 2)
     }
 
     private func formatMinutes(_ minutes: Int) -> String {

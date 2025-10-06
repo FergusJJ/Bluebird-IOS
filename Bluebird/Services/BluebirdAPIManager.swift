@@ -73,6 +73,7 @@ protocol BluebirdAccountAPIService {
     func getTopGenres(numDays: Int) async -> Result<
         GenreCounts, BluebirdAPIError
     >
+    func getDiscoveries() async -> Result<Discoveries, BluebirdAPIError>
 }
 
 protocol SpotifyAPIService {
@@ -2892,6 +2893,97 @@ class BluebirdAPIManager: BluebirdAccountAPIService, SpotifyAPIService {
         } catch {
             print(
                 "GetTopGenres Error: Unknown error - \(error.localizedDescription)"
+            )
+            return .failure(.unknownError)
+        }
+    }
+
+    func getDiscoveries() async -> Result<Discoveries, BluebirdAPIError> {
+        guard
+            var components = URLComponents(
+                url: apiURL,
+                resolvingAgainstBaseURL: true
+            )
+        else {
+            return .failure(.invalidEndpoint)
+        }
+        let discoveriesPath = "/api/me/discoveries"
+        components.path = discoveriesPath
+        guard let url = components.url
+        else {
+            return .failure(.invalidEndpoint)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let session = try? await SupabaseClientManager.shared.client.auth
+            .session
+        {
+            request.setValue(
+                "Bearer \(session.accessToken)",
+                forHTTPHeaderField: "Authorization"
+            )
+        } else {
+            return .failure(.notAuthenticated)
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(
+                for: request
+            )
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("GetDiscoveries Error: Invalid response type")
+                return .failure(.invalidResponse)
+            }
+            switch httpResponse.statusCode {
+            case 200:
+                do {
+                    let decodedResponse = try JSONDecoder().decode(
+                        Discoveries.self,
+                        from: data
+                    )
+                    return .success(decodedResponse)
+                } catch {
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+
+            default:
+                do {
+                    let errorResponse = try JSONDecoder().decode(
+                        APIErrorResponse.self,
+                        from: data
+                    )
+                    return .failure(
+                        .apiError(
+                            statusCode: httpResponse.statusCode,
+                            message:
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
+                        )
+                    )
+                } catch {
+                    print("Unknown response received from API")
+                    return .failure(
+                        .decodingError(
+                            statusCode: httpResponse.statusCode,
+                            error: error
+                        )
+                    )
+                }
+            }
+
+        } catch let error as URLError {
+            print(
+                "GetDiscoveries Error: Network Error - \(error.localizedDescription)"
+            )
+            return .failure(.networkError(error))
+        } catch {
+            print(
+                "GetDiscoveries Error: Unknown error - \(error.localizedDescription)"
             )
             return .failure(.unknownError)
         }

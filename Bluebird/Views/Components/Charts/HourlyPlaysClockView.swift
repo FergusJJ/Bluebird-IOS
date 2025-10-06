@@ -9,7 +9,24 @@ struct HourlyPlaysClockView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.themeElement.opacity(0.4))
-                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                    .overlay(
+                        VStack {
+                            LinearGradient(
+                                colors: [
+                                    Color.themeHighlight.opacity(0.05),
+                                    Color.clear,
+                                ],
+                                startPoint: .top,
+                                endPoint: .center
+                            ).cornerRadius(20)
+                        }
+                    )
+                    .shadow(
+                        color: Color.themeShadow,
+                        radius: 4,
+                        x: 0,
+                        y: 2
+                    )
                 content(in: geo.size)
             }
         }
@@ -192,7 +209,7 @@ struct HourlyPlaysClockView: View {
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color.themeElement.opacity(0.95))
-                .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
+                .shadow(color: Color.themeShadow, radius: 12, x: 0, y: 4)
         )
         .position(position)
         .transition(.scale.combined(with: .opacity))
