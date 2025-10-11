@@ -18,12 +18,20 @@ struct AppRouterView: View {
         } else {
             TabView {
                 NavigationStack {
+                    SocialView()
+                }
+                .toolbarBackground(Color.themeBackground, for: .tabBar)
+                .toolbarColorScheme(colorScheme, for: .tabBar)
+                .tabItem {
+                    Label("Social", systemImage: "music.note.house.fill")
+                }
+                NavigationStack {
                     HomeView()
                 }
                 .toolbarBackground(Color.themeBackground, for: .tabBar)
                 .toolbarColorScheme(colorScheme, for: .tabBar)
                 .tabItem {
-                    Label("Home", systemImage: "music.note.list")
+                    Label("History", systemImage: "music.note.list")
                 }
                 NavigationStack {
                     StatsView()

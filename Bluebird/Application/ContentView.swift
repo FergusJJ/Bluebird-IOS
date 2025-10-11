@@ -7,6 +7,7 @@ struct ContentView: View {
     @StateObject private var profileViewModel: ProfileViewModel
     @StateObject private var searchViewModel: SearchViewModel
     @StateObject private var statsViewModel: StatsViewModel
+    @StateObject private var socialViewModel: SocialViewModel
 
     @Environment(\.scenePhase) var scenePhase
 
@@ -16,6 +17,7 @@ struct ContentView: View {
         _profileViewModel = StateObject(wrappedValue: ProfileViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
         _searchViewModel = StateObject(wrappedValue: SearchViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
         _statsViewModel = StateObject(wrappedValue: StatsViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
+        _socialViewModel = StateObject(wrappedValue: SocialViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
     }
 
     var body: some View {
@@ -25,6 +27,7 @@ struct ContentView: View {
                 .environmentObject(profileViewModel)
                 .environmentObject(searchViewModel)
                 .environmentObject(statsViewModel)
+                .environmentObject(socialViewModel)
                 //
                 .modifier(ErrorAlertViewModifier())
                 .onOpenURL { url in
