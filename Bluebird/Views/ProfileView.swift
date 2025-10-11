@@ -20,7 +20,6 @@ struct ProfileView: View {
                     ProfileHeadlineView()
                 }
                 Divider()
-                // TODO: - need to fix the horizontal padding
                 VStack {
                     pinnedTracksView()
                     Divider()
