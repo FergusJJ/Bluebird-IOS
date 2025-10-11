@@ -30,7 +30,7 @@ struct ProfileHeadlineViewEditable: View {
                                 .padding(6)
                                 .background(Color.themeElement)
                                 .cornerRadius(10)
-                                .tint(Color.accentColor)
+                                .tint(Color.themeAccent)
 
                             HStack(spacing: 20) {
                                 Button("Discard") {

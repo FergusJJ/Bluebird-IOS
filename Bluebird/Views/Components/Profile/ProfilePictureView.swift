@@ -65,7 +65,7 @@ struct ProfilePictureView: View {
 
             if editableMode {
                 Circle()
-                    .stroke(Color.accentColor, lineWidth: 2)
+                    .stroke(Color.themeAccent, lineWidth: 2)
                     .frame(width: 80, height: 80)
 
                 Image(systemName: "plus.circle.fill")

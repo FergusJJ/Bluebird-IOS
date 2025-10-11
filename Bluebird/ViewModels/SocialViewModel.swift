@@ -4,6 +4,8 @@ import SwiftUI
 class SocialViewModel: ObservableObject {
     private var appState: AppState
 
+    @Published var friendsCurrentlyPlaying: [String: SongDetail] = [:]
+
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     init(
         appState: AppState,
@@ -11,6 +13,26 @@ class SocialViewModel: ObservableObject {
     ) {
         self.appState = appState
         self.bluebirdAccountAPIService = bluebirdAccountAPIService
+    }
+
+    func fetchFriendsCurrentlyPlaying() async {
+        let result = await bluebirdAccountAPIService.getFriendsCurrentlyPlaying(
+            for: [])
+        switch result {
+        case let .success(userIDTrackMap):
+            await MainActor.run {
+                friendsCurrentlyPlaying = userIDTrackMap
+            }
+            print(
+                "Updated currently playing for \(userIDTrackMap.count) friends"
+            )
+            print(friendsCurrentlyPlaying)
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error refreshing history: \(presentationError)")
+            appState.setError(presentationError)
+        }
     }
 
     // want a way to get the users' friends currenlty playing
