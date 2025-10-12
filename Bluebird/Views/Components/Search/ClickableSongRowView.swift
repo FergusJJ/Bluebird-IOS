@@ -39,7 +39,7 @@ struct ClickableSongRowView: View {
                         )
                         .frame(width: 45, alignment: .trailing)
                         .font(.subheadline)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.themeAccent)
                         .onAppear {
                             Timer.scheduledTimer(
                                 withTimeInterval: 0.5,

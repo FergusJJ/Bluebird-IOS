@@ -40,7 +40,7 @@ class AppState: ObservableObject {
 
     init() {
         do {
-            authAPIService = try BluebirdAPIManager()
+            authAPIService = try BluebirdAPIManagerV2()
         } catch {
             print(
                 "FATAL ERROR: Failed to initialize BluebirdAPIManager: \(error.localizedDescription)"

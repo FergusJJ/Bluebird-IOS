@@ -5,17 +5,62 @@ struct ContentView: View {
 
     @StateObject private var spotifyViewModel: SpotifyViewModel
     @StateObject private var profileViewModel: ProfileViewModel
-    @StateObject private var searchViewModel: SearchViewModel
     @StateObject private var statsViewModel: StatsViewModel
+    @StateObject private var socialViewModel: SocialViewModel
+    @StateObject private var songSearchViewModel:
+        GenericSearchViewModel<
+            SongDetail,
+            SearchSongResult
+        >
+    @StateObject private var userSearchViewModel:
+        GenericSearchViewModel<UserProfile, SearchUserResult>
 
     @Environment(\.scenePhase) var scenePhase
 
-    init(appState: AppState, apiManager: BluebirdAPIManager) {
+    init(appState: AppState, apiManager: BluebirdAPIManagerV2) {
         self.appState = appState
-        _spotifyViewModel = StateObject(wrappedValue: SpotifyViewModel(appState: appState, spotifyAPIService: apiManager))
-        _profileViewModel = StateObject(wrappedValue: ProfileViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
-        _searchViewModel = StateObject(wrappedValue: SearchViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
-        _statsViewModel = StateObject(wrappedValue: StatsViewModel(appState: appState, bluebirdAccountAPIService: apiManager))
+        _spotifyViewModel = StateObject(
+            wrappedValue: SpotifyViewModel(
+                appState: appState,
+                spotifyAPIService: apiManager
+            )
+        )
+        _profileViewModel = StateObject(
+            wrappedValue: ProfileViewModel(
+                appState: appState,
+                bluebirdAccountAPIService: apiManager
+            )
+        )
+        _statsViewModel = StateObject(
+            wrappedValue: StatsViewModel(
+                appState: appState,
+                bluebirdAccountAPIService: apiManager
+            )
+        )
+        _socialViewModel = StateObject(
+            wrappedValue: SocialViewModel(
+                appState: appState,
+                bluebirdAccountAPIService: apiManager
+            )
+        )
+        _songSearchViewModel = StateObject(
+            wrappedValue: GenericSearchViewModel(
+                debounceDuration: .milliseconds(500),
+                appState: appState,
+                searchFunction: apiManager.searchSongs,
+                unwrapFunction: { $0.tracks }
+            )
+        )
+        _userSearchViewModel = StateObject(
+            wrappedValue: GenericSearchViewModel(
+                debounceDuration: .milliseconds(500),
+                appState: appState,
+                searchFunction: apiManager.searchUsers,
+                unwrapFunction: {
+                    $0.users
+                }
+            )
+        )
     }
 
     var body: some View {
@@ -23,8 +68,10 @@ struct ContentView: View {
             AppRouterView()
                 .environmentObject(spotifyViewModel)
                 .environmentObject(profileViewModel)
-                .environmentObject(searchViewModel)
+                .environmentObject(songSearchViewModel)
+                .environmentObject(userSearchViewModel)
                 .environmentObject(statsViewModel)
+                .environmentObject(socialViewModel)
                 //
                 .modifier(ErrorAlertViewModifier())
                 .onOpenURL { url in
@@ -39,13 +86,24 @@ struct ContentView: View {
     private func handleUrl(_ url: URL) {
         guard url.scheme == "com.fergusjj.bluebird" else { return }
 
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
-              let queryItems = components.queryItems else { return }
+        guard
+            let components = URLComponents(
+                url: url,
+                resolvingAgainstBaseURL: true
+            ),
+            let queryItems = components.queryItems
+        else { return }
 
-        if let accessToken = queryItems.first(where: { $0.name == "access_token" })?.value,
-           let refreshToken = queryItems.first(where: { $0.name == "refresh_token" })?.value,
-           let tokenExpiryString = queryItems.first(where: { $0.name == "expires_in" })?.value,
-           let scopes = queryItems.first(where: { $0.name == "scopes" })?.value
+        if let accessToken = queryItems.first(where: {
+            $0.name == "access_token"
+        })?.value,
+            let refreshToken = queryItems.first(where: {
+                $0.name == "refresh_token"
+            })?.value,
+            let tokenExpiryString = queryItems.first(where: {
+                $0.name == "expires_in"
+            })?.value,
+            let scopes = queryItems.first(where: { $0.name == "scopes" })?.value
         {
             Task {
                 await appState.handleInitialSpotifyConnection(

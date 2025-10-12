@@ -1,9 +1,7 @@
 import SwiftUI
 
-struct ProfileView: View {
+struct ProfileViewV2: View {
     @EnvironmentObject var profileViewModel: ProfileViewModel
-
-    let isCurrentUser: Bool
 
     @State private var selectedTrack: SongDetail?
     @State private var selectedAlbum: AlbumDetail?
@@ -14,13 +12,8 @@ struct ProfileView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                if isCurrentUser {
-                    ProfileHeadlineViewEditable(editableMode: isEditing)
-                } else {
-                    ProfileHeadlineView()
-                }
+                ProfileHeadlineViewEditable(editableMode: isEditing)
                 Divider()
-                // TODO: - need to fix the horizontal padding
                 VStack {
                     pinnedTracksView()
                     Divider()
@@ -40,20 +33,21 @@ struct ProfileView: View {
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
         .toolbar {
-            if isCurrentUser {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { isEditing.toggle() }) {
-                        Image(systemName: isEditing ? "pencil.line" : "pencil")
-                            .foregroundColor(Color.themeAccent)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    NavigationLink(destination: SettingsView()) {
-                        Image(systemName: "gearshape.fill")
-                            .foregroundColor(Color.themeAccent)
-                    }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { isEditing.toggle() }) {
+                    Image(systemName: isEditing ? "pencil.line" : "pencil")
+                        .foregroundColor(Color.themeAccent)
                 }
             }
+            ToolbarItem(placement: .navigationBarLeading) {
+                NavigationLink(destination: SettingsView()) {
+                    Image(systemName: "gearshape.fill")
+                        .foregroundColor(Color.themeAccent)
+                }
+            }
+        }
+        .task {
+            logAvatar()
         }
     }
 
@@ -162,5 +156,13 @@ struct ProfileView: View {
                 )
             )
         }
+    }
+
+    func logAvatar() {
+        guard let avatar = profileViewModel.avatarURL else {
+            print("no avatar")
+            return
+        }
+        print(avatar)
     }
 }

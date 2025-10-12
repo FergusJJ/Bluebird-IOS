@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 @MainActor
@@ -51,8 +52,8 @@ class ProfileViewModel: ObservableObject {
 
     @State var pinsFetched = false
 
+    private var cancellables = Set<AnyCancellable>()
     private var appState: AppState
-
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     private let supabaseManager = SupabaseClientManager.shared
 
@@ -62,13 +63,25 @@ class ProfileViewModel: ObservableObject {
     ) {
         self.appState = appState
         self.bluebirdAccountAPIService = bluebirdAccountAPIService
-        Task {
-            guard appState.isLoggedIn == .istrue else {
-                return
+        observeLoginState()
+    }
+
+    private func observeLoginState() {
+        appState.$isLoggedIn
+            .removeDuplicates()
+            .filter { $0 == .istrue } // only fire when user logs in
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                Task {
+                    await self.syncAllPinnedContent()
+                    self.pinsFetched = true
+                }
             }
-            await syncAllPinnedContent()
-            pinsFetched = true
-        }
+            .store(in: &cancellables)
+    }
+
+    func isCurrentlyPlaying() -> Bool {
+        return appState.currentSong != "" && appState.currentArtist != ""
     }
 
     func getCurrentlyPlayingHeadline() -> String {
@@ -82,6 +95,7 @@ class ProfileViewModel: ObservableObject {
         let result = await bluebirdAccountAPIService.getProfile()
         switch result {
         case let .success(profileInfo):
+            print("got profile \(profileInfo.avatarUrl)")
             username = profileInfo.username
             bio = profileInfo.bio
             avatarURL = URL(string: profileInfo.avatarUrl)
@@ -266,6 +280,7 @@ class ProfileViewModel: ObservableObject {
     }
 
     private func getPins(entities: [String]) async -> Bool {
+        print("getting pins")
         if isLoading {
             return false
         }
@@ -326,6 +341,7 @@ class ProfileViewModel: ObservableObject {
     // MARK: - Sync Logic
 
     func syncAllPinnedContent() async {
+        print("syncing pins")
         let success = await getPins(entities: ["artist", "album", "track"])
         guard success else {
             print("Failed to fetch pins")

@@ -1,13 +1,15 @@
 import SwiftUI
 
-struct SearchbarView: View {
-    @EnvironmentObject var searchViewModel: SearchViewModel
+struct SearchbarView<T: Decodable & Hashable, V: Decodable>: View {
+    @EnvironmentObject var searchViewModel: GenericSearchViewModel<T, V>
     @FocusState private var isFocused: Bool
+
     @Binding var isSearching: Bool
+    let placeholderText: String
 
     var body: some View {
         HStack(spacing: 15) {
-            TextField("Search Song", text: $searchViewModel.searchQuery)
+            TextField(placeholderText, text: $searchViewModel.searchQuery)
                 .keyboardType(.default)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
@@ -23,14 +25,13 @@ struct SearchbarView: View {
                     }
                 }
 
-            if searchViewModel.isSearchingSong {
+            if searchViewModel.isSearching {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: Color.themeAccent))
             }
         }
         .padding(.horizontal, 20)
         .frame(height: 50)
-        .background(Color.themeBackground.opacity(0.8))
         .cornerRadius(4)
         .shadow(radius: 5)
     }

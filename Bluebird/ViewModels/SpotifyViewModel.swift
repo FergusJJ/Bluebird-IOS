@@ -34,8 +34,8 @@ class SpotifyViewModel: ObservableObject {
         )
 
         switch result {
-        case let .success(response):
-            guard let songData = response else {
+        case let .success(songData):
+            if songData.isEmpty {
                 currentlyPlaying = nil
                 return
             }

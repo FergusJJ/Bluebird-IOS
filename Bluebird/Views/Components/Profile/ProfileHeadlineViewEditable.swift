@@ -10,7 +10,7 @@ struct ProfileHeadlineViewEditable: View {
     var body: some View {
         VStack(alignment: .center, spacing: 15) {
             HStack(alignment: .top, spacing: 15) {
-                ProfilePictureView(editableMode: editableMode)
+                ProfilePictureView(editableMode: editableMode, isCurrentlyPlaying: profileViewModel.isCurrentlyPlaying())
                     .frame(width: 80, height: 80)
                     .alignmentGuide(.top) { d in d[.top] }
                 VStack(alignment: .leading, spacing: 12) {
@@ -30,7 +30,7 @@ struct ProfileHeadlineViewEditable: View {
                                 .padding(6)
                                 .background(Color.themeElement)
                                 .cornerRadius(10)
-                                .tint(Color.accentColor)
+                                .tint(Color.themeAccent)
 
                             HStack(spacing: 20) {
                                 Button("Discard") {
