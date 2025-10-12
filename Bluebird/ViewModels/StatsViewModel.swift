@@ -98,12 +98,12 @@ class StatsViewModel: ObservableObject {
         let result = await bluebirdAccountAPIService.getTopArtists(for: days)
         switch result {
         case let .success(topArtistsResponse):
-            guard let topArtistsPresent = topArtistsResponse else {
+            if topArtistsResponse.artists.isEmpty {
                 print("No top artists")
                 return
             }
-            topArtists = topArtistsPresent
-            topArtistsCache[days] = topArtistsPresent
+            topArtists = topArtistsResponse
+            topArtistsCache[days] = topArtistsResponse
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error top artists: \(presentationError)")
@@ -119,12 +119,12 @@ class StatsViewModel: ObservableObject {
         let result = await bluebirdAccountAPIService.getTopTracks(for: days)
         switch result {
         case let .success(topTracksResponse):
-            guard let topTracksPresent = topTracksResponse else {
+            if topTracksResponse.tracks.isEmpty {
                 print("No top tracks")
                 return
             }
-            topTracks = topTracksPresent
-            topTracksCache[days] = topTracksPresent
+            topTracks = topTracksResponse
+            topTracksCache[days] = topTracksResponse
             return
 
         case let .failure(serviceError):

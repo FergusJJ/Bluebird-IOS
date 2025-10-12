@@ -3,10 +3,10 @@ import SwiftUI
 @main
 struct BluebirdApp: App {
     @StateObject private var appState: AppState
-    private let apiManager: BluebirdAPIManager
+    private let apiManager: BluebirdAPIManagerV2
 
     init() {
-        apiManager = try! BluebirdAPIManager()
+        apiManager = try! BluebirdAPIManagerV2()
         _appState = StateObject(wrappedValue: AppState())
     }
 

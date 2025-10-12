@@ -4,7 +4,12 @@ import SwiftUI
 class SocialViewModel: ObservableObject {
     private var appState: AppState
 
-    @Published var friendsCurrentlyPlaying: [String: SongDetail] = [:]
+    @Published var currentUserProfile: UserProfileDetail?
+    @Published var friendsCurrentlyPlaying: [String: FriendCurrentlyPlaying] =
+        [:]
+
+    private var userProfileDetailCache:
+        [String: (profile: UserProfileDetail, timestamp: Date)] = [:]
 
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     init(
@@ -15,18 +20,33 @@ class SocialViewModel: ObservableObject {
         self.bluebirdAccountAPIService = bluebirdAccountAPIService
     }
 
+    func fetchUserProfile(userId: String, forceRefresh: Bool) async {
+        if !forceRefresh,
+           let cached = userProfileDetailCache[userId],
+           Date().timeIntervalSince(cached.timestamp) < 300
+        {
+            currentUserProfile = cached.profile
+            return
+        }
+        let result = await bluebirdAccountAPIService.getUser(userID: userId)
+        switch result {
+        case let .success(profileDetail):
+            userProfileDetailCache[userId] = (profileDetail, Date())
+            currentUserProfile = profileDetail
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching user profile: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
     func fetchFriendsCurrentlyPlaying() async {
-        let result = await bluebirdAccountAPIService.getFriendsCurrentlyPlaying(
-            for: [])
+        let result =
+            await bluebirdAccountAPIService.getFriendsCurrentlyPlaying()
         switch result {
         case let .success(userIDTrackMap):
-            await MainActor.run {
-                friendsCurrentlyPlaying = userIDTrackMap
-            }
-            print(
-                "Updated currently playing for \(userIDTrackMap.count) friends"
-            )
-            print(friendsCurrentlyPlaying)
+            friendsCurrentlyPlaying = userIDTrackMap.friends
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
@@ -35,9 +55,56 @@ class SocialViewModel: ObservableObject {
         }
     }
 
-    // want a way to get the users' friends currenlty playing
+    func sendFriendRequest(to userId: String) async {
+        let result = await bluebirdAccountAPIService.sendFriendRequest(
+            to: userId
+        )
+        switch result {
+        case .success:
+            if var profile = currentUserProfile, profile.user_id == userId {
+                profile.display_friendship_status = .outgoing
+                currentUserProfile = profile
+                userProfileDetailCache[userId] = (profile, Date())
+            }
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error sending friend request: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
+    func respondToFriendRequests(to userId: String, accept: Bool) async {
+        let result = await bluebirdAccountAPIService.respondToFriendRequest(
+            to: userId,
+            accept: accept
+        )
+        switch result {
+        case .success:
+            if var profile = currentUserProfile, profile.user_id == userId {
+                profile.display_friendship_status = accept ? .friends : .none
+                currentUserProfile = profile
+                userProfileDetailCache[userId] = (profile, Date())
+            }
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error responding to friend request: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
+    // MARK: - some cache helpers
+
+    func invalidateCache(for userId: String) {
+        userProfileDetailCache.removeValue(forKey: userId)
+    }
+
+    func clearCache() {
+        userProfileDetailCache.removeAll()
+    }
+
     // then want to show reposts.
 
+    // TODO: -
     // Reposts:
     // Need to query the reposts of all friends.
     // then can return the details back for each repost,
@@ -47,9 +114,7 @@ class SocialViewModel: ObservableObject {
     // Strategy: maybe fetch all reposts in the past x days? Limit by some amount of number?
     // But want to show all posts so maybe read all
     // then send back x, and allow pagination?
+    // have feed function allowing pagination
 
-    // Currently playing:
-    // Maybe going to want to cache the users access token when they are on the app so we don't keep on wiping it?
-    // and if not in cache just get new one?
-    // access tokens aren't invalidated when a new one is issued.
+    // need remove friend button
 }

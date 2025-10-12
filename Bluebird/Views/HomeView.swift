@@ -2,17 +2,20 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
-    @EnvironmentObject var searchViewModel: SearchViewModel
+    @EnvironmentObject var searchViewModel: GenericSearchViewModel<SongDetail, SearchSongResult>
 
     @State private var isSearching = false
 
     var body: some View {
         VStack(spacing: 0) {
             if isSearching {
-                SearchbarView(isSearching: $isSearching)
-                    .padding(.top, 10)
-                    .transition(.move(edge: .top))
-                    .zIndex(2)
+                SearchbarView<SongDetail, SearchSongResult>(
+                    isSearching: $isSearching,
+                    placeholderText: "Search songs"
+                )
+                .padding(.top, 10)
+                .transition(.move(edge: .top))
+                .zIndex(2)
             }
 
             ZStack {
@@ -62,7 +65,7 @@ struct HomeView: View {
                 }
                 .listRowBackground(Color.themeElement)
             }
-            if searchViewModel.isSearchingSong {
+            if searchViewModel.isSearching {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()

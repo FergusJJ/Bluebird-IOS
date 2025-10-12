@@ -6,7 +6,10 @@ struct ProfileHeadlineView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 15) {
             HStack(spacing: 15) {
-                ProfilePictureView(editableMode: false)
+                ProfilePictureView(
+                    editableMode: false,
+                    isCurrentlyPlaying: profileViewModel.isCurrentlyPlaying()
+                )
                 VStack(spacing: 15) {
                     Text(profileViewModel.username)
                         .font(.headline)
@@ -14,7 +17,10 @@ struct ProfileHeadlineView: View {
 
                     Text(profileViewModel.bio)
                         .font(.subheadline)
-                        .foregroundColor(profileViewModel.bio.isEmpty ? Color.themeSecondary : Color.themePrimary)
+                        .foregroundColor(
+                            profileViewModel.bio.isEmpty
+                                ? Color.themeSecondary : Color.themePrimary
+                        )
                         .multilineTextAlignment(.center)
                         .padding(.vertical, 5)
                 }
