@@ -73,6 +73,25 @@ class SocialViewModel: ObservableObject {
         }
     }
 
+    func removeFriend(friend userId: String) async {
+        let result = await bluebirdAccountAPIService.removeFriend(
+            friend: userId
+        )
+        switch result {
+        case .success:
+            // needs changing
+            if var profile = currentUserProfile, profile.user_id == userId {
+                profile.display_friendship_status = .none
+                currentUserProfile = profile
+                userProfileDetailCache[userId] = (profile, Date())
+            }
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error removing friend: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
     func respondToFriendRequests(to userId: String, accept: Bool) async {
         let result = await bluebirdAccountAPIService.respondToFriendRequest(
             to: userId,

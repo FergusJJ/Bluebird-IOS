@@ -7,6 +7,7 @@ struct UserProfileView: View {
     @State private var selectedTrack: SongDetail?
     @State private var selectedAlbum: AlbumDetail?
     @State private var selectedArtist: ArtistDetail?
+    @State private var showRemoveFriendAlert = false
 
     var body: some View {
         ScrollView {
@@ -52,6 +53,16 @@ struct UserProfileView: View {
                 userId: userProfile.user_id,
                 forceRefresh: false
             )
+        }
+        .alert("Remove Friend", isPresented: $showRemoveFriendAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove", role: .destructive) {
+                Task {
+                    await removeFriend(userId: userProfile.user_id)
+                }
+            }
+        } message: {
+            Text("Are you sure you want to remove \(userProfile.username)? You will have to request them again.")
         }
     }
 
@@ -100,7 +111,6 @@ struct UserProfileView: View {
                     )
                 }
 
-                // Friend request button
                 friendshipButton(status: detail.friendship_status)
             }
         }
@@ -132,12 +142,27 @@ struct UserProfileView: View {
     @ViewBuilder
     fileprivate func friendshipButton(status: FriendshipStatus) -> some View {
         switch status {
-        case .friends: // TODO: - needs to issue remvoe friend request
-            Button()
-            EmptyView()
+        case .friends:
+            Button(action: {
+                showRemoveFriendAlert = true
+            }) {
+                HStack {
+                    Text("Friends")
+                    Image(systemName: "checkmark")
+                }
+                .font(.subheadline)
+                .foregroundColor(Color.themePrimary)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(Color.themeElement)
+                .cornerRadius(20)
+            }
         case .outgoing:
-            // TODO: - should delete outgoing request
-            Button(action: {}) {
+            Button(action: {
+                Task {
+                    await removeFriend(userId: userProfile.user_id)
+                }
+            }) {
                 HStack {
                     Image(systemName: "checkmark")
                     Text("Friend Request Sent")
@@ -149,7 +174,6 @@ struct UserProfileView: View {
                 .background(Color.themeElement)
                 .cornerRadius(20)
             }
-            .disabled(true)
         case .incoming:
             HStack(spacing: 12) {
                 Button(action: {
@@ -352,5 +376,10 @@ struct UserProfileView: View {
     private func denyFriendRequest(userId: String) async {
         print("denyFriendRequest(userId: \(userId))")
         await socialViewModel.respondToFriendRequests(to: userId, accept: false)
+    }
+
+    private func removeFriend(userId: String) async {
+        print("removeFriend(userId: \(userId)")
+        await socialViewModel.removeFriend(friend: userId)
     }
 }

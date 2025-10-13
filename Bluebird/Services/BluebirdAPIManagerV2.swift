@@ -593,6 +593,16 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
+    func removeFriend(friend userID: String) async -> Result<
+        FriendRequestResponse, BluebirdAPIError
+    > {
+        return await makeRequest(
+            path: "/api/social/friends/remove",
+            method: "POST",
+            body: SendFriendRequestBody(recipient_id: userID)
+        )
+    }
+
     func respondToFriendRequest(to userID: String, accept: Bool) async
         -> Result<
             FriendRequestResponse, BluebirdAPIError

@@ -89,6 +89,9 @@ protocol BluebirdAccountAPIService {
     func sendFriendRequest(to userID: String) async -> Result<
         FriendRequestResponse, BluebirdAPIError
     >
+    func removeFriend(friend userID: String) async -> Result<
+        FriendRequestResponse, BluebirdAPIError
+    >
     func respondToFriendRequest(to userID: String, accept: Bool) async
         -> Result<
             FriendRequestResponse, BluebirdAPIError
