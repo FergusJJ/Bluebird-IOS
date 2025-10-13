@@ -16,6 +16,7 @@ struct StatsView: View {
                     Spacer()
                     DaysToggleButton(forDays: $statsNumDays)
                 }
+                .padding(.top, 0)
                 Text("Weekly Plays")
                     .font(.headline)
                     .fontWeight(.bold)

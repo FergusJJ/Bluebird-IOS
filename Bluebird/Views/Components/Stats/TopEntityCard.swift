@@ -9,18 +9,16 @@ struct TopEntityCard: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Background Image
             if let url = URL(string: imageURL) {
-                CachedAsyncImage(url: url)
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: isTop ? 220 : 140)
-                    .clipped()
-                    .cornerRadius(12)
+                GeometryReader { geometry in // fixes weird images sizes breaking disaplu
+                    CachedAsyncImage(url: url)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                }
             } else {
                 Rectangle()
                     .fill(Color.themeSecondary.opacity(0.3))
-                    .frame(height: isTop ? 220 : 140)
-                    .cornerRadius(12)
             }
 
             // Gradient overlay
@@ -32,7 +30,6 @@ struct TopEntityCard: View {
                 startPoint: .bottom,
                 endPoint: .center
             )
-            .cornerRadius(12)
 
             // Top left badge
             if isTop {
@@ -48,7 +45,6 @@ struct TopEntityCard: View {
                 .background(Color.themeBackground.opacity(0.8))
                 .cornerRadius(10)
                 .shadow(color: Color.themeShadow, radius: 3, x: 0, y: 2)
-                // .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color.themePrimary.opacity(0.4), lineWidth: 0.3)
@@ -79,8 +75,9 @@ struct TopEntityCard: View {
                 .padding(.bottom, 10)
             }
         }
+        .frame(maxWidth: .infinity)
         .frame(height: isTop ? 220 : 140)
-        .cornerRadius(12)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .shadow(color: Color.themeShadow, radius: 3)
     }
 }
