@@ -157,8 +157,10 @@ struct SongDetailView: View {
                     Spacer()
 
                     CircleIconButton(
-                        systemName: isReposted ? "arrow.2.squarepath" : "arrow.2.squarepath",
-                        iconColor: isReposted ? Color.themeAccent : Color.themePrimary,
+                        systemName: isReposted
+                            ? "arrow.2.squarepath" : "arrow.2.squarepath",
+                        iconColor: isReposted
+                            ? Color.themeAccent : Color.themePrimary,
                         backgroundColor: Color.themeElement.opacity(0.9)
                     ) {
                         onRepostTapped()
@@ -166,7 +168,8 @@ struct SongDetailView: View {
 
                     CircleIconButton(
                         systemName: isPinned ? "pin.fill" : "pin",
-                        iconColor: isPinned ? Color.themeAccent : Color.themePrimary,
+                        iconColor: isPinned
+                            ? Color.themeAccent : Color.themePrimary,
                         backgroundColor: Color.themeElement.opacity(0.9)
                     ) {
                         onPinTapped()

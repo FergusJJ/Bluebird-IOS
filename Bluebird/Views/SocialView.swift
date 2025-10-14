@@ -131,7 +131,6 @@ struct SocialView: View {
             ) { _, trackAndUser in
                 // I want to use navigation link here, but depending on whether the song or
                 // friend pfp is clicked it should go elsewhere
-                // TODO: - doesnt load artist correctly onSongTap - fix
                 FriendSongRowView(
                     song: trackAndUser.track,
                     username: "fergus",
@@ -150,7 +149,11 @@ struct SocialView: View {
         .scrollContentBackground(.hidden)
         .background(Color.themeBackground)
         .navigationDestination(item: $selectedSong) { song in
-            SongDetailView(song: song)
+            SongDetailView(
+                trackID: song.track_id,
+                imageURL: song.album_image_url,
+                name: song.name
+            )
         }
         .navigationDestination(item: $selectedUser) { profile in
             UserProfileView(userProfile: profile)
