@@ -9,6 +9,7 @@ struct SongDetailView: View {
     @State private var song: SongDetail?
     @State private var isLoading = false
     @State private var isPinned = false
+    @State private var isReposted = false
     @State private var trackTrend: [DailyPlayCount] = []
     @State private var trackLastPlayed: Date?
     @State private var trackUserPercenitile: Double?
@@ -68,6 +69,10 @@ struct SongDetailView: View {
                         await statsViewModel.getTrackUserPercentile(
                             for: trackID
                         )
+                }
+                group.addTask { @MainActor in
+                    // TODO: Fetch repost status
+                    isReposted = false // Replace with actual fetch
                 }
             }
         }
@@ -143,21 +148,36 @@ struct SongDetailView: View {
         }
         .overlay(
             VStack {
-                HStack {
-                    Spacer()
-                    CircleIconButton(systemName: "arrowshape.turn.up.right") {
+                Spacer()
+                HStack(spacing: 12) {
+                    CircleIconButton(
+                        systemName: "arrow.up.right.circle.fill",
+                        iconColor: Color.green,
+                        backgroundColor: Color.black.opacity(0.6)
+                    ) {
                         onOpenSpotifyTapped(song.spotify_url)
                     }
-                }
-                Spacer()
-                HStack {
+
                     Spacer()
-                    CircleIconButton(systemName: isPinned ? "pin.fill" : "pin") {
+
+                    CircleIconButton(
+                        systemName: isReposted ? "arrow.2.squarepath" : "arrow.2.squarepath",
+                        iconColor: isReposted ? Color.themeAccent : Color.themePrimary,
+                        backgroundColor: Color.themeElement.opacity(0.9)
+                    ) {
+                        onRepostTapped()
+                    }
+
+                    CircleIconButton(
+                        systemName: isPinned ? "pin.fill" : "pin",
+                        iconColor: isPinned ? Color.themeAccent : Color.themePrimary,
+                        backgroundColor: Color.themeElement.opacity(0.9)
+                    ) {
                         onPinTapped()
                     }
                 }
             }
-            .padding(12)
+            .padding(16)
         )
     }
 
@@ -196,6 +216,12 @@ struct SongDetailView: View {
         } else {
             print("SongDetailView - song and initailSong not loaded")
         }
+    }
+
+    // TODO:
+    private func onRepostTapped() {
+        isReposted.toggle()
+        print("Repost toggled: \(isReposted)")
     }
 
     private func fetchSongIfNeeded() async {
