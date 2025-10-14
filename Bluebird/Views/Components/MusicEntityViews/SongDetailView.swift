@@ -70,10 +70,6 @@ struct SongDetailView: View {
                             for: trackID
                         )
                 }
-                group.addTask { @MainActor in
-                    // TODO: Fetch repost status
-                    isReposted = false // Replace with actual fetch
-                }
             }
         }
     }

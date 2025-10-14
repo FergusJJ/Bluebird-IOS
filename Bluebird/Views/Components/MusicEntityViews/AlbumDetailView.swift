@@ -9,6 +9,7 @@ struct AlbumDetailView: View {
     @State private var album: AlbumDetail?
     @State private var isLoading = false
     @State private var isPinned = false
+    @State private var isReposted = false
 
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
     // use to check pins
@@ -112,23 +113,36 @@ struct AlbumDetailView: View {
             }
             .overlay(
                 VStack {
-                    HStack {
-                        Spacer()
-                        CircleIconButton(systemName: "arrowshape.turn.up.right") {
+                    Spacer()
+                    HStack(spacing: 12) {
+                        CircleIconButton(
+                            systemName: "arrow.up.right.circle.fill",
+                            iconColor: Color.green,
+                            backgroundColor: Color.black.opacity(0.6)
+                        ) {
                             onOpenSpotifyTapped(album.spotify_uri)
                         }
-                    }
-                    Spacer()
-                    HStack {
+
                         Spacer()
+
                         CircleIconButton(
-                            systemName: isPinned ? "pin.fill" : "pin"
+                            systemName: isReposted ? "arrow.2.squarepath" : "arrow.2.squarepath",
+                            iconColor: isReposted ? Color.themeAccent : Color.themePrimary,
+                            backgroundColor: Color.themeElement.opacity(0.9)
+                        ) {
+                            onRepostTapped()
+                        }
+
+                        CircleIconButton(
+                            systemName: isPinned ? "pin.fill" : "pin",
+                            iconColor: isPinned ? Color.themeAccent : Color.themePrimary,
+                            backgroundColor: Color.themeElement.opacity(0.9)
                         ) {
                             onPinTapped()
                         }
                     }
                 }
-                .padding(12)
+                .padding(16)
             )
             TwoStatsView(
                 leftLabel: "RELEASE DATE",
@@ -173,6 +187,11 @@ struct AlbumDetailView: View {
                 }
             }
         }
+    }
+
+    private func onRepostTapped() {
+        isReposted.toggle()
+        print("reposted")
     }
 
     private func fetchAlbumIfNeeded() async {

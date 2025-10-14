@@ -36,7 +36,7 @@ struct TopGenresBarGraph: View {
         let horizontalPadding: CGFloat = 16
         let labelWidth: CGFloat = 90
         let availableHeight = size.height - (verticalPadding * 2)
-        let barHeight = availableHeight / CGFloat(data.count)
+        let barHeight = availableHeight / CGFloat(max(1, data.count))
         let spacing = barHeight * 0.15
         let actualBarHeight = barHeight - spacing
         let maxBarWidth = size.width - (horizontalPadding * 2) - labelWidth - 8

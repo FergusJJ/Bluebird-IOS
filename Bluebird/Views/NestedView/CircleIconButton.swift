@@ -15,7 +15,6 @@ struct CircleIconButton: View {
                 .background(
                     ZStack {
                         backgroundColor
-
                         Circle()
                             .fill(
                                 LinearGradient(

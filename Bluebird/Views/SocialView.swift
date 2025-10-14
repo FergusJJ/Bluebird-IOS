@@ -131,6 +131,7 @@ struct SocialView: View {
             ) { _, trackAndUser in
                 // I want to use navigation link here, but depending on whether the song or
                 // friend pfp is clicked it should go elsewhere
+                // TODO: - doesnt load artist correctly onSongTap - fix
                 FriendSongRowView(
                     song: trackAndUser.track,
                     username: "fergus",

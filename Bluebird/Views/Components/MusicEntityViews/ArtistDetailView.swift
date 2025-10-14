@@ -5,6 +5,7 @@ struct ArtistDetailView: View {
 
     @State private var forDays = 0
     @State private var isPinned = false
+    @State private var isReposted = false
     @State private var artistDetail: ArtistDetail?
     @State private var userListens: Int?
     @State private var forDaysCache: [Int: Int] = [:]
@@ -92,7 +93,15 @@ struct ArtistDetailView: View {
         }
     }
 
-    private func onOpenSpotifyTapped(_ uri: String) {
+    private func onRepostTapped() {
+        isReposted.toggle()
+        print("reposted")
+    }
+
+    private func onOpenSpotifyTapped(uriOption: String?) {
+        guard let uri = uriOption else {
+            return
+        }
         let spotifyURL = URL(
             string: uri.replacingOccurrences(of: "spotify:", with: "spotify://")
         )!
@@ -127,23 +136,36 @@ extension ArtistDetailView {
         }
         .overlay(
             VStack {
-                HStack {
-                    Spacer()
-                    if let uri = artistDetail?.spotify_uri {
-                        CircleIconButton(systemName: "arrowshape.turn.up.right") {
-                            onOpenSpotifyTapped(uri)
-                        }
-                    }
-                }
                 Spacer()
-                HStack {
+                HStack(spacing: 12) {
+                    CircleIconButton(
+                        systemName: "arrow.up.right.circle.fill",
+                        iconColor: Color.green,
+                        backgroundColor: Color.black.opacity(0.6)
+                    ) {
+                        onOpenSpotifyTapped(uriOption: artistDetail?.spotify_uri)
+                    }
+
                     Spacer()
-                    CircleIconButton(systemName: isPinned ? "pin.fill" : "pin") {
+
+                    CircleIconButton(
+                        systemName: isReposted ? "arrow.2.squarepath" : "arrow.2.squarepath",
+                        iconColor: isReposted ? Color.themeAccent : Color.themePrimary,
+                        backgroundColor: Color.themeElement.opacity(0.9)
+                    ) {
+                        onRepostTapped()
+                    }
+
+                    CircleIconButton(
+                        systemName: isPinned ? "pin.fill" : "pin",
+                        iconColor: isPinned ? Color.themeAccent : Color.themePrimary,
+                        backgroundColor: Color.themeElement.opacity(0.9)
+                    ) {
                         onPinTapped()
                     }
                 }
             }
-            .padding(12)
+            .padding(16)
         )
     }
 
