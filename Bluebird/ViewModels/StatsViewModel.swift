@@ -262,7 +262,14 @@ class StatsViewModel: ObservableObject {
         switch result {
         case let .success(discoveries):
             discoveredTracks = discoveries.discovered_tracks
+                .sorted { $0.play_count > $1.play_count }
+                .prefix(3)
+                .map { $0 }
+
             discoveredArtists = discoveries.discovered_artists
+                .sorted { $0.play_count > $1.play_count }
+                .prefix(3)
+                .map { $0 }
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading discoveries: \(presentationError)")

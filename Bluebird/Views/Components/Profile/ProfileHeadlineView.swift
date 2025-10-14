@@ -29,7 +29,8 @@ struct ProfileHeadlineView: View {
             HeadlineStatsView(
                 totalMinutesListened: profileViewModel.totalMinutesListened,
                 totalPlays: profileViewModel.totalPlays,
-                totalUniqueArtists: profileViewModel.totalUniqueArtists
+                totalUniqueArtists: profileViewModel.totalUniqueArtists,
+                friendCount: 1
             )
 
             Spacer()

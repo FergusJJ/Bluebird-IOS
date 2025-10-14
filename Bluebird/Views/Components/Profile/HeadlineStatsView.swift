@@ -4,48 +4,49 @@ struct HeadlineStatsView: View {
     let totalMinutesListened: Int
     let totalPlays: Int
     let totalUniqueArtists: Int
+    let friendCount: Int
 
     var body: some View {
-        HStack(spacing: 0) {
-            StatItemView(
-                value: formatMinutes(totalMinutesListened),
-                label: "Minutes",
-                icon: "clock.fill"
-            )
+        VStack(spacing: 8) {
+            // Top row - Minutes and Plays
+            HStack(spacing: 8) {
+                CompactStatView(
+                    value: formatMinutes(totalMinutesListened),
+                    label: "Minutes",
+                    icon: "clock.fill",
+                    accentColor: Color.themeAccent
+                )
 
-            Divider()
-                .frame(height: 40)
-                .background(Color.themeSecondary.opacity(0.3))
-
-            StatItemView(
-                value: formatNumber(totalPlays),
-                label: "Plays",
-                icon: "play.fill"
-            )
-
-            Divider()
-                .frame(height: 40)
-                .background(Color.themeSecondary.opacity(0.3))
-
-            StatItemView(
-                value: formatNumber(totalUniqueArtists),
-                label: "Artists",
-                icon: "person.2.fill"
-            )
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(Color.themeElement)
-        .cornerRadius(12)
-        .overlay(
-            VStack {
-                LinearGradient(
-                    colors: [Color.themeHighlight, Color.clear],
-                    startPoint: .top,
-                    endPoint: .center
-                ).cornerRadius(12)
+                CompactStatView(
+                    value: formatNumber(totalPlays),
+                    label: "Plays",
+                    icon: "play.circle.fill",
+                    accentColor: Color.green
+                )
             }
-        ).shadow(color: Color.themeShadow, radius: 4, x: 0, y: 2)
+
+            // Bottom row - Artists and Friends
+            HStack(spacing: 8) {
+                CompactStatView(
+                    value: formatNumber(totalUniqueArtists),
+                    label: "Artists",
+                    icon: "music.mic",
+                    accentColor: Color.purple
+                )
+
+                Button(action: {
+                    // Navigate to friends list (not implemented yet)
+                }) {
+                    CompactStatView(
+                        value: formatNumber(friendCount),
+                        label: "Friends",
+                        icon: "person.2.fill",
+                        accentColor: Color.blue
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
     }
 
     private func formatMinutes(_ minutes: Int) -> String {
@@ -72,28 +73,42 @@ struct HeadlineStatsView: View {
     }
 }
 
-struct StatItemView: View {
+struct CompactStatView: View {
     let value: String
     let label: String
     let icon: String
+    let accentColor: Color
 
     var body: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.caption2)
-                    .foregroundColor(Color.themeAccent)
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(accentColor)
+                .frame(width: 32, height: 32)
+                .background(accentColor.opacity(0.15))
+                .clipShape(Circle())
 
+            VStack(alignment: .leading, spacing: 2) {
                 Text(value)
                     .font(.headline)
-                    .fontWeight(.semibold)
+                    .fontWeight(.bold)
                     .foregroundColor(Color.themePrimary)
+
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(Color.themeSecondary)
             }
 
-            Text(label)
-                .font(.caption)
-                .foregroundColor(Color.themeSecondary)
+            Spacer()
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
+        .background(Color.themeElement)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.themeHighlight.opacity(0.1), lineWidth: 1)
+        )
     }
 }

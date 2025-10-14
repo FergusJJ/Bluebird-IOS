@@ -85,7 +85,8 @@ struct ProfileHeadlineViewEditable: View {
             HeadlineStatsView(
                 totalMinutesListened: profileViewModel.totalMinutesListened,
                 totalPlays: profileViewModel.totalPlays,
-                totalUniqueArtists: profileViewModel.totalUniqueArtists
+                totalUniqueArtists: profileViewModel.totalUniqueArtists,
+                friendCount: 1 // TODO: Get own friends on load
             )
 
             Spacer()
