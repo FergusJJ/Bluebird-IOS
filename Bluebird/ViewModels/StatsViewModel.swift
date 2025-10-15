@@ -25,6 +25,7 @@ class StatsViewModel: ObservableObject {
 
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     private let supabaseManager = SupabaseClientManager.shared
+    private let cacheManager = CacheManager.shared
 
     init(
         appState: AppState,
@@ -51,10 +52,13 @@ class StatsViewModel: ObservableObject {
     }
 
     func fetchHourlyPlays(for days: Int) async {
-        if let cached = hourlyPlaysCache[days] {
-            hourlyPlays = cached
+        if let cached = cacheManager.getHourlyPlays(for: days) {
+            hourlyPlays = cached.reduce(into: Array(repeating: 0, count: 24)) { result, play in
+                result[play.hour] = play.plays
+            }
             return
         }
+
         let result = await bluebirdAccountAPIService.getHourlyPlays(for: days)
         switch result {
         case let .success(hourlyPlaysResponse):
@@ -65,7 +69,7 @@ class StatsViewModel: ObservableObject {
                 newPlays[hourIndex] = play.plays
             }
             hourlyPlays = newPlays
-            hourlyPlaysCache[days] = newPlays
+            cacheManager.saveHourlyPlays(hourlyPlaysResponse, days: days)
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
@@ -91,7 +95,7 @@ class StatsViewModel: ObservableObject {
     }
 
     func fetchTopArtists(for days: Int) async {
-        if let cached = topArtistsCache[days] {
+        if let cached = cacheManager.getTopArtists(for: days) {
             topArtists = cached
             return
         }
@@ -103,7 +107,7 @@ class StatsViewModel: ObservableObject {
                 return
             }
             topArtists = topArtistsResponse
-            topArtistsCache[days] = topArtistsResponse
+            cacheManager.saveTopArtists(topArtistsResponse, days: days)
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error top artists: \(presentationError)")
@@ -112,7 +116,7 @@ class StatsViewModel: ObservableObject {
     }
 
     func fetchTopTracks(for days: Int) async {
-        if let cached = topTracksCache[days] {
+        if let cached = cacheManager.getTopTracks(for: days) {
             topTracks = cached
             return
         }
@@ -124,7 +128,7 @@ class StatsViewModel: ObservableObject {
                 return
             }
             topTracks = topTracksResponse
-            topTracksCache[days] = topTracksResponse
+            cacheManager.saveTopTracks(topTracksResponse, days: days)
             return
 
         case let .failure(serviceError):

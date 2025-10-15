@@ -1,17 +1,17 @@
 import Foundation
 
-struct HourlyPlay: Decodable {
+struct HourlyPlay: Codable {
     let hour: Int
     let plays: Int
 }
 
-struct DailyPlay: Decodable {
+struct DailyPlay: Codable {
     let day_of_week: Int
     let this_week: Int
     let last_week: Int
 }
 
-struct ArtistWithPlayCount: Decodable, Hashable {
+struct ArtistWithPlayCount: Codable, Hashable {
     let artist: ArtistDetail
     let play_count: Int
 
@@ -26,7 +26,7 @@ struct ArtistWithPlayCount: Decodable, Hashable {
     }
 }
 
-struct TopArtists: Decodable, Hashable {
+struct TopArtists: Codable, Hashable {
     let artists: [Int: ArtistWithPlayCount]
 
     init(artists: [Int: ArtistWithPlayCount]) {
@@ -53,7 +53,7 @@ struct TopArtists: Decodable, Hashable {
     }
 }
 
-struct TrackWithPlayCount: Decodable, Hashable {
+struct TrackWithPlayCount: Codable, Hashable {
     let track: SongDetail
     let play_count: Int
 
@@ -68,7 +68,7 @@ struct TrackWithPlayCount: Decodable, Hashable {
     }
 }
 
-struct TopTracks: Decodable, Hashable {
+struct TopTracks: Codable, Hashable {
     let tracks: [Int: TrackWithPlayCount]
 
     init(tracks: [Int: TrackWithPlayCount]) {
@@ -121,7 +121,7 @@ struct TrackUserPercentile: Decodable {
 
 typealias GenreCounts = [String: Int]
 
-struct Discoveries: Decodable {
+struct Discoveries: Codable {
     let discovered_tracks: [TrackWithPlayCount]
     let discovered_artists: [ArtistWithPlayCount]
 }

@@ -127,7 +127,7 @@ struct TopGenresBarGraph: View {
                     )
                 )
                 .frame(
-                    width: animateIn ? barWidth : 0,
+                    width: max(0, animateIn ? barWidth : 0),
                     height: height * (isSelected ? 1.15 : 1.0)
                 )
                 .opacity(isSelected ? 1.0 : 0.85)

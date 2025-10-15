@@ -42,7 +42,7 @@ extension EntityType {
     }
 }
 
-struct Pin: Decodable, Hashable {
+struct Pin: Codable, Hashable {
     let entity_id: String
     let entity_type: EntityType
     var id: String { "\(entity_id)_\(entity_type)" }

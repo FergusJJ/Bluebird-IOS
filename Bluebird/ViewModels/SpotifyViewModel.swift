@@ -12,6 +12,7 @@ class SpotifyViewModel: ObservableObject {
 
     private var appState: AppState
     private let spotifyAPIService: SpotifyAPIService
+    private let cacheManager = CacheManager.shared
 
     var sortedSongs: [SongDetail] {
         songHistory.values.sorted { $0.listened_at! > $1.listened_at! }
@@ -20,6 +21,12 @@ class SpotifyViewModel: ObservableObject {
     init(appState: AppState, spotifyAPIService: SpotifyAPIService) {
         self.appState = appState
         self.spotifyAPIService = spotifyAPIService
+        loadCachedHistory()
+    }
+
+    private func loadCachedHistory() {
+        songHistory = cacheManager.getSongHistory()
+        print("Loaded \(songHistory.count) songs from cache")
     }
 
     func loadCurrentlyPlaying() async {
@@ -76,6 +83,7 @@ class SpotifyViewModel: ObservableObject {
                 uniquingKeysWith: { first, _ in first }
             )
             songHistory.merge(newSongs) { existing, _ in existing }
+            cacheManager.saveSongHistory(songHistory)
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
@@ -116,11 +124,18 @@ class SpotifyViewModel: ObservableObject {
                 uniquingKeysWith: { first, _ in first }
             )
             songHistory.merge(newSongs) { existing, _ in existing }
+            cacheManager.saveSongHistory(songHistory)
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error fetching older history: \(presentationError)")
         }
+    }
+
+    func clearHistory() {
+        songHistory.removeAll()
+        currentlyPlaying = nil
+        canLoadMore = true
     }
 
     func fetchArtistDetail(for artistID: String) async -> ArtistDetail? {

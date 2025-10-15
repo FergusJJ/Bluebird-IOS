@@ -2,16 +2,17 @@ import SwiftUI
 
 @MainActor
 class SocialViewModel: ObservableObject {
-    private var appState: AppState
-
     @Published var currentUserProfile: UserProfileDetail?
     @Published var friendsCurrentlyPlaying: [String: FriendCurrentlyPlaying] =
         [:]
 
+    private var appState: AppState
+    private let cacheManager = CacheManager.shared
+    private let bluebirdAccountAPIService: BluebirdAccountAPIService
+
     private var userProfileDetailCache:
         [String: (profile: UserProfileDetail, timestamp: Date)] = [:]
 
-    private let bluebirdAccountAPIService: BluebirdAccountAPIService
     init(
         appState: AppState,
         bluebirdAccountAPIService: BluebirdAccountAPIService
@@ -21,18 +22,17 @@ class SocialViewModel: ObservableObject {
     }
 
     func fetchUserProfile(userId: String, forceRefresh: Bool) async {
-        if !forceRefresh,
-           let cached = userProfileDetailCache[userId],
-           Date().timeIntervalSince(cached.timestamp) < 300
-        {
-            currentUserProfile = cached.profile
-            return
+        if !forceRefresh {
+            if let cached = cacheManager.getUserProfile(userId: userId) {
+                currentUserProfile = cached
+                return
+            }
         }
         let result = await bluebirdAccountAPIService.getUser(userID: userId)
         switch result {
         case let .success(profileDetail):
-            userProfileDetailCache[userId] = (profileDetail, Date())
             currentUserProfile = profileDetail
+            cacheManager.saveUserProfile(profileDetail)
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
@@ -114,11 +114,11 @@ class SocialViewModel: ObservableObject {
     // MARK: - some cache helpers
 
     func invalidateCache(for userId: String) {
-        userProfileDetailCache.removeValue(forKey: userId)
+        cacheManager.invalidateSocialCache(for: userId)
     }
 
     func clearCache() {
-        userProfileDetailCache.removeAll()
+        cacheManager.invalidateSocialCache()
     }
 
     // then want to show reposts.
