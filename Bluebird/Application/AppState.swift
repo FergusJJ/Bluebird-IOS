@@ -11,8 +11,12 @@ class AppState: ObservableObject {
     @Published var isLoggedIn: LoadingOrBool = .loading
     @Published var isSpotifyConnected: LoadingOrBool = .loading
     @Published var errorToDisplay: AppError?
+    @Published var isInitialSignup = false
+    @Published var shouldShowSpotifyModal = false
 
     @AppStorage("userColorScheme") private var storedScheme: String = "system"
+    @AppStorage("spotifyModalDontAskAgain") private var dontAskAgainForSpotify: Bool = false
+
     @Published var userColorScheme: ColorScheme? = nil {
         didSet {
             storedScheme = userColorScheme == .dark ? "dark" :
@@ -79,6 +83,15 @@ class AppState: ObservableObject {
         errorToDisplay = nil
     }
 
+    func dismissSpotifyModal() {
+        shouldShowSpotifyModal = false
+    }
+
+    func setDontAskAgainForSpotify() {
+        dontAskAgainForSpotify = true
+        shouldShowSpotifyModal = false
+    }
+
     func handleAppDidBecomeActive() async {
         print("AppState: Handling app becoming active.")
         guard isLoggedIn == .istrue else {
@@ -106,6 +119,16 @@ class AppState: ObservableObject {
             print(
                 "AppState: Failed to re-establish Spotify session on foreground."
             )
+            // Show modal if not connected and haven't opted out
+            if !dontAskAgainForSpotify && !isInitialSignup {
+                // Delay showing modal to let UI settle
+                Task {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                    if isSpotifyConnected == .isfalse && !dontAskAgainForSpotify {
+                        shouldShowSpotifyModal = true
+                    }
+                }
+            }
         }
     }
 
@@ -141,6 +164,8 @@ class AppState: ObservableObject {
             print(
                 "AppState: Spotify intial session established successfully on foreground."
             )
+            shouldShowSpotifyModal = false
+            isInitialSignup = false
         } else {
             print(
                 "AppState: Failed to establish Spotify initial session on foreground."
@@ -199,9 +224,10 @@ class AppState: ObservableObject {
 
                         if justSignedUp {
                             print(
-                                "Auth Listener: User just signed up, skipping Spotify session establishment."
+                                "Auth Listener: User just signed up, marking as initial signup."
                             )
-                            justSignedUp = false // Reset the flag
+                            justSignedUp = false
+                            isInitialSignup = true
                             newSpotifyState = .isfalse
                         } else if self.isSpotifyConnected != .istrue {
                             print(
@@ -215,6 +241,15 @@ class AppState: ObservableObject {
                                 print(
                                     "Auth Listener: Failed to establish Spotify session."
                                 )
+                                // Check if we should show modal (not initial signup, not opted out)
+                                if !isInitialSignup && !dontAskAgainForSpotify {
+                                    Task {
+                                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
+                                        if self.isSpotifyConnected == .isfalse && !self.dontAskAgainForSpotify {
+                                            self.shouldShowSpotifyModal = true
+                                        }
+                                    }
+                                }
                             } else {
                                 print(
                                     "Auth Listener: Spotify session established successfully via listener for \(event.event)."
@@ -262,6 +297,8 @@ class AppState: ObservableObject {
                     newLoggedInState = .isfalse
                     newSpotifyState = .isfalse
                     newUserID = nil
+                    isInitialSignup = false
+                    shouldShowSpotifyModal = false
                     await self.clearSpotifyTokens()
                     await self.clearUserCache()
 
@@ -375,6 +412,8 @@ class AppState: ObservableObject {
             currentUsername = nil
             currentSong = ""
             currentArtist = ""
+            isInitialSignup = false
+            shouldShowSpotifyModal = false
 
             return true
         } catch {
@@ -429,7 +468,6 @@ class AppState: ObservableObject {
             setError(presentationError)
             return false
         }
-        // previously returned here, but want to make sure that spotify client id is fetched
     }
 
     func saveSpotifyCredentials(access: String, refresh: String, tokenExpiry: String, scopes: String) -> Bool {
@@ -480,6 +518,8 @@ class AppState: ObservableObject {
             spotifyAccessToken = access
             isSpotifyConnected = .istrue
             clearError()
+            shouldShowSpotifyModal = false
+            isInitialSignup = false
 
             Task {
                 await uploadSpotifyRefreshTokenToDatabase(
@@ -489,7 +529,7 @@ class AppState: ObservableObject {
                     scopes: scopes
                 )
             }
-            return true // Success
+            return true
         } else {
             print(
                 "SaveSpotifyCredentials Error: Failed to store one or both tokens in Keychain. accessSuccess=\(accessSuccess), refreshSuccess=\(refreshSuccess)"
@@ -569,9 +609,6 @@ class AppState: ObservableObject {
         }
         guard let userId = currentUserId else {
             print("EstablishSpotifySession Error: Missing User ID.")
-            let appError = AppStateError.missingUserID
-            let presentationError = AppError(from: appError)
-            setError(presentationError)
             return false
         }
         let userIdString = userId.uuidString
@@ -615,8 +652,6 @@ class AppState: ObservableObject {
             print(
                 "EstablishSpotifySessionClientID Error: Failed to establish session via API - \(serviceError.localizedDescription)"
             )
-            let presentationError = AppError(from: serviceError)
-            setError(presentationError)
             spotifyAccessToken = nil
             let accessAccount = keychainAccountName(
                 for: keychainAccessTokenType,
@@ -651,9 +686,6 @@ class AppState: ObservableObject {
 
         guard let userId = currentUserId else {
             print("EstablishSpotifySession Error: Missing User ID.")
-            let appError = AppStateError.missingUserID
-            let presentationError = AppError(from: appError)
-            setError(presentationError)
             return false
         }
         let userIdString = userId.uuidString
@@ -719,8 +751,13 @@ class AppState: ObservableObject {
                     "EstablishSpotifySession Warning: Failed to delete access token from keychain (it might not have existed)."
                 )
             }
-            let presentationError = AppError(from: serviceError)
-            setError(presentationError)
+            // Don't set error for 404 case as this is expected for new users
+            if case .apiError(404, _) = serviceError {
+                // Expected case, don't set error
+            } else {
+                let presentationError = AppError(from: serviceError)
+                setError(presentationError)
+            }
             return false
         }
     }

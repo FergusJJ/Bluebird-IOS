@@ -6,6 +6,7 @@ struct SettingsView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
+    @State private var isConnectingSpotify = false
 
     var body: some View {
         ScrollView {
@@ -21,9 +22,55 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                connectedDetail()
-                Divider()
+                if appState.isSpotifyConnected != .istrue {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Spotify Connection")
+                            .font(.headline)
+                            .foregroundColor(Color.themePrimary)
 
+                        Text(
+                            "Connect your Spotify account to enable music tracking and insights"
+                        )
+                        .font(.caption)
+                        .foregroundColor(Color.themeSecondary)
+
+                        Button(action: {
+                            Task {
+                                isConnectingSpotify = true
+                                _ = await appState.connectSpotify()
+                                isConnectingSpotify = false
+                            }
+                        }) {
+                            HStack {
+                                if isConnectingSpotify {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .progressViewStyle(
+                                            CircularProgressViewStyle(
+                                                tint: .white
+                                            )
+                                        )
+                                } else {
+                                    Image(systemName: "link")
+                                }
+                                Text("Connect to Spotify")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .foregroundColor(.white)
+                            .background(Color.spotifyGreen)
+                            .cornerRadius(10)
+                        }
+                        .disabled(isConnectingSpotify)
+                    }
+
+                    Divider()
+                } else {
+                    // EXISTING CONNECTION DETAILS - Only show when connected
+                    connectedDetail()
+                    Divider()
+                }
                 Button {
                     Task {
                         await onLogoutProfile()

@@ -124,7 +124,6 @@ struct SignupView: View {
                     .padding(.top)
 
                     Spacer()
-                    Spacer()
                 }
                 .padding()
                 // .frame(minHeight: UIScreen.main.bounds.height)

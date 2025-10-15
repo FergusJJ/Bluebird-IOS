@@ -23,6 +23,11 @@ struct SpotifyView: View {
         }
     }
 
+    private func connectLater() {
+        appState.isInitialSignup = false
+        appState.isSpotifyConnected = .isfalse
+    }
+
     private func logOut() {
         showConnectionAlert = false
         Task {
@@ -39,28 +44,56 @@ struct SpotifyView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 20) {
+                Spacer()
+
+                Image(systemName: "music.note.house.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.spotifyGreen)
+                    .padding(.bottom, 10)
+
                 Text("Connect Spotify")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
 
-                Text("Please connect your Spotify account to continue.")
+                Text("Connect your Spotify account to start tracking your music history and discover insights")
                     .font(.body)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, 30)
 
                 if isConnecting {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .padding(.vertical)
+                        .padding(.vertical, 30)
                 } else {
-                    Button("Connect to Spotify") {
-                        initiateSpotifyConnection()
+                    VStack(spacing: 16) {
+                        Button(action: initiateSpotifyConnection) {
+                            HStack {
+                                Image(systemName: "link")
+                                Text("Connect to Spotify")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.spotifyGreen)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isConnecting)
+                        .padding(.horizontal, 30)
+
+                        if appState.isInitialSignup {
+                            Button(action: connectLater) {
+                                Text("Connect Later")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                    .underline()
+                            }
+                            .padding(.top, 8)
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.spotifyGreen)
-                    .disabled(isConnecting)
-                    .padding(.vertical)
+                    .padding(.vertical, 20)
                 }
 
                 if let logoutErr = appState.errorToDisplay?.localizedDescription {
@@ -71,6 +104,7 @@ struct SpotifyView: View {
                         .padding(.horizontal)
                 }
 
+                Spacer()
                 Spacer()
             }
             .padding()
