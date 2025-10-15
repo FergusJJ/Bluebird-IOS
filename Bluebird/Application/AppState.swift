@@ -23,6 +23,8 @@ class AppState: ObservableObject {
     private var authListener: Task<Void, Never>?
     private var authAPIService: BluebirdAccountAPIService
     private var currentUserId: UUID?
+    private var currentUserEmail: String?
+    private var currentUsername: String?
     private var spotifyAccessToken: String?
     private var isEstablishingSpotifySession = false
     private var justSignedUp = false
@@ -37,6 +39,8 @@ class AppState: ObservableObject {
 
     @Published var currentSong: String = ""
     @Published var currentArtist: String = ""
+
+    private let cacheManager = CacheManager.shared
 
     init() {
         do {
@@ -156,7 +160,10 @@ class AppState: ObservableObject {
                 self.isLoggedIn = .isfalse
                 self.isSpotifyConnected = .isfalse
                 self.currentUserId = nil
+                self.currentUserEmail = nil
+                self.currentUsername = nil
                 await self.clearSpotifyTokens()
+                await self.clearUserCache()
             }
         }
     }
@@ -184,6 +191,11 @@ class AppState: ObservableObject {
                         newLoggedInState = .istrue
                         newUserID = user.id
                         self.currentUserId = newUserID
+                        self.currentUserEmail = user.email
+                        await self.setupUserCache(
+                            userId: user.id.uuidString,
+                            email: user.email ?? ""
+                        )
 
                         if justSignedUp {
                             print(
@@ -223,6 +235,7 @@ class AppState: ObservableObject {
                         newSpotifyState = .isfalse
                         newUserID = nil
                         await self.clearSpotifyTokens()
+                        await self.clearUserCache()
                     }
 
                 // happens slightly after session is initialized, don't establish spotify session
@@ -231,6 +244,7 @@ class AppState: ObservableObject {
                     if let user = event.session?.user {
                         newUserID = user.id
                         self.currentUserId = newUserID
+                        self.currentUserEmail = user.email
                         newLoggedInState = .istrue
                     } else {
                         print(
@@ -240,6 +254,7 @@ class AppState: ObservableObject {
                         newSpotifyState = .isfalse
                         newUserID = nil
                         await self.clearSpotifyTokens()
+                        await self.clearUserCache()
                     }
 
                 case .signedOut:
@@ -248,17 +263,20 @@ class AppState: ObservableObject {
                     newSpotifyState = .isfalse
                     newUserID = nil
                     await self.clearSpotifyTokens()
+                    await self.clearUserCache()
 
                 case .passwordRecovery, .userUpdated, .userDeleted:
                     print("Auth Listener: Event \(event.event) received.")
                     if let user = event.session?.user {
                         newUserID = user.id
                         self.currentUserId = newUserID
+                        self.currentUserEmail = user.email
                     } else if event.event == .userDeleted {
                         newLoggedInState = .isfalse
                         newSpotifyState = .isfalse
                         newUserID = nil
                         await self.clearSpotifyTokens()
+                        await self.clearUserCache()
                     }
 
                 default:
@@ -291,10 +309,17 @@ class AppState: ObservableObject {
                     password: password
                 )
             let userId = authResponse.user.id
+            currentUsername = username
             let result = await authAPIService.userSignUp(username: username)
             switch result {
             case .success:
                 print("Profile Insert successful for user ID \(userId)")
+                // Setup cache for new user
+                await setupUserCache(
+                    userId: userId.uuidString,
+                    email: email,
+                    username: username
+                )
                 return true
             case let .failure(serviceError):
                 print("Failed to create user profile: \(serviceError)")
@@ -337,8 +362,20 @@ class AppState: ObservableObject {
 
     func logoutUser() async -> Bool {
         do {
+            print("Cleasring cache")
+            await clearUserCache()
+            print("Cleared cache")
+
             try await SupabaseClientManager.shared.client.auth.signOut()
             print("User logged out successfully.")
+
+            // Reset local state
+            currentUserId = nil
+            currentUserEmail = nil
+            currentUsername = nil
+            currentSong = ""
+            currentArtist = ""
+
             return true
         } catch {
             print("Error signing out: \(error.localizedDescription)")
@@ -353,6 +390,7 @@ class AppState: ObservableObject {
         let result = await SupabaseClientManager.shared.deleteAccount()
         switch result {
         case .success():
+            await clearUserCache()
             _ = await logoutUser()
             return true
         case let .failure(error):
@@ -474,6 +512,39 @@ class AppState: ObservableObject {
             setError(presentationError)
             return false
         }
+    }
+
+    // MARK: - Cache stuff
+
+    @MainActor
+    private func setupUserCache(userId: String, email: String, username: String? = nil) async {
+        // Try to get username if not provided
+        let finalUsername: String
+        if let username = username {
+            finalUsername = username
+        } else if let cachedUsername = currentUsername {
+            finalUsername = cachedUsername
+        } else {
+            let result = await authAPIService.getProfile()
+            switch result {
+            case let .success(profile):
+                finalUsername = profile.username
+                currentUsername = profile.username
+            case .failure:
+                finalUsername = email.components(separatedBy: "@").first ?? "User"
+            }
+        }
+
+        cacheManager.setCurrentUser(
+            userId: userId,
+            username: finalUsername,
+            email: email
+        )
+    }
+
+    @MainActor
+    private func clearUserCache() async {
+        cacheManager.clearCurrentUserData()
     }
 
     @MainActor

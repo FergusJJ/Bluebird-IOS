@@ -16,6 +16,7 @@ struct BluebirdApp: App {
             ContentView(appState: appState, apiManager: apiManager)
                 .environmentObject(appState)
                 .preferredColorScheme(appState.userColorScheme)
+                .modelContainer(CacheManager.shared.modelContainer)
         }
     }
 }

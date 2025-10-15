@@ -56,6 +56,7 @@ class ProfileViewModel: ObservableObject {
     private var appState: AppState
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     private let supabaseManager = SupabaseClientManager.shared
+    private let cacheManager = CacheManager.shared
 
     init(
         appState: AppState,
@@ -89,6 +90,18 @@ class ProfileViewModel: ObservableObject {
     }
 
     func loadProfile() async {
+        let (cachedProfile, cachedStats) = cacheManager.getProfile()
+        if let profile = cachedProfile {
+            username = profile.username
+            bio = profile.bio
+            avatarURL = URL(string: profile.avatarUrl)
+        }
+        if let stats = cachedStats {
+            totalPlays = stats.total_plays
+            totalUniqueArtists = stats.unique_artists
+            totalMinutesListened = stats.total_duration_millis / (60 * 1000)
+        }
+
         guard appState.isLoggedIn == .istrue else {
             return
         }
@@ -341,7 +354,13 @@ class ProfileViewModel: ObservableObject {
     // MARK: - Sync Logic
 
     func syncAllPinnedContent() async {
-        print("syncing pins")
+        if let cached = cacheManager.getPins() {
+            orderedPins = cached.pins
+            pinnedTrackDetails = cached.tracks
+            pinnedAlbumDetails = cached.albums
+            pinnedArtistDetails = cached.artists
+        }
+
         let success = await getPins(entities: ["artist", "album", "track"])
         guard success else {
             print("Failed to fetch pins")
@@ -350,6 +369,12 @@ class ProfileViewModel: ObservableObject {
         await syncPinnedTracks()
         await syncPinnedAlbums()
         await syncPinnedArtists()
+        cacheManager.savePins(
+            orderedPins,
+            tracks: pinnedTrackDetails,
+            albums: pinnedAlbumDetails,
+            artists: pinnedArtistDetails
+        )
     }
 
     func syncPinnedTracks() async {
