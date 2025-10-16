@@ -66,8 +66,11 @@ protocol BluebirdAccountAPIService {
     func getTrackLastPlayed(for id: String) async -> Result<
         Date?, BluebirdAPIError
     >
-    func getTrackUserPercentile(for id: String) async -> Result<
-        Double, BluebirdAPIError
+    func getTrackRank(for id: String) async -> Result<
+        Int, BluebirdAPIError
+    >
+    func getWeeklyPlatformComparison() async -> Result<
+        WeeklyPlatformComparison, BluebirdAPIError
     >
     func getTopGenres(numDays: Int) async -> Result<
         GenreCounts, BluebirdAPIError
@@ -96,6 +99,11 @@ protocol BluebirdAccountAPIService {
         -> Result<
             FriendRequestResponse, BluebirdAPIError
         >
+    func createRepost(
+        on entityType: EntityType,
+        for entityID: String,
+        caption: String
+    ) async -> Result<PostCreatedResponse, BluebirdAPIError>
 }
 
 protocol SpotifyAPIService {

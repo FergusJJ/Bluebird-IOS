@@ -15,6 +15,7 @@ class StatsViewModel: ObservableObject {
 
     @Published var trackTrendCache: [String: [DailyPlayCount]] = [:]
 
+    @Published var weeklyComparison: WeeklyPlatformComparison = .init()
     @Published var lastWeekTotalPlays: Int = 0
     @Published var thisWeekTotalPlays: Int = 0
 
@@ -53,7 +54,9 @@ class StatsViewModel: ObservableObject {
 
     func fetchHourlyPlays(for days: Int) async {
         if let cached = cacheManager.getHourlyPlays(for: days) {
-            hourlyPlays = cached.reduce(into: Array(repeating: 0, count: 24)) { result, play in
+            hourlyPlays = cached.reduce(into: Array(repeating: 0, count: 24)) {
+                result,
+                    play in
                 result[play.hour] = play.plays
             }
             return
@@ -225,8 +228,8 @@ class StatsViewModel: ObservableObject {
         }
     }
 
-    func getTrackUserPercentile(for trackID: String) async -> Double {
-        let result = await bluebirdAccountAPIService.getTrackUserPercentile(
+    func getTrackRank(for trackID: String) async -> Int {
+        let result = await bluebirdAccountAPIService.getTrackRank(
             for: trackID
         )
         switch result {
@@ -238,7 +241,7 @@ class StatsViewModel: ObservableObject {
                 "Error loading track user percentile for \(trackID): \(presentationError)"
             )
             appState.setError(presentationError)
-            return 0.0
+            return -1
         }
     }
 
@@ -277,6 +280,19 @@ class StatsViewModel: ObservableObject {
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading discoveries: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
+    func fetchWeeklyStatsComparison() async {
+        let result = await bluebirdAccountAPIService.getWeeklyPlatformComparison()
+        switch result {
+        case let .success(comparison):
+            weeklyComparison = comparison
+            print(weeklyComparison)
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error weekly comparison: \(presentationError)")
             appState.setError(presentationError)
         }
     }

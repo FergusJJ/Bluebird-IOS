@@ -369,6 +369,12 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
+    func getWeeklyPlatformComparison() async -> Result<
+        WeeklyPlatformComparison, BluebirdAPIError
+    > {
+        return await makeRequest(path: "/api/me/weekly-platform-comparison")
+    }
+
     func getHourlyPlays(for days: Int) async -> Result<
         [HourlyPlay], BluebirdAPIError
     > {
@@ -452,18 +458,18 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         return result.map { $0.last_played }
     }
 
-    func getTrackUserPercentile(for id: String) async -> Result<
-        Double, BluebirdAPIError
+    func getTrackRank(for id: String) async -> Result<
+        Int, BluebirdAPIError
     > {
         struct Response: Decodable {
-            let percentile: Double
+            let rank: Int
         }
 
         let result: Result<Response, BluebirdAPIError> = await makeRequest(
             path: "/api/me/track-user-percentile",
             queryItems: [URLQueryItem(name: "id", value: id)]
         )
-        return result.map { $0.percentile }
+        return result.map { $0.rank }
     }
 
     func getTopGenres(numDays: Int) async -> Result<
@@ -612,6 +618,32 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
             path: "/api/social/friend-request/respond",
             method: "POST",
             body: RespondFriendRequestBody(requester_id: userID, accept: accept)
+        )
+    }
+
+    /*
+
+     */
+
+    func createRepost(
+        on entityType: EntityType,
+        for entityID: String,
+        caption: String
+    ) async -> Result<PostCreatedResponse, BluebirdAPIError> {
+        let isoDecoder = JSONDecoder()
+        isoDecoder.dateDecodingStrategy = .iso8601
+        return await makeRequest(
+            path: "/api/social/posts",
+            method: "POST",
+            body: PostActionBody(
+                action: "create",
+                post_id: nil,
+                post_type: "repost",
+                entity_type: entityType.rawValue,
+                entity_id: entityID,
+                caption: caption
+            ),
+            decoder: isoDecoder
         )
     }
 

@@ -111,6 +111,30 @@ class SocialViewModel: ObservableObject {
         }
     }
 
+    func createRepost(
+        on entityType: EntityType,
+        for entityID: String,
+        caption: String
+    ) async -> PostCreatedResponse? {
+        let result = await bluebirdAccountAPIService.createRepost(
+            on: entityType,
+            for: entityID,
+            caption: caption
+        )
+        switch result {
+        case let .success(createPostResponse):
+            return createPostResponse
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print(
+                "Error creating post: \(serviceError.localizedDescription) \(presentationError.localizedDescription)"
+            )
+
+            // going to show modal here instead
+            return nil
+        }
+    }
+
     // MARK: - some cache helpers
 
     func invalidateCache(for userId: String) {

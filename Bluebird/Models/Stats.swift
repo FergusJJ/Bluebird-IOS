@@ -125,3 +125,28 @@ struct Discoveries: Codable {
     let discovered_tracks: [TrackWithPlayCount]
     let discovered_artists: [ArtistWithPlayCount]
 }
+
+struct WeeklyPlatformComparison: Codable {
+    let tracks: Int
+    let artists: Int
+    let albums: Int
+    let tracks_percentile: Float64
+    let artists_percentile: Float64
+    let albums_percentile: Float64
+
+    init(
+        tracks: Int = 0,
+        artists: Int = 0,
+        albums: Int = 0,
+        tracks_percentile: Float64 = 0,
+        artists_percentile: Float64 = 0,
+        albums_percentile: Float64 = 0
+    ) {
+        self.tracks = tracks
+        self.artists = artists
+        self.albums = albums
+        self.tracks_percentile = tracks_percentile
+        self.artists_percentile = artists_percentile
+        self.albums_percentile = albums_percentile
+    }
+}

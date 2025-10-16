@@ -1,3 +1,5 @@
+import Foundation
+
 struct CurrentlyPlayingResponse: Decodable {
     let friends: [String: FriendCurrentlyPlaying]
 
@@ -73,4 +75,19 @@ enum FriendshipStatus: String, Codable {
     case outgoing
     case incoming
     case none
+}
+
+struct PostActionBody: Codable {
+    let action: String
+    let post_id: String?
+    let post_type: String?
+    let entity_type: String? // needed for repost only
+    let entity_id: String? // repost
+    let caption: String
+}
+
+struct PostCreatedResponse: Codable {
+    let message: String
+    let post_id: String
+    let created_at: Date
 }

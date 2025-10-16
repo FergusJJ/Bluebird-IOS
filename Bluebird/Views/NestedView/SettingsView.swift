@@ -126,7 +126,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func connectedDetail() -> some View {
+    fileprivate func connectedDetail() -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Spotify Connection Details")
                 .font(.headline)
@@ -166,7 +166,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func connectedDetailRow(heading: String, value: String) -> some View {
+    fileprivate func connectedDetailRow(heading: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(heading)
                 .font(.caption)

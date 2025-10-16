@@ -7,14 +7,16 @@ struct SongDetailView: View {
     let initialName: String
 
     @State private var song: SongDetail?
+    @State private var isCreatingPost = false
     @State private var isLoading = false
     @State private var isPinned = false
     @State private var isReposted = false
     @State private var trackTrend: [DailyPlayCount] = []
     @State private var trackLastPlayed: Date?
-    @State private var trackUserPercenitile: Double?
+    @State private var trackUserRank: Int?
 
     @EnvironmentObject var profileViewModel: ProfileViewModel
+    @EnvironmentObject var socialViewModel: SocialViewModel
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
     @EnvironmentObject var statsViewModel: StatsViewModel
 
@@ -65,13 +67,48 @@ struct SongDetailView: View {
                     )
                 }
                 group.addTask { @MainActor in
-                    trackUserPercenitile =
-                        await statsViewModel.getTrackUserPercentile(
+                    trackUserRank =
+                        await statsViewModel.getTrackRank(
                             for: trackID
                         )
                 }
             }
         }
+        .overlay(
+            ZStack {
+                if isCreatingPost {
+                    Color.themeBackground.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                isCreatingPost = false
+                            }
+                        }
+                        .transition(.opacity)
+
+                    VStack {
+                        Spacer()
+                        CreatePostModal(
+                            onClosePressed: {
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    isCreatingPost = false
+                                }
+                            },
+                            onCreatePost: { caption in
+                                Task {
+                                    await handleCreatePost(caption: caption)
+                                }
+                            }
+                        )
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(
+                .spring(response: 0.35, dampingFraction: 0.85),
+                value: isCreatingPost
+            )
+        )
     }
 
     // MARK: - Helpers
@@ -217,10 +254,25 @@ struct SongDetailView: View {
         }
     }
 
-    // TODO:
     private func onRepostTapped() {
-        isReposted.toggle()
-        print("Repost toggled: \(isReposted)")
+        isCreatingPost = true
+    }
+
+    private func handleCreatePost(caption: String) async {
+        let maybePostCreated = await socialViewModel.createRepost(
+            on: EntityType(rawValue: "track")!,
+            for: trackID,
+            caption: caption
+        )
+
+        isCreatingPost = false
+
+        guard let postCreated = maybePostCreated else {
+            return
+        }
+
+        isReposted = true
+        print("Created repost: \(postCreated.message)")
     }
 
     private func fetchSongIfNeeded() async {
@@ -245,19 +297,13 @@ struct SongDetailView: View {
     }
 
     private func formatUserPercentile() -> String? {
-        if trackUserPercenitile == nil {
+        if trackUserRank == nil {
             return nil
         }
-        let clampedPercentile = max(0.0, min(100.0, trackUserPercenitile!))
-        let percentileInt = Int(clampedPercentile.rounded())
-        let rank = 100 - percentileInt
-        switch percentileInt {
-        case 1 ... 100:
-            let topRankPercent = max(1, rank)
-            return "Top \(topRankPercent)% of listeners"
-        default:
-            return "One of the newest listeners"
+        if trackUserRank! == 0 {
+            return "Listen to the track to become ranked"
         }
+        return "#\(trackUserRank!)"
     }
 }
 
