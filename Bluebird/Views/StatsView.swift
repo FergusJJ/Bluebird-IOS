@@ -36,6 +36,29 @@ struct StatsView: View {
                     )
                     .aspectRatio(1, contentMode: .fit)
 
+                    // MARK: - weekly comparison
+
+                    VStack(spacing: 16) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "chart.bar.fill")
+                                .foregroundColor(Color.themeAccent)
+                                .font(.system(size: 16))
+                            Text("Weekly Listening")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(Color.themePrimary)
+                            Spacer()
+                            Text("Past 7 Days")
+                                .font(.caption)
+                                .foregroundColor(
+                                    Color.themePrimary.opacity(0.5)
+                                )
+                        }
+                        WeeklyStatsComparisonCard(
+                            comparison: statsViewModel.weeklyComparison
+                        )
+                    }
+
                     // MARK: - top tracks/artists
 
                     Divider()
