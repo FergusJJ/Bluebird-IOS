@@ -5,13 +5,21 @@ class SocialViewModel: ObservableObject {
     @Published var currentUserProfile: UserProfileDetail?
     @Published var friendsCurrentlyPlaying: [String: FriendCurrentlyPlaying] =
         [:]
+    @Published var userReposts: [RepostItem] = []
+    @Published var isLoadingReposts = false
+    @Published private(set) var repostsNextCursor: String = ""
+
+    @Published var feedPosts: [FeedPostItem] = []
+    @Published var isLoadingFeed = false
+    @Published private(set) var feedHasMore = false
+    @Published private(set) var feedNextOffset = 0
 
     private var appState: AppState
     private let cacheManager = CacheManager.shared
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
 
     private var userProfileDetailCache:
-        [String: (profile: UserProfileDetail, timestamp: Date)] = [:]
+        [String: (profile: UserProfileDetail, timestamp: Date)] = []
 
     init(
         appState: AppState,
@@ -79,7 +87,6 @@ class SocialViewModel: ObservableObject {
         )
         switch result {
         case .success:
-            // needs changing
             if var profile = currentUserProfile, profile.user_id == userId {
                 profile.display_friendship_status = .none
                 currentUserProfile = profile
@@ -129,13 +136,11 @@ class SocialViewModel: ObservableObject {
             print(
                 "Error creating post: \(serviceError.localizedDescription) \(presentationError.localizedDescription)"
             )
-
-            // going to show modal here instead
             return nil
         }
     }
 
-    // MARK: - some cache helpers
+    // MARK: - Cache Helpers
 
     func invalidateCache(for userId: String) {
         cacheManager.invalidateSocialCache(for: userId)
@@ -145,19 +150,118 @@ class SocialViewModel: ObservableObject {
         cacheManager.invalidateSocialCache()
     }
 
-    // then want to show reposts.
+    func fetchUserReposts(userId: String, forceRefresh: Bool = false) async {
+        if !forceRefresh && !userReposts.isEmpty {
+            return
+        }
 
-    // TODO: -
-    // Reposts:
-    // Need to query the reposts of all friends.
-    // then can return the details back for each repost,
-    // alongside data such as:
-    // timestamp, who reposted, caption?
-    // make easy to extend via comments, not sure abvout this yet
-    // Strategy: maybe fetch all reposts in the past x days? Limit by some amount of number?
-    // But want to show all posts so maybe read all
-    // then send back x, and allow pagination?
-    // have feed function allowing pagination
+        isLoadingReposts = true
+        let result = await bluebirdAccountAPIService.getUserReposts(
+            userID: userId,
+            cursor: nil,
+            limit: 50
+        )
 
-    // need remove friend button
+        switch result {
+        case let .success(response):
+            userReposts = response.reposts
+            repostsNextCursor = response.next_cursor
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching user reposts: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingReposts = false
+    }
+
+    func loadMoreUserReposts(userId: String) async {
+        guard !repostsNextCursor.isEmpty && !isLoadingReposts else { return }
+
+        isLoadingReposts = true
+        let result = await bluebirdAccountAPIService.getUserReposts(
+            userID: userId,
+            cursor: repostsNextCursor,
+            limit: 50
+        )
+
+        switch result {
+        case let .success(response):
+            userReposts.append(contentsOf: response.reposts)
+            repostsNextCursor = response.next_cursor
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error loading more reposts: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingReposts = false
+    }
+
+    // MARK: - Feed
+
+    func fetchFeed(forceRefresh: Bool = false) async {
+        if !forceRefresh && !feedPosts.isEmpty {
+            return
+        }
+
+        isLoadingFeed = true
+        let result = await bluebirdAccountAPIService.getFeed(
+            limit: 20,
+            offset: 0
+        )
+
+        switch result {
+        case let .success(response):
+            feedPosts = response.posts
+            feedHasMore = response.has_more
+            feedNextOffset = response.next_offset
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching feed: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingFeed = false
+    }
+
+    func loadMoreFeedPosts() async {
+        guard feedHasMore && !isLoadingFeed else { return }
+
+        isLoadingFeed = true
+        let result = await bluebirdAccountAPIService.getFeed(
+            limit: 20,
+            offset: feedNextOffset
+        )
+
+        switch result {
+        case let .success(response):
+            feedPosts.append(contentsOf: response.posts)
+            feedHasMore = response.has_more
+            feedNextOffset = response.next_offset
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error loading more feed posts: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingFeed = false
+    }
+
+    func deletePost(postID: String) async -> Bool {
+        let result = await bluebirdAccountAPIService.deleteRepost(postID: postID)
+
+        switch result {
+        case .success():
+            // Remove from feed
+            feedPosts.removeAll { $0.post.post_id == postID }
+            return true
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error deleting post: \(presentationError)")
+            appState.setError(presentationError)
+            return false
+        }
+    }
 }

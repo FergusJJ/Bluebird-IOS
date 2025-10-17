@@ -8,19 +8,19 @@ struct ProfileHeadlineViewEditable: View {
     @State private var editingBio = ""
 
     var body: some View {
-        VStack(alignment: .center, spacing: 15) {
-            HStack(alignment: .top, spacing: 15) {
-                ProfilePictureView(editableMode: editableMode, isCurrentlyPlaying: profileViewModel.isCurrentlyPlaying())
-                    .frame(width: 80, height: 80)
-                    .alignmentGuide(.top) { d in d[.top] }
-                VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .center, spacing: 16) {
+            // Profile image and username section
+            VStack(spacing: 12) {
+                profileImageContainer
+
+                VStack(spacing: 4) {
                     Text(profileViewModel.username)
-                        .font(.headline)
+                        .font(.title2)
+                        .fontWeight(.bold)
                         .foregroundStyle(Color.themePrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     if isEditing {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(spacing: 10) {
                             TextEditor(text: $editingBio)
                                 .font(.subheadline)
                                 .scrollContentBackground(.hidden)
@@ -53,9 +53,8 @@ struct ProfileHeadlineViewEditable: View {
                                 .bold()
                             }
                         }
+                        .padding(.horizontal, 20)
                         .transition(.move(edge: .top).combined(with: .opacity))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
                     } else {
                         Text(
                             profileViewModel.bio.isEmpty && editableMode
@@ -66,10 +65,9 @@ struct ProfileHeadlineViewEditable: View {
                             profileViewModel.bio.isEmpty
                                 ? Color.themeSecondary : Color.themePrimary
                         )
-                        .multilineTextAlignment(.leading)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 5)
+                        .padding(.horizontal, 20)
                         .onTapGesture {
                             if editableMode {
                                 editingBio = profileViewModel.bio
@@ -78,29 +76,52 @@ struct ProfileHeadlineViewEditable: View {
                         }
                     }
                 }
-                .layoutPriority(1)
             }
-            Spacer()
 
+            // Stats
             HeadlineStatsView(
                 totalMinutesListened: profileViewModel.totalMinutesListened,
                 totalPlays: profileViewModel.totalPlays,
                 totalUniqueArtists: profileViewModel.totalUniqueArtists,
                 friendCount: 1 // TODO: Get own friends on load
             )
-
-            Spacer()
-            Text(profileViewModel.getCurrentlyPlayingHeadline())
-                .font(.subheadline)
-                .foregroundStyle(Color.themeSecondary)
+            .padding(.horizontal)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 20)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.themeElement.opacity(0.3),
+                    Color.themeBackground,
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
         .onAppear {
             Task {
                 await profileViewModel.loadProfile()
                 await profileViewModel.loadHeadlineStats()
             }
+        }
+    }
+
+    @ViewBuilder
+    fileprivate var profileImageContainer: some View {
+        ZStack {
+            // Glow effect
+            Circle()
+                .fill(Color.themeAccent.opacity(0.2))
+                .frame(width: 110, height: 110)
+                .blur(radius: 10)
+
+            // Main image with playing indicator
+            ProfilePictureView(editableMode: editableMode, isCurrentlyPlaying: profileViewModel.isCurrentlyPlaying())
+                .frame(width: 100, height: 100)
+                .overlay(
+                    Circle()
+                        .stroke(Color.themeAccent.opacity(0.5), lineWidth: 3)
+                )
         }
     }
 }

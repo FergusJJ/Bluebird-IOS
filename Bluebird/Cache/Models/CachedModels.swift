@@ -64,6 +64,7 @@ final class CachedSongHistory {
     var spotifyUrl: String
     var albumName: String
     var albumImageUrl: String
+    var lastUpdated: Date? // Optional to allow migration of existing data
 
     @Relationship(inverse: \CachedUserAccount.songHistory) var account: CachedUserAccount?
 
@@ -78,6 +79,7 @@ final class CachedSongHistory {
         spotifyUrl = song.spotify_url
         albumName = song.album_name
         albumImageUrl = song.album_image_url
+        lastUpdated = Date()
     }
 
     func toSongDetail() -> SongDetail {
@@ -122,6 +124,9 @@ final class CachedStats {
 
     var discoveriesData: Data? // Encoded Discoveries
     var discoveriesExpiry: Date?
+
+    var weeklyComparisonData: Data? // Encoded WeeklyPlatformComparison
+    var weeklyComparisonExpiry: Date?
 
     @Relationship(inverse: \CachedUserAccount.stats) var account: CachedUserAccount?
 
@@ -173,6 +178,57 @@ final class CachedStats {
               cachedDays == days,
               Date() < expiry else { return nil }
         return try? JSONDecoder().decode(TopTracks.self, from: data)
+    }
+
+    func setTopGenres(_ genres: GenreCounts, days: Int, ttl: TimeInterval = 3600) {
+        topGenresData = try? JSONEncoder().encode(genres)
+        topGenresDays = days
+        topGenresExpiry = Date().addingTimeInterval(ttl)
+    }
+
+    func getTopGenres(for days: Int) -> GenreCounts? {
+        guard let data = topGenresData,
+              let expiry = topGenresExpiry,
+              let cachedDays = topGenresDays,
+              cachedDays == days,
+              Date() < expiry else { return nil }
+        return try? JSONDecoder().decode(GenreCounts.self, from: data)
+    }
+
+    func setDiscoveries(_ discoveries: Discoveries, ttl: TimeInterval = 3600) {
+        discoveriesData = try? JSONEncoder().encode(discoveries)
+        discoveriesExpiry = Date().addingTimeInterval(ttl)
+    }
+
+    func getDiscoveries() -> Discoveries? {
+        guard let data = discoveriesData,
+              let expiry = discoveriesExpiry,
+              Date() < expiry else { return nil }
+        return try? JSONDecoder().decode(Discoveries.self, from: data)
+    }
+
+    func setDailyPlays(_ plays: [DailyPlay], ttl: TimeInterval = 3600) {
+        dailyPlaysData = try? JSONEncoder().encode(plays)
+        dailyPlaysExpiry = Date().addingTimeInterval(ttl)
+    }
+
+    func getDailyPlays() -> [DailyPlay]? {
+        guard let data = dailyPlaysData,
+              let expiry = dailyPlaysExpiry,
+              Date() < expiry else { return nil }
+        return try? JSONDecoder().decode([DailyPlay].self, from: data)
+    }
+
+    func setWeeklyComparison(_ comparison: WeeklyPlatformComparison, ttl: TimeInterval = 3600) {
+        weeklyComparisonData = try? JSONEncoder().encode(comparison)
+        weeklyComparisonExpiry = Date().addingTimeInterval(ttl)
+    }
+
+    func getWeeklyComparison() -> WeeklyPlatformComparison? {
+        guard let data = weeklyComparisonData,
+              let expiry = weeklyComparisonExpiry,
+              Date() < expiry else { return nil }
+        return try? JSONDecoder().decode(WeeklyPlatformComparison.self, from: data)
     }
 }
 

@@ -9,6 +9,7 @@ struct ArtistDetailView: View {
     @State private var artistDetail: ArtistDetail?
     @State private var userListens: Int?
     @State private var forDaysCache: [Int: Int] = [:]
+    @State private var leaderboard: LeaderboardResponse?
 
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
     @EnvironmentObject var profileViewModel: ProfileViewModel
@@ -38,6 +39,22 @@ struct ArtistDetailView: View {
                     .padding(.bottom, 8)
 
                 Divider()
+
+                // Leaderboard
+                LeaderboardView(
+                    leaderboard: leaderboard,
+                    type: .artist,
+                    id: artist.id
+                ) { newScope in
+                    leaderboard = await statsViewModel.getLeaderboard(
+                        type: .artist,
+                        id: artist.id,
+                        scope: newScope
+                    )
+                }
+                .padding(.vertical, 8)
+
+                Divider()
                 topTracksSection()
                 albumsSection()
             }
@@ -55,6 +72,13 @@ struct ArtistDetailView: View {
                         for: artist.id,
                         forDays: forDays,
                         entityType: EntityType(safeRawValue: "artist")!
+                    )
+                }
+                group.addTask { @MainActor in
+                    leaderboard = await statsViewModel.getLeaderboard(
+                        type: .artist,
+                        id: artist.id,
+                        scope: .global
                     )
                 }
             }

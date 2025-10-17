@@ -104,6 +104,25 @@ protocol BluebirdAccountAPIService {
         for entityID: String,
         caption: String
     ) async -> Result<PostCreatedResponse, BluebirdAPIError>
+    func deleteRepost(postID: String) async -> Result<Void, BluebirdAPIError>
+    func getCurrentUserReposts(
+        cursor: String?,
+        limit: Int?
+    ) async -> Result<RepostsResponse, BluebirdAPIError>
+    func getUserReposts(
+        userID: String,
+        cursor: String?,
+        limit: Int?
+    ) async -> Result<RepostsResponse, BluebirdAPIError>
+    func getFeed(
+        limit: Int?,
+        offset: Int?
+    ) async -> Result<FeedResponse, BluebirdAPIError>
+    func getLeaderboard(
+        type: LeaderboardType,
+        id: String,
+        scope: LeaderboardScope
+    ) async -> Result<LeaderboardResponse, BluebirdAPIError>
 }
 
 protocol SpotifyAPIService {

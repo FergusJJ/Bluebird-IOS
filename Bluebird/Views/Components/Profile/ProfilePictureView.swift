@@ -62,7 +62,7 @@ struct ProfilePictureView: View {
                 loadingOverlay
             }
         }
-        .frame(width: 80, height: 80)
+        .frame(width: 100, height: 100)
         .clipShape(Circle())
     }
 
@@ -115,7 +115,7 @@ struct ProfilePictureView: View {
                 ),
                 lineWidth: 3
             )
-            .frame(width: 80, height: 80)
+            .frame(width: 100, height: 100)
             .rotationEffect(.degrees(rotationDegrees))
             .animation(
                 .linear(duration: 2.0)
@@ -132,7 +132,7 @@ struct ProfilePictureView: View {
                 loadingOverlay
             }
         }
-        .frame(width: 76, height: 76)
+        .frame(width: 96, height: 96)
         .clipShape(Circle())
     }
 
@@ -165,7 +165,7 @@ struct ProfilePictureView: View {
         Group {
             Circle()
                 .stroke(Color.themeAccent, lineWidth: 2)
-                .frame(width: 80, height: 80)
+                .frame(width: 100, height: 100)
 
             Image(systemName: "plus.circle.fill")
                 .font(.footnote)

@@ -8,6 +8,12 @@ struct UserProfileView: View {
     @State private var selectedAlbum: AlbumDetail?
     @State private var selectedArtist: ArtistDetail?
     @State private var showRemoveFriendAlert = false
+    @State private var rotationDegrees = 0.0
+    @State private var glowOpacity = 0.3
+
+    private var isCurrentlyPlaying: Bool {
+        socialViewModel.friendsCurrentlyPlaying[userProfile.user_id] != nil
+    }
 
     var body: some View {
         ScrollView {
@@ -19,22 +25,36 @@ struct UserProfileView: View {
                     if detail.is_private && detail.friendship_status != .friends {
                         privateProfileView()
                     } else {
-                        VStack(spacing: 24) {
-                            if !detail.pinned_tracks.isEmpty {
-                                pinnedTracksView(tracks: detail.pinned_tracks)
+                        VStack(spacing: 32) {
+                            // Pins section
+                            if detail.pinned_tracks.isEmpty &&
+                                detail.pinned_albums.isEmpty &&
+                                detail.pinned_artists.isEmpty
+                            {
+                                emptyPinsView()
+                            } else {
+                                VStack(spacing: 24) {
+                                    if !detail.pinned_tracks.isEmpty {
+                                        pinnedTracksView(tracks: detail.pinned_tracks)
+                                    }
+
+                                    if !detail.pinned_albums.isEmpty {
+                                        pinnedAlbumsView(albums: detail.pinned_albums)
+                                    }
+
+                                    if !detail.pinned_artists.isEmpty {
+                                        pinnedArtistsView(
+                                            artists: detail.pinned_artists
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal)
                             }
 
-                            if !detail.pinned_albums.isEmpty {
-                                pinnedAlbumsView(albums: detail.pinned_albums)
-                            }
-
-                            if !detail.pinned_artists.isEmpty {
-                                pinnedArtistsView(
-                                    artists: detail.pinned_artists
-                                )
-                            }
+                            // Reposts section
+                            repostsSection()
+                                .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                         .padding(.bottom, 20)
                     }
                 } else {
@@ -58,6 +78,12 @@ struct UserProfileView: View {
             await withTaskGroup(of: Void.self) { group in
                 group.addTask {
                     await socialViewModel.fetchUserProfile(
+                        userId: userProfile.user_id,
+                        forceRefresh: false
+                    )
+                }
+                group.addTask {
+                    await socialViewModel.fetchUserReposts(
                         userId: userProfile.user_id,
                         forceRefresh: false
                     )
@@ -135,6 +161,14 @@ struct UserProfileView: View {
 
     @ViewBuilder
     fileprivate var profileImageContainer: some View {
+        if isCurrentlyPlaying {
+            animatedProfileImage
+        } else {
+            staticProfileImage
+        }
+    }
+
+    private var staticProfileImage: some View {
         ZStack {
             // Glow effect
             Circle()
@@ -166,6 +200,86 @@ struct UserProfileView: View {
                 Circle()
                     .stroke(Color.themeAccent.opacity(0.5), lineWidth: 3)
             )
+        }
+    }
+
+    private var animatedProfileImage: some View {
+        ZStack {
+            glowingBackground
+            rotatingGradientBorder
+            profilePictureContent
+        }
+        .onAppear {
+            rotationDegrees = 360
+            glowOpacity = 0.6
+        }
+    }
+
+    private var glowingBackground: some View {
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color.themeAccent.opacity(glowOpacity),
+                        Color.clear,
+                    ],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: 50
+                )
+            )
+            .frame(width: 100, height: 100)
+            .blur(radius: 8)
+            .animation(
+                .easeInOut(duration: 1.0)
+                    .repeatForever(autoreverses: true),
+                value: glowOpacity
+            )
+    }
+
+    private var rotatingGradientBorder: some View {
+        Circle()
+            .strokeBorder(
+                AngularGradient(
+                    colors: [
+                        Color.themeAccent,
+                        Color.themeAccent.opacity(0.3),
+                        Color.themeAccent,
+                    ],
+                    center: .center,
+                    startAngle: .degrees(0),
+                    endAngle: .degrees(360)
+                ),
+                lineWidth: 3
+            )
+            .frame(width: 100, height: 100)
+            .rotationEffect(.degrees(rotationDegrees))
+            .animation(
+                .linear(duration: 2.0)
+                    .repeatForever(autoreverses: false),
+                value: rotationDegrees
+            )
+    }
+
+    private var profilePictureContent: some View {
+        Group {
+            if userProfile.avatar_url.isEmpty {
+                Circle()
+                    .fill(Color.themeElement)
+                    .frame(width: 96, height: 96)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(24)
+                            .foregroundColor(Color.themePrimary)
+                    )
+            } else {
+                CachedAsyncImage(url: URL(string: userProfile.avatar_url)!)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 96, height: 96)
+                    .clipShape(Circle())
+            }
         }
     }
 
@@ -431,5 +545,112 @@ struct UserProfileView: View {
     private func removeFriend(userId: String) async {
         print("removeFriend(userId: \(userId)")
         await socialViewModel.removeFriend(friend: userId)
+    }
+
+    @ViewBuilder
+    fileprivate func emptyPinsView() -> some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.themeElement)
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "pin.slash")
+                    .font(.system(size: 35))
+                    .foregroundColor(Color.themeSecondary)
+            }
+
+            Text("No Pins")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(Color.themePrimary)
+
+            Text("This user hasn't pinned any tracks, albums, or artists yet")
+                .font(.subheadline)
+                .foregroundColor(Color.themeSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+
+    @ViewBuilder
+    fileprivate func repostsSection() -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "arrow.2.squarepath")
+                    .foregroundColor(Color.themeAccent)
+                    .font(.headline)
+                Text("\(userProfile.username)'s Reposts")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.themePrimary)
+                Spacer()
+            }
+
+            if socialViewModel.isLoadingReposts && socialViewModel.userReposts.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+            } else if socialViewModel.userReposts.isEmpty {
+                Text("No reposts yet")
+                    .font(.subheadline)
+                    .foregroundColor(Color.themeSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 16) {
+                    ForEach(socialViewModel.userReposts) { repostItem in
+                        RepostRowView(
+                            repostItem: repostItem,
+                            isCurrentUser: false,
+                            onEntityTap: {
+                                handleRepostEntityTap(repostItem: repostItem)
+                            },
+                            onProfileTap: {
+                                // Navigate to user profile (already on it)
+                            },
+                            onUnrepostTap: {
+                                // Not current user, can't unrepost
+                            }
+                        )
+                    }
+
+                    if !socialViewModel.repostsNextCursor.isEmpty {
+                        Button(action: {
+                            Task {
+                                await socialViewModel.loadMoreUserReposts(userId: userProfile.user_id)
+                            }
+                        }) {
+                            if socialViewModel.isLoadingReposts {
+                                ProgressView()
+                            } else {
+                                Text("Load More")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(Color.themeAccent)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                }
+            }
+        }
+    }
+
+    private func handleRepostEntityTap(repostItem: RepostItem) {
+        if let track = repostItem.track_detail {
+            selectedTrack = track
+        } else if let album = repostItem.album_detail {
+            selectedAlbum = album
+        } else if let artist = repostItem.artist_detail {
+            selectedArtist = artist
+        }
     }
 }

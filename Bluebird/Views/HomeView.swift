@@ -180,7 +180,12 @@ struct HomeView: View {
         .onAppear {
             Task {
                 await spotifyViewModel.loadCurrentlyPlaying()
-                if spotifyViewModel.songHistory.isEmpty {
+
+                // Check if cache is empty or stale (older than 1 hour)
+                let shouldRefresh = spotifyViewModel.songHistory.isEmpty ||
+                    spotifyViewModel.isCacheStale()
+
+                if shouldRefresh {
                     await spotifyViewModel.refreshHistory()
                 }
             }

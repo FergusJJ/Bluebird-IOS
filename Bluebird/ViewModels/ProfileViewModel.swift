@@ -46,6 +46,12 @@ class ProfileViewModel: ObservableObject {
     @Published var pinnedTracks: [SongDetail] = []
     @Published var pinnedAlbums: [AlbumDetail] = []
 
+    // MARK: - Reposts
+
+    @Published var myReposts: [RepostItem] = []
+    @Published var isLoadingReposts = false
+    @Published private(set) var repostsNextCursor: String = ""
+
     // MARK: - settings page stuff
 
     @Published var connectedAccountDetails: ConnectedAccountDetails?
@@ -112,6 +118,9 @@ class ProfileViewModel: ObservableObject {
             username = profileInfo.username
             bio = profileInfo.bio
             avatarURL = URL(string: profileInfo.avatarUrl)
+
+            // Save to cache
+            cacheManager.saveProfile(profileInfo, stats: cachedStats)
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading profile info: \(presentationError)")
@@ -120,6 +129,14 @@ class ProfileViewModel: ObservableObject {
     }
 
     func loadHeadlineStats() async {
+        // Check cache first
+        let (cachedProfile, cachedStats) = cacheManager.getProfile()
+        if let stats = cachedStats {
+            totalPlays = stats.total_plays
+            totalUniqueArtists = stats.unique_artists
+            totalMinutesListened = stats.total_duration_millis / (60 * 1000)
+        }
+
         guard appState.isLoggedIn == .istrue else {
             return
         }
@@ -129,6 +146,17 @@ class ProfileViewModel: ObservableObject {
             totalPlays = stats.total_plays
             totalUniqueArtists = stats.unique_artists
             totalMinutesListened = (stats.total_duration_millis / (60 * 1000))
+
+            // Save to cache
+            cacheManager.saveProfile(
+                cachedProfile ?? ProfileInfo(
+                    message: "",
+                    username: username,
+                    bio: bio,
+                    avatarUrl: avatarURL?.absoluteString ?? ""
+                ),
+                stats: stats
+            )
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading headline stats info: \(presentationError)")
@@ -551,5 +579,70 @@ class ProfileViewModel: ObservableObject {
     private func removePin(_ pin: Pin) {
         pinsById[pin.id] = nil
         orderedPins.removeAll { $0.id == pin.id }
+    }
+
+    // MARK: - Reposts
+
+    func fetchMyReposts(forceRefresh: Bool = false) async {
+        if !forceRefresh && !myReposts.isEmpty {
+            return
+        }
+
+        isLoadingReposts = true
+        let result = await bluebirdAccountAPIService.getCurrentUserReposts(
+            cursor: nil,
+            limit: 50
+        )
+
+        switch result {
+        case let .success(response):
+            myReposts = response.reposts
+            repostsNextCursor = response.next_cursor
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching reposts: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingReposts = false
+    }
+
+    func loadMoreReposts() async {
+        guard !repostsNextCursor.isEmpty && !isLoadingReposts else { return }
+
+        isLoadingReposts = true
+        let result = await bluebirdAccountAPIService.getCurrentUserReposts(
+            cursor: repostsNextCursor,
+            limit: 50
+        )
+
+        switch result {
+        case let .success(response):
+            myReposts.append(contentsOf: response.reposts)
+            repostsNextCursor = response.next_cursor
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error loading more reposts: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingReposts = false
+    }
+
+    func deleteRepost(postID: String) async -> Bool {
+        let result = await bluebirdAccountAPIService.deleteRepost(postID: postID)
+
+        switch result {
+        case .success():
+            // Remove from local array
+            myReposts.removeAll { $0.repost.post_id == postID }
+            return true
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error deleting repost: \(presentationError)")
+            appState.setError(presentationError)
+            return false
+        }
     }
 }

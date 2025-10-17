@@ -29,6 +29,17 @@ class SpotifyViewModel: ObservableObject {
         print("Loaded \(songHistory.count) songs from cache")
     }
 
+    func isCacheStale() -> Bool {
+        guard let lastUpdated = cacheManager.getSongHistoryLastUpdated() else {
+            return true // No cache, treat as stale
+        }
+
+        // Cache is stale if older than 1 hour
+        let cacheAge = Date().timeIntervalSince(lastUpdated)
+        let oneHour: TimeInterval = 3600
+        return cacheAge > oneHour
+    }
+
     func loadCurrentlyPlaying() async {
         guard let accessToken = appState.getSpotifyAccessToken() else {
             print("Load currently playing failed: Access token is nil.")
@@ -87,7 +98,7 @@ class SpotifyViewModel: ObservableObject {
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
-            print("Error refreshing history: \(presentationError)")
+            print("Error refreshing user history: \(presentationError)")
         }
     }
 

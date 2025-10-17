@@ -68,6 +68,10 @@ class CacheManager: ObservableObject {
 
     // MARK: - Account Management
 
+    func getCurrentUserId() -> String? {
+        return currentUserId
+    }
+
     func setCurrentUser(userId: String, username: String, email: String) {
         currentUserId = userId
 
@@ -244,6 +248,14 @@ class CacheManager: ObservableObject {
         return history
     }
 
+    func getSongHistoryLastUpdated() -> Date? {
+        guard let account = getCurrentAccount() else { return nil }
+
+        // Get the most recent lastUpdated timestamp from all cached songs
+        // Filter out nil values for backward compatibility with migrated data
+        return account.songHistory.compactMap { $0.lastUpdated }.max()
+    }
+
     // MARK: - Stats Cache
 
     func saveHourlyPlays(_ plays: [HourlyPlay], days: Int) {
@@ -301,6 +313,82 @@ class CacheManager: ObservableObject {
 
     func getTopTracks(for days: Int) -> TopTracks? {
         return getCurrentAccount()?.stats?.getTopTracks(for: days)
+    }
+
+    func saveTopGenres(_ genres: GenreCounts, days: Int) {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+
+        if account.stats == nil {
+            let stats = CachedStats()
+            account.stats = stats
+            context.insert(stats)
+        }
+
+        account.stats?.setTopGenres(genres, days: days, ttl: 3600)
+        try? context.save()
+    }
+
+    func getTopGenres(for days: Int) -> GenreCounts? {
+        return getCurrentAccount()?.stats?.getTopGenres(for: days)
+    }
+
+    func saveDiscoveries(_ discoveries: Discoveries) {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+
+        if account.stats == nil {
+            let stats = CachedStats()
+            account.stats = stats
+            context.insert(stats)
+        }
+
+        account.stats?.setDiscoveries(discoveries, ttl: 3600)
+        try? context.save()
+    }
+
+    func getDiscoveries() -> Discoveries? {
+        return getCurrentAccount()?.stats?.getDiscoveries()
+    }
+
+    func saveDailyPlays(_ plays: [DailyPlay]) {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+
+        if account.stats == nil {
+            let stats = CachedStats()
+            account.stats = stats
+            context.insert(stats)
+        }
+
+        account.stats?.setDailyPlays(plays, ttl: 3600)
+        try? context.save()
+    }
+
+    func getDailyPlays() -> [DailyPlay]? {
+        return getCurrentAccount()?.stats?.getDailyPlays()
+    }
+
+    func saveWeeklyComparison(_ comparison: WeeklyPlatformComparison) {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+
+        if account.stats == nil {
+            let stats = CachedStats()
+            account.stats = stats
+            context.insert(stats)
+        }
+
+        account.stats?.setWeeklyComparison(comparison, ttl: 3600)
+        try? context.save()
+    }
+
+    func getWeeklyComparison() -> WeeklyPlatformComparison? {
+        return getCurrentAccount()?.stats?.getWeeklyComparison()
     }
 
     // MARK: - Pins Cache

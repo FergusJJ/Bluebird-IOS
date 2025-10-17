@@ -14,6 +14,7 @@ struct SongDetailView: View {
     @State private var trackTrend: [DailyPlayCount] = []
     @State private var trackLastPlayed: Date?
     @State private var trackUserRank: Int?
+    @State private var leaderboard: LeaderboardResponse?
 
     @EnvironmentObject var profileViewModel: ProfileViewModel
     @EnvironmentObject var socialViewModel: SocialViewModel
@@ -72,6 +73,13 @@ struct SongDetailView: View {
                             for: trackID
                         )
                 }
+                group.addTask { @MainActor in
+                    leaderboard = await statsViewModel.getLeaderboard(
+                        type: .track,
+                        id: trackID,
+                        scope: .global
+                    )
+                }
             }
         }
         .overlay(
@@ -127,6 +135,20 @@ struct SongDetailView: View {
         TrackTrendBarGraph(trackTrend: trackTrend)
             .frame(height: 250)
             .padding(12)
+
+        // Leaderboard
+        LeaderboardView(
+            leaderboard: leaderboard,
+            type: .track,
+            id: trackID
+        ) { newScope in
+            leaderboard = await statsViewModel.getLeaderboard(
+                type: .track,
+                id: trackID,
+                scope: newScope
+            )
+        }
+        .padding(.vertical, 8)
 
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: song.artists.count > 1 ? "Artists" : "Artist")

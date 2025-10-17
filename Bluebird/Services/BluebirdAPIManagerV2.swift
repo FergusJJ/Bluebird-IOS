@@ -647,6 +647,106 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
+    func deleteRepost(postID: String) async -> Result<Void, BluebirdAPIError> {
+        let result: Result<SuccessResponse, BluebirdAPIError> = await makeRequest(
+            path: "/api/social/posts",
+            method: "POST",
+            body: PostActionBody(
+                action: "delete",
+                post_id: postID,
+                post_type: nil,
+                entity_type: nil,
+                entity_id: nil,
+                caption: ""
+            )
+        )
+        return result.map { _ in () }
+    }
+
+    func getCurrentUserReposts(
+        cursor: String?,
+        limit: Int?
+    ) async -> Result<RepostsResponse, BluebirdAPIError> {
+        let isoDecoder = JSONDecoder()
+        isoDecoder.dateDecodingStrategy = .iso8601
+
+        var queryItems: [URLQueryItem] = []
+        if let cursor = cursor, !cursor.isEmpty {
+            queryItems.append(URLQueryItem(name: "cursor", value: cursor))
+        }
+        if let limit = limit {
+            queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        }
+
+        return await makeRequest(
+            path: "/api/me/reposts",
+            queryItems: queryItems.isEmpty ? nil : queryItems,
+            decoder: isoDecoder
+        )
+    }
+
+    func getUserReposts(
+        userID: String,
+        cursor: String?,
+        limit: Int?
+    ) async -> Result<RepostsResponse, BluebirdAPIError> {
+        let isoDecoder = JSONDecoder()
+        isoDecoder.dateDecodingStrategy = .iso8601
+
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "user_id", value: userID),
+        ]
+        if let cursor = cursor, !cursor.isEmpty {
+            queryItems.append(URLQueryItem(name: "cursor", value: cursor))
+        }
+        if let limit = limit {
+            queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        }
+
+        return await makeRequest(
+            path: "/api/social/users/reposts",
+            queryItems: queryItems,
+            decoder: isoDecoder
+        )
+    }
+
+    func getFeed(
+        limit: Int?,
+        offset: Int?
+    ) async -> Result<FeedResponse, BluebirdAPIError> {
+        let isoDecoder = JSONDecoder()
+        isoDecoder.dateDecodingStrategy = .iso8601
+
+        var queryItems: [URLQueryItem] = []
+        if let limit = limit {
+            queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        }
+        if let offset = offset {
+            queryItems.append(URLQueryItem(name: "offset", value: String(offset)))
+        }
+
+        return await makeRequest(
+            path: "/api/social/feed",
+            queryItems: queryItems.isEmpty ? nil : queryItems,
+            decoder: isoDecoder
+        )
+    }
+
+    func getLeaderboard(
+        type: LeaderboardType,
+        id: String,
+        scope: LeaderboardScope
+    ) async -> Result<LeaderboardResponse, BluebirdAPIError> {
+        return await makeRequest(
+            path: "/api/me/leaderboard",
+            queryItems: [
+                URLQueryItem(name: "type", value: type.rawValue),
+                URLQueryItem(name: "id", value: id),
+                URLQueryItem(name: "scope", value: scope.rawValue),
+            ]
+        )
+    }
+
     // MARK: - Special Cases
 
     @MainActor

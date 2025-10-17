@@ -91,3 +91,87 @@ struct PostCreatedResponse: Codable {
     let post_id: String
     let created_at: Date
 }
+
+// MARK: - Leaderboard
+
+struct LeaderboardEntry: Codable {
+    let profile: UserProfile
+    let play_count: Int
+}
+
+struct LeaderboardResponse: Codable {
+    let current_user: LeaderboardEntry
+    let leaderboard: [LeaderboardEntry]
+}
+
+enum LeaderboardType: String {
+    case artist
+    case track
+}
+
+enum LeaderboardScope: String {
+    case global
+    case friends
+}
+
+// MARK: - Reposts
+
+struct Repost: Codable, Identifiable {
+    let post_id: String
+    let profile: UserProfile
+    let entity_type: String // "track", "album", or "artist"
+    let entity_id: String
+    let caption: String
+    let created_at: Date
+    let likes_count: Int
+    let comments_count: Int
+    let user_has_liked: Bool
+
+    var id: String { post_id }
+}
+
+struct RepostItem: Codable, Identifiable {
+    let repost: Repost
+    let track_detail: SongDetail?
+    let album_detail: AlbumDetail?
+    let artist_detail: ArtistDetail?
+
+    var id: String { repost.post_id }
+}
+
+struct RepostsResponse: Codable {
+    let reposts: [RepostItem]
+    let next_cursor: String
+}
+
+// MARK: - Feed
+
+struct FeedPost: Codable, Identifiable {
+    let post_id: String
+    let author: UserProfile
+    let post_type: String // "repost"
+    let entity_type: String // "track", "album", or "artist"
+    let entity_id: String
+    let caption: String
+    let created_at: Date
+    let likes_count: Int
+    let comments_count: Int
+    let user_has_liked: Bool
+
+    var id: String { post_id }
+}
+
+struct FeedPostItem: Codable, Identifiable {
+    let post: FeedPost
+    let track_detail: SongDetail?
+    let album_detail: AlbumDetail?
+    let artist_detail: ArtistDetail?
+
+    var id: String { post.post_id }
+}
+
+struct FeedResponse: Codable {
+    let posts: [FeedPostItem]
+    let has_more: Bool
+    let next_offset: Int
+}
