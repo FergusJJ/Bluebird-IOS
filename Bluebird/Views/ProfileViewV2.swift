@@ -12,7 +12,8 @@ struct ProfileViewV2: View {
     @State private var repostToDelete: Repost?
 
     var body: some View {
-        ScrollView {
+        Group {
+            ScrollView {
             VStack(spacing: 0) {
                 ProfileHeadlineViewEditable(editableMode: isEditing)
 
@@ -47,11 +48,13 @@ struct ProfileViewV2: View {
                 }
                 .padding(.bottom, 20)
             }
+            }
         }
         .scrollContentBackground(.hidden)
         .background(Color.themeBackground.ignoresSafeArea(edges: .all))
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .applyAdaptiveNavigationBar()
         .applyDefaultTabBarStyling()
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

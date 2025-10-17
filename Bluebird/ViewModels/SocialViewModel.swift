@@ -19,7 +19,7 @@ class SocialViewModel: ObservableObject {
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
 
     private var userProfileDetailCache:
-        [String: (profile: UserProfileDetail, timestamp: Date)] = []
+    [String: (profile: UserProfileDetail, timestamp: Date)] = [:]
 
     init(
         appState: AppState,

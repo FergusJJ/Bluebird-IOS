@@ -36,9 +36,10 @@ struct RepostRowView: View {
             return track.artists.map { $0.name }.joined(separator: ", ")
         } else if let album = repostItem.album_detail {
             return album.artists.map { $0.name }.joined(separator: ", ")
-        } else if let artist = repostItem.artist_detail {
-            return "Artist"
         }
+        /*else if let artist = repostItem.artist_detail {
+            return "Artist"
+        }*/
         return ""
     }
 

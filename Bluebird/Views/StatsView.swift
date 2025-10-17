@@ -9,8 +9,9 @@ struct StatsView: View {
     @State private var statsNumDays: Int = 14
 
     var body: some View {
-        if appState.isSpotifyConnected == .istrue {
-            ScrollView {
+        Group {
+            if appState.isSpotifyConnected == .istrue {
+                ScrollView {
                 VStack(spacing: 20) {
                     HStack {
                         percentageChange()
@@ -127,12 +128,6 @@ struct StatsView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 20)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .scrollContentBackground(.hidden)
-            .background(Color.themeBackground.ignoresSafeArea(edges: .all))
-            .navigationTitle("Stats")
-            .navigationBarTitleDisplayMode(.inline)
-            .applyDefaultTabBarStyling()
             .task {
                 await withTaskGroup(of: Void.self) { group in
                     group.addTask {
@@ -203,7 +198,7 @@ struct StatsView: View {
                     name: track.track.name
                 )
             }
-        } else if appState.isSpotifyConnected == .loading {
+            } else if appState.isSpotifyConnected == .loading {
             VStack {
                 ProgressView()
                 Text("Loading...")
@@ -211,12 +206,7 @@ struct StatsView: View {
                     .foregroundColor(Color.themeSecondary)
                     .padding(.top, 8)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.themeBackground.ignoresSafeArea())
-            .navigationTitle("Stats")
-            .navigationBarTitleDisplayMode(.inline)
-            .applyDefaultTabBarStyling()
-        } else {
+            } else {
             VStack(spacing: 24) {
                 Spacer()
 
@@ -260,14 +250,17 @@ struct StatsView: View {
 
                 Spacer()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.themeBackground.ignoresSafeArea())
-            .navigationTitle("Stats")
-            .navigationBarTitleDisplayMode(.inline)
-            .applyDefaultTabBarStyling()
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollContentBackground(.hidden)
+        .background(Color.themeBackground.ignoresSafeArea(edges: .all))
+        .navigationTitle("Stats")
+        .navigationBarTitleDisplayMode(.inline)
+        .applyAdaptiveNavigationBar()
+        .applyDefaultTabBarStyling()
     }
-
+    
     @ViewBuilder
     fileprivate func topArtists() -> some View {
         VStack(spacing: 12) {

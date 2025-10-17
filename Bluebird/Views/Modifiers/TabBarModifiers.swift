@@ -28,6 +28,7 @@ struct AdaptiveNavigationBarAppearance: ViewModifier {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor(Color.themeBackground)
+        appearance.shadowColor = .clear
 
         let textColor = UIColor(Color.themePrimary)
         appearance.titleTextAttributes = [.foregroundColor: textColor]
@@ -43,8 +44,10 @@ struct AdaptiveNavigationBarAppearance: ViewModifier {
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().compactScrollEdgeAppearance = appearance
 
         UINavigationBar.appearance().tintColor = textColor
+        UINavigationBar.appearance().isTranslucent = false
         UIBarButtonItem.appearance().tintColor = textColor
     }
 }

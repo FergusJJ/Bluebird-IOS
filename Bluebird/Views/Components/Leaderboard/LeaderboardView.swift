@@ -139,7 +139,7 @@ struct LeaderboardRowView: View {
             ]
         }
 
-        guard let pos = position else { return [Color.clear] }
+    
 
         let baseColor = borderColor
         return [

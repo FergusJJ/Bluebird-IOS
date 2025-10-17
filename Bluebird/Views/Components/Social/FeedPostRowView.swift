@@ -41,9 +41,9 @@ struct FeedPostRowView: View {
             return track.artists.map { $0.name }.joined(separator: ", ")
         } else if let album = feedPost.album_detail {
             return album.artists.map { $0.name }.joined(separator: ", ")
-        } else if let artist = feedPost.artist_detail {
+        } /*else if let artist = feedPost.artist_detail {
             return "Artist"
-        }
+        }*/
         return ""
     }
 
