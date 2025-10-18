@@ -176,6 +176,43 @@ struct FeedResponse: Codable {
     let next_offset: Int
 }
 
+// MARK: - Unified Feed (with Highlights)
+
+enum FeedContentType: String, Codable {
+    case repost
+    case highlightLoving = "highlight_loving"
+    case highlightDiscovery = "highlight_discovery"
+}
+
+struct UnifiedFeedItem: Codable, Identifiable {
+    let content_type: FeedContentType
+    let timestamp: Date
+    let post_id: String?
+    let caption: String?
+    let likes_count: Int?
+    let comments_count: Int?
+    let user_has_liked: Bool?
+    let author: UserProfile
+    let entity_type: String // "track", "album", or "artist"
+    let entity_id: String
+    let track_detail: SongDetail?
+    let album_detail: AlbumDetail?
+    let artist_detail: ArtistDetail?
+    let play_count: Int?
+    let is_new_discovery: Bool?
+
+    var id: String {
+        // Use post_id if available, otherwise generate from content
+        post_id ?? "highlight_\(author.user_id)_\(entity_id)"
+    }
+}
+
+struct UnifiedFeedResponse: Codable {
+    let items: [UnifiedFeedItem]
+    let has_more: Bool
+    let next_offset: Int
+}
+
 // MARK: - Trending
 
 struct TrendingTrack: Codable, Identifiable {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DeletePostConfirmationModal: View {
-    let post: FeedPost
+    let postID: String
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
@@ -17,45 +17,6 @@ struct DeletePostConfirmationModal: View {
             }
             .padding(.horizontal)
             .padding(.top)
-
-            HStack(spacing: 12) {
-                ZStack {
-                    if !post.author.avatar_url.isEmpty,
-                       let url = URL(string: post.author.avatar_url)
-                    {
-                        CachedAsyncImage(url: url)
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 32, height: 32)
-                            .clipShape(Circle())
-                    } else {
-                        Image(systemName: "person.fill")
-                            .resizable()
-                            .padding(6)
-                            .foregroundColor(Color.themePrimary)
-                            .background(Color.themeBackground.opacity(0.4))
-                            .frame(width: 32, height: 32)
-                            .clipShape(Circle())
-                    }
-
-                    Circle()
-                        .stroke(Color.themeAccent, lineWidth: 1.5)
-                        .frame(width: 32, height: 32)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Your Post")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color.themePrimary)
-
-                    Text(timeAgoString(from: post.created_at))
-                        .font(.caption2)
-                        .foregroundColor(Color.themeSecondary)
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 20)
 
             VStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle")

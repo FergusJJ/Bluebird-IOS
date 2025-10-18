@@ -14,6 +14,12 @@ class SocialViewModel: ObservableObject {
     @Published private(set) var feedHasMore = false
     @Published private(set) var feedNextOffset = 0
 
+    // Unified feed (with highlights)
+    @Published var unifiedFeedItems: [UnifiedFeedItem] = []
+    @Published var isLoadingUnifiedFeed = false
+    @Published private(set) var unifiedFeedHasMore = false
+    @Published private(set) var unifiedFeedNextOffset = 0
+
     @Published var trendingTracks: [TrendingTrack] = []
     @Published var isLoadingTrending = false
     @Published var showAllTrending = false
@@ -289,13 +295,67 @@ class SocialViewModel: ObservableObject {
         isLoadingFeed = false
     }
 
+    // MARK: - Unified Feed (with highlights)
+
+    func fetchUnifiedFeed(forceRefresh: Bool = false) async {
+        if !forceRefresh && !unifiedFeedItems.isEmpty {
+            return
+        }
+
+        isLoadingUnifiedFeed = true
+        let result = await bluebirdAccountAPIService.getUnifiedFeed(
+            limit: 20,
+            offset: 0,
+            includeHighlights: true
+        )
+
+        switch result {
+        case let .success(response):
+            unifiedFeedItems = response.items
+            unifiedFeedHasMore = response.has_more
+            unifiedFeedNextOffset = response.next_offset
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching unified feed: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingUnifiedFeed = false
+    }
+
+    func loadMoreUnifiedFeedItems() async {
+        guard unifiedFeedHasMore && !isLoadingUnifiedFeed else { return }
+
+        isLoadingUnifiedFeed = true
+        let result = await bluebirdAccountAPIService.getUnifiedFeed(
+            limit: 20,
+            offset: unifiedFeedNextOffset,
+            includeHighlights: true
+        )
+
+        switch result {
+        case let .success(response):
+            unifiedFeedItems.append(contentsOf: response.items)
+            unifiedFeedHasMore = response.has_more
+            unifiedFeedNextOffset = response.next_offset
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error loading more unified feed items: \(presentationError)")
+            appState.setError(presentationError)
+        }
+        isLoadingUnifiedFeed = false
+    }
+
     func deletePost(postID: String) async -> Bool {
         let result = await bluebirdAccountAPIService.deleteRepost(postID: postID)
 
         switch result {
         case .success():
-            // Remove from feed
+            // Remove from regular feed
             feedPosts.removeAll { $0.post.post_id == postID }
+            // Remove from unified feed
+            unifiedFeedItems.removeAll { $0.post_id == postID }
             return true
 
         case let .failure(serviceError):

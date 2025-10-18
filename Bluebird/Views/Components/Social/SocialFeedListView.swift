@@ -7,7 +7,7 @@ struct SocialFeedListView: View {
     @Binding var selectedAlbum: AlbumDetail?
     @Binding var selectedArtist: ArtistDetail?
     @Binding var selectedUser: UserProfile?
-    @Binding var postToDelete: FeedPost?
+    @Binding var postToDelete: String?
     @Binding var showDeletePostModal: Bool
 
     let currentUserID: String?
@@ -15,7 +15,7 @@ struct SocialFeedListView: View {
 
     var body: some View {
         Group {
-            if socialViewModel.feedPosts.isEmpty && socialViewModel.friendsCurrentlyPlaying.isEmpty && !socialViewModel.isLoadingFeed {
+            if socialViewModel.unifiedFeedItems.isEmpty && socialViewModel.friendsCurrentlyPlaying.isEmpty && !socialViewModel.isLoadingUnifiedFeed {
                 EmptyFeedStateView(onFindFriends: onFindFriends)
             } else {
                 feedList
@@ -50,7 +50,7 @@ struct SocialFeedListView: View {
         .refreshable {
             await withTaskGroup(of: Void.self) { group in
                 group.addTask {
-                    await socialViewModel.fetchFeed(forceRefresh: true)
+                    await socialViewModel.fetchUnifiedFeed(forceRefresh: true)
                 }
                 group.addTask {
                     await socialViewModel.fetchFriendsCurrentlyPlaying()
@@ -100,33 +100,35 @@ struct SocialFeedListView: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
             }
 
-            // Feed Posts
-            ForEach(socialViewModel.feedPosts) { feedPost in
-                FeedPostRowView(
-                    feedPost: feedPost,
+            // Unified Feed (Posts + Highlights)
+            ForEach(socialViewModel.unifiedFeedItems) { feedItem in
+                UnifiedFeedRowView(
+                    unifiedFeedItem: feedItem,
                     currentUserID: currentUserID,
                     onEntityTap: {
-                        handleFeedEntityTap(feedPost: feedPost)
+                        handleUnifiedFeedEntityTap(feedItem: feedItem)
                     },
                     onProfileTap: {
-                        selectedUser = feedPost.post.author
+                        selectedUser = feedItem.author
                     },
-                    onDeleteTap: {
-                        postToDelete = feedPost.post
-                        showDeletePostModal = true
-                    }
+                    onDeleteTap: feedItem.content_type == .repost ? {
+                        if let postID = feedItem.post_id {
+                            postToDelete = postID
+                            showDeletePostModal = true
+                        }
+                    } : nil
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
 
-            if socialViewModel.feedHasMore {
+            if socialViewModel.unifiedFeedHasMore {
                 Button(action: {
                     Task {
-                        await socialViewModel.loadMoreFeedPosts()
+                        await socialViewModel.loadMoreUnifiedFeedItems()
                     }
                 }) {
-                    if socialViewModel.isLoadingFeed {
+                    if socialViewModel.isLoadingUnifiedFeed {
                         ProgressView()
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
@@ -148,12 +150,12 @@ struct SocialFeedListView: View {
         .background(Color.themeBackground)
     }
 
-    private func handleFeedEntityTap(feedPost: FeedPostItem) {
-        if let track = feedPost.track_detail {
+    private func handleUnifiedFeedEntityTap(feedItem: UnifiedFeedItem) {
+        if let track = feedItem.track_detail {
             selectedSong = track
-        } else if let album = feedPost.album_detail {
+        } else if let album = feedItem.album_detail {
             selectedAlbum = album
-        } else if let artist = feedPost.artist_detail {
+        } else if let artist = feedItem.artist_detail {
             selectedArtist = artist
         }
     }
