@@ -26,7 +26,6 @@ struct UserProfileView: View {
                         privateProfileView()
                     } else {
                         VStack(spacing: 32) {
-                            // Pins section
                             if detail.pinned_tracks.isEmpty &&
                                 detail.pinned_albums.isEmpty &&
                                 detail.pinned_artists.isEmpty
@@ -51,7 +50,6 @@ struct UserProfileView: View {
                                 .padding(.horizontal)
                             }
 
-                            // Reposts section
                             repostsSection()
                                 .padding(.horizontal)
                         }
@@ -107,7 +105,6 @@ struct UserProfileView: View {
     @ViewBuilder
     fileprivate func userHeadlineView() -> some View {
         VStack(alignment: .center, spacing: 16) {
-            // Profile image and username section
             VStack(spacing: 12) {
                 profileImageContainer
 
@@ -129,7 +126,6 @@ struct UserProfileView: View {
             }
 
             if let detail = socialViewModel.currentUserProfile {
-                // Stats
                 if !detail.is_private || detail.friendship_status == .friends {
                     HeadlineStatsView(
                         totalMinutesListened: detail.total_minutes_listened
@@ -141,7 +137,6 @@ struct UserProfileView: View {
                     .padding(.horizontal)
                 }
 
-                // Friend action button
                 friendshipButton(status: detail.friendship_status)
                     .padding(.horizontal)
             }
@@ -176,7 +171,6 @@ struct UserProfileView: View {
                 .frame(width: 110, height: 110)
                 .blur(radius: 10)
 
-            // Main image
             Group {
                 if userProfile.avatar_url.isEmpty {
                     Circle()

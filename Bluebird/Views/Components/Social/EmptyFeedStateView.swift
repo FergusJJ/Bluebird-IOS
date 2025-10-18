@@ -7,12 +7,10 @@ struct EmptyFeedStateView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Icon
             Image(systemName: "music.note.list")
                 .font(.system(size: 60))
                 .foregroundColor(Color.themePrimary.opacity(0.5))
 
-            // Title and description
             VStack(spacing: 12) {
                 Text("Your Feed is Quiet")
                     .font(.title2)
@@ -26,7 +24,6 @@ struct EmptyFeedStateView: View {
                     .padding(.horizontal, 32)
             }
 
-            // CTAs
             VStack(spacing: 12) {
                 Button(action: onFindFriends) {
                     HStack {

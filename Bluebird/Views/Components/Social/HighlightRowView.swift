@@ -74,49 +74,48 @@ struct HighlightRowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Highlight header
             Button(action: onProfileTap) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ZStack {
                         if !unifiedFeedItem.author.avatar_url.isEmpty,
                            let url = URL(string: unifiedFeedItem.author.avatar_url)
                         {
                             CachedAsyncImage(url: url)
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                                 .clipShape(Circle())
                         } else {
                             Image(systemName: "person.fill")
                                 .resizable()
-                                .padding(5)
+                                .padding(6)
                                 .foregroundColor(Color.themePrimary)
                                 .background(Color.themeBackground.opacity(0.4))
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                                 .clipShape(Circle())
                         }
 
                         Circle()
-                            .stroke(highlightColor, lineWidth: 1.5)
-                            .frame(width: 24, height: 24)
+                            .stroke(highlightColor, lineWidth: 2)
+                            .frame(width: 28, height: 28)
                     }
 
                     Image(systemName: highlightIcon)
-                        .font(.caption)
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(highlightColor)
 
                     Text(highlightText)
-                        .font(.caption)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(Color.themePrimary)
 
                     Spacer()
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
                 .background(
                     LinearGradient(
                         colors: [
-                            highlightColor.opacity(0.15),
-                            highlightColor.opacity(0.05),
+                            highlightColor.opacity(0.12),
+                            highlightColor.opacity(0.04),
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
@@ -126,28 +125,29 @@ struct HighlightRowView: View {
             }
             .buttonStyle(PlainButtonStyle())
 
-            // Entity content
             Button(action: onEntityTap) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 0) {
                     if let imageURL = entityImageURL, let url = URL(string: imageURL) {
-                        CachedAsyncImage(url: url)
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 280)
-                            .clipped()
-                            .background(Color.themeBackground)
+                        GeometryReader { geometry in
+                            CachedAsyncImage(url: url)
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .clipped()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 300)
+                        .background(Color.themeBackground)
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 5) {
                             Text(entityName)
-                                .font(.headline)
-                                .fontWeight(.bold)
+                                .font(.system(size: 18, weight: .bold))
                                 .lineLimit(2)
                                 .foregroundStyle(Color.themePrimary)
 
                             Text(entitySubtext)
-                                .font(.subheadline)
+                                .font(.system(size: 15))
                                 .foregroundColor(.themeSecondary)
                                 .lineLimit(1)
                         }
@@ -155,32 +155,56 @@ struct HighlightRowView: View {
                         // Show play count for "loving" highlights
                         if unifiedFeedItem.content_type == .highlightLoving,
                            let playCount = unifiedFeedItem.play_count {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "play.circle.fill")
-                                    .font(.caption)
+                                    .font(.system(size: 13))
                                     .foregroundColor(highlightColor)
                                 Text("\(playCount) plays this week")
-                                    .font(.caption)
+                                    .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(Color.themeSecondary)
                             }
-                            .padding(.top, 4)
+                            .padding(.top, 2)
                         }
 
-                        // Timestamp
                         Text(timeAgoString(from: unifiedFeedItem.timestamp))
-                            .font(.caption2)
-                            .foregroundColor(Color.themeSecondary)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color.themeSecondary.opacity(0.8))
                             .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.top, 2)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 14)
+                    .padding(.bottom, 14)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .background(Color.themeElement)
-        .cornerRadius(12)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.themeElement)
+
+                // Subtle inner highlight
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.themeHighlight.opacity(0.6),
+                                Color.clear,
+                            ],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.themePrimary.opacity(0.08), lineWidth: 0.5)
+        )
+        .shadow(color: Color.themeShadow, radius: 6, x: 0, y: 3)
     }
 
     private func timeAgoString(from date: Date) -> String {

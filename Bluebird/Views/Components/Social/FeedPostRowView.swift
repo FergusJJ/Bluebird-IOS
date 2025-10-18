@@ -50,37 +50,36 @@ struct FeedPostRowView: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: onProfileTap) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ZStack {
                         if !feedPost.post.author.avatar_url.isEmpty,
                            let url = URL(string: feedPost.post.author.avatar_url)
                         {
                             CachedAsyncImage(url: url)
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                                 .clipShape(Circle())
                         } else {
                             Image(systemName: "person.fill")
                                 .resizable()
-                                .padding(5)
+                                .padding(6)
                                 .foregroundColor(Color.themePrimary)
                                 .background(Color.themeBackground.opacity(0.4))
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                                 .clipShape(Circle())
                         }
 
                         Circle()
-                            .stroke(Color.themeAccent, lineWidth: 1.5)
-                            .frame(width: 24, height: 24)
+                            .stroke(Color.themeAccent, lineWidth: 2)
+                            .frame(width: 28, height: 28)
                     }
 
                     Text(isCurrentUser ? "You" : feedPost.post.author.username)
-                        .font(.caption)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(Color.themePrimary)
 
                     Text("reposted")
-                        .font(.caption)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(Color.themeSecondary)
 
                     Spacer()
@@ -88,22 +87,22 @@ struct FeedPostRowView: View {
                     if isCurrentUser {
                         Button(action: onDeleteTap) {
                             Image(systemName: "trash")
-                                .font(.caption)
+                                .font(.system(size: 13))
                                 .foregroundColor(Color.themeSecondary)
-                                .padding(6)
-                                .background(Color.themeBackground.opacity(0.5))
+                                .padding(8)
+                                .background(Color.themeBackground.opacity(0.6))
                                 .clipShape(Circle())
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
                 .background(
                     LinearGradient(
                         colors: [
-                            Color.themeAccent.opacity(0.15),
-                            Color.themeAccent.opacity(0.05),
+                            Color.themeAccent.opacity(0.12),
+                            Color.themeAccent.opacity(0.04),
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
@@ -114,73 +113,100 @@ struct FeedPostRowView: View {
             .buttonStyle(PlainButtonStyle())
 
             Button(action: onEntityTap) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 0) {
                     if let imageURL = entityImageURL, let url = URL(string: imageURL) {
-                        CachedAsyncImage(url: url)
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 280)
-                            .clipped()
-                            .background(Color.themeBackground)
+                        GeometryReader { geometry in
+                            CachedAsyncImage(url: url)
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .clipped()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 300)
+                        .background(Color.themeBackground)
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 5) {
                             Text(entityName)
-                                .font(.headline)
-                                .fontWeight(.bold)
+                                .font(.system(size: 18, weight: .bold))
                                 .lineLimit(2)
                                 .foregroundStyle(Color.themePrimary)
 
                             Text(entitySubtext)
-                                .font(.subheadline)
+                                .font(.system(size: 15))
                                 .foregroundColor(.themeSecondary)
                                 .lineLimit(1)
                         }
 
                         if !feedPost.post.caption.isEmpty {
                             Text(feedPost.post.caption)
-                                .font(.subheadline)
+                                .font(.system(size: 15))
                                 .foregroundColor(Color.themePrimary)
                                 .lineLimit(4)
                                 .padding(.top, 4)
                         }
 
                         HStack(spacing: 16) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 5) {
                                 Image(systemName: feedPost.post.user_has_liked ? "heart.fill" : "heart")
-                                    .font(.caption)
+                                    .font(.system(size: 13))
                                     .foregroundColor(feedPost.post.user_has_liked ? .red : Color.themeSecondary)
                                 Text("\(feedPost.post.likes_count)")
-                                    .font(.caption)
+                                    .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(Color.themeSecondary)
                             }
 
-                            HStack(spacing: 4) {
+                            HStack(spacing: 5) {
                                 Image(systemName: "bubble.right")
-                                    .font(.caption)
+                                    .font(.system(size: 13))
                                     .foregroundColor(Color.themeSecondary)
                                 Text("\(feedPost.post.comments_count)")
-                                    .font(.caption)
+                                    .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(Color.themeSecondary)
                             }
 
                             Spacer()
 
                             Text(timeAgoString(from: feedPost.post.created_at))
-                                .font(.caption2)
-                                .foregroundColor(Color.themeSecondary)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.themeSecondary.opacity(0.8))
                         }
+                        .padding(.top, 2)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 14)
+                    .padding(.bottom, 14)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .background(Color.themeElement)
-        .cornerRadius(12)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.themeElement)
+
+                // Subtle inner highlight
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.themeHighlight.opacity(0.6),
+                                Color.clear,
+                            ],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.themePrimary.opacity(0.08), lineWidth: 0.5)
+        )
+        .shadow(color: Color.themeShadow, radius: 6, x: 0, y: 3)
     }
 
     private func timeAgoString(from date: Date) -> String {

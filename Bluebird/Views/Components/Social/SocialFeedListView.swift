@@ -60,9 +60,8 @@ struct SocialFeedListView: View {
     }
 
     private var feedList: some View {
-        List {
-            // Currently Playing Section
-            let _ = print("DEBUG: friendsCurrentlyPlaying count = \(socialViewModel.friendsCurrentlyPlaying.count)")
+        ScrollViewReader { proxy in
+            List {
             if !socialViewModel.friendsCurrentlyPlaying.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -100,7 +99,6 @@ struct SocialFeedListView: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
             }
 
-            // Unified Feed (Posts + Highlights)
             ForEach(socialViewModel.unifiedFeedItems) { feedItem in
                 UnifiedFeedRowView(
                     unifiedFeedItem: feedItem,
@@ -144,10 +142,11 @@ struct SocialFeedListView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
             }
+            }
+            .listRowSpacing(8)
+            .scrollContentBackground(.hidden)
+            .background(Color.themeBackground)
         }
-        .listRowSpacing(8)
-        .scrollContentBackground(.hidden)
-        .background(Color.themeBackground)
     }
 
     private func handleUnifiedFeedEntityTap(feedItem: UnifiedFeedItem) {

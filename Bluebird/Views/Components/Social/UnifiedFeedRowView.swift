@@ -77,37 +77,40 @@ struct RepostInUnifiedFeedView: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: onProfileTap) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ZStack {
                         if !unifiedFeedItem.author.avatar_url.isEmpty,
-                           let url = URL(string: unifiedFeedItem.author.avatar_url)
+                            let url = URL(
+                                string: unifiedFeedItem.author.avatar_url
+                            )
                         {
                             CachedAsyncImage(url: url)
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                                 .clipShape(Circle())
                         } else {
                             Image(systemName: "person.fill")
                                 .resizable()
-                                .padding(5)
+                                .padding(6)
                                 .foregroundColor(Color.themePrimary)
                                 .background(Color.themeBackground.opacity(0.4))
-                                .frame(width: 24, height: 24)
+                                .frame(width: 28, height: 28)
                                 .clipShape(Circle())
                         }
 
                         Circle()
-                            .stroke(Color.themeAccent, lineWidth: 1.5)
-                            .frame(width: 24, height: 24)
+                            .stroke(Color.themeAccent, lineWidth: 2)
+                            .frame(width: 28, height: 28)
                     }
 
-                    Text(isCurrentUser ? "You" : unifiedFeedItem.author.username)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color.themePrimary)
+                    Text(
+                        isCurrentUser ? "You" : unifiedFeedItem.author.username
+                    )
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.themePrimary)
 
                     Text("reposted")
-                        .font(.caption)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(Color.themeSecondary)
 
                     Spacer()
@@ -115,22 +118,22 @@ struct RepostInUnifiedFeedView: View {
                     if isCurrentUser, let onDelete = onDeleteTap {
                         Button(action: onDelete) {
                             Image(systemName: "trash")
-                                .font(.caption)
+                                .font(.system(size: 13))
                                 .foregroundColor(Color.themeSecondary)
-                                .padding(6)
-                                .background(Color.themeBackground.opacity(0.5))
+                                .padding(8)
+                                .background(Color.themeBackground.opacity(0.6))
                                 .clipShape(Circle())
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
                 .background(
                     LinearGradient(
                         colors: [
-                            Color.themeAccent.opacity(0.15),
-                            Color.themeAccent.opacity(0.05),
+                            Color.themeAccent.opacity(0.12),
+                            Color.themeAccent.opacity(0.04),
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
@@ -141,33 +144,39 @@ struct RepostInUnifiedFeedView: View {
             .buttonStyle(PlainButtonStyle())
 
             Button(action: onEntityTap) {
-                VStack(alignment: .leading, spacing: 12) {
-                    if let imageURL = entityImageURL, let url = URL(string: imageURL) {
-                        CachedAsyncImage(url: url)
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 280)
-                            .clipped()
-                            .background(Color.themeBackground)
+                VStack(alignment: .leading, spacing: 0) {
+                    if let imageURL = entityImageURL,
+                        let url = URL(string: imageURL)
+                    {
+                        GeometryReader { geometry in
+                            CachedAsyncImage(url: url)
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .clipped()
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 300)
+                        .background(Color.themeBackground)
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 5) {
                             Text(entityName)
-                                .font(.headline)
-                                .fontWeight(.bold)
+                                .font(.system(size: 18, weight: .bold))
                                 .lineLimit(2)
                                 .foregroundStyle(Color.themePrimary)
 
                             Text(entitySubtext)
-                                .font(.subheadline)
+                                .font(.system(size: 15))
                                 .foregroundColor(.themeSecondary)
                                 .lineLimit(1)
                         }
 
-                        if let caption = unifiedFeedItem.caption, !caption.isEmpty {
+                        if let caption = unifiedFeedItem.caption,
+                            !caption.isEmpty
+                        {
                             Text(caption)
-                                .font(.subheadline)
+                                .font(.system(size: 15))
                                 .foregroundColor(Color.themePrimary)
                                 .lineLimit(4)
                                 .padding(.top, 4)
@@ -175,24 +184,34 @@ struct RepostInUnifiedFeedView: View {
 
                         HStack(spacing: 16) {
                             if let likesCount = unifiedFeedItem.likes_count,
-                               let userHasLiked = unifiedFeedItem.user_has_liked {
-                                HStack(spacing: 4) {
-                                    Image(systemName: userHasLiked ? "heart.fill" : "heart")
-                                        .font(.caption)
-                                        .foregroundColor(userHasLiked ? .red : Color.themeSecondary)
+                                let userHasLiked = unifiedFeedItem
+                                    .user_has_liked
+                            {
+                                HStack(spacing: 5) {
+                                    Image(
+                                        systemName: userHasLiked
+                                            ? "heart.fill" : "heart"
+                                    )
+                                    .font(.system(size: 13))
+                                    .foregroundColor(
+                                        userHasLiked
+                                            ? .red : Color.themeSecondary
+                                    )
                                     Text("\(likesCount)")
-                                        .font(.caption)
+                                        .font(.system(size: 13, weight: .medium))
                                         .foregroundColor(Color.themeSecondary)
                                 }
                             }
 
-                            if let commentsCount = unifiedFeedItem.comments_count {
-                                HStack(spacing: 4) {
+                            if let commentsCount = unifiedFeedItem
+                                .comments_count
+                            {
+                                HStack(spacing: 5) {
                                     Image(systemName: "bubble.right")
-                                        .font(.caption)
+                                        .font(.system(size: 13))
                                         .foregroundColor(Color.themeSecondary)
                                     Text("\(commentsCount)")
-                                        .font(.caption)
+                                        .font(.system(size: 13, weight: .medium))
                                         .foregroundColor(Color.themeSecondary)
                                 }
                             }
@@ -200,24 +219,53 @@ struct RepostInUnifiedFeedView: View {
                             Spacer()
 
                             Text(timeAgoString(from: unifiedFeedItem.timestamp))
-                                .font(.caption2)
-                                .foregroundColor(Color.themeSecondary)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.themeSecondary.opacity(0.8))
                         }
+                        .padding(.top, 2)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 14)
+                    .padding(.bottom, 14)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .background(Color.themeElement)
-        .cornerRadius(12)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.themeElement)
+
+                // Subtle inner highlight
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.themeHighlight.opacity(0.6),
+                                Color.clear,
+                            ],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.themePrimary.opacity(0.08), lineWidth: 0.5)
+        )
+        .shadow(color: Color.themeShadow, radius: 6, x: 0, y: 3)
     }
 
     private func timeAgoString(from date: Date) -> String {
         let now = Date()
-        let components = Calendar.current.dateComponents([.minute, .hour, .day, .weekOfYear], from: date, to: now)
+        let components = Calendar.current.dateComponents(
+            [.minute, .hour, .day, .weekOfYear],
+            from: date,
+            to: now
+        )
 
         if let week = components.weekOfYear, week > 0 {
             return week == 1 ? "1 week ago" : "\(week) weeks ago"

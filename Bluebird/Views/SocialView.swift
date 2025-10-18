@@ -28,7 +28,6 @@ struct SocialView: View {
                 .zIndex(2)
             }
 
-            // View toggle (only show when not searching)
             if !isSearching {
                 SocialViewToggle(selectedView: $selectedView)
                     .padding(.horizontal, 16)

@@ -81,8 +81,8 @@ struct PostActionBody: Codable {
     let action: String
     let post_id: String?
     let post_type: String?
-    let entity_type: String? // needed for repost only
-    let entity_id: String? // repost
+    let entity_type: String?  // needed for repost only
+    let entity_id: String?  // repost
     let caption: String
 }
 
@@ -119,7 +119,7 @@ enum LeaderboardScope: String {
 struct Repost: Codable, Identifiable {
     let post_id: String
     let profile: UserProfile
-    let entity_type: String // "track", "album", or "artist"
+    let entity_type: String  // "track", "album", or "artist"
     let entity_id: String
     let caption: String
     let created_at: Date
@@ -149,8 +149,8 @@ struct RepostsResponse: Codable {
 struct FeedPost: Codable, Identifiable {
     let post_id: String
     let author: UserProfile
-    let post_type: String // "repost"
-    let entity_type: String // "track", "album", or "artist"
+    let post_type: String  // "repost"
+    let entity_type: String  // "track", "album", or "artist"
     let entity_id: String
     let caption: String
     let created_at: Date
@@ -193,7 +193,7 @@ struct UnifiedFeedItem: Codable, Identifiable {
     let comments_count: Int?
     let user_has_liked: Bool?
     let author: UserProfile
-    let entity_type: String // "track", "album", or "artist"
+    let entity_type: String  // "track", "album", or "artist"
     let entity_id: String
     let track_detail: SongDetail?
     let album_detail: AlbumDetail?
@@ -202,8 +202,12 @@ struct UnifiedFeedItem: Codable, Identifiable {
     let is_new_discovery: Bool?
 
     var id: String {
-        // Use post_id if available, otherwise generate from content
-        post_id ?? "highlight_\(author.user_id)_\(entity_id)"
+        if let postID = post_id {
+            return postID
+        }
+        // needed for generated posts that arent explicitlty stored
+        let timestampString = String(timestamp.timeIntervalSince1970)
+        return "\(content_type.rawValue)_\(author.user_id)_\(entity_id)_\(timestampString)"
     }
 }
 
