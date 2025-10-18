@@ -71,14 +71,8 @@ struct SocialView: View {
                             }
                         )
                     } else {
-                        NowPlayingListView(
-                            selectedSong: $selectedSong,
-                            selectedUser: $selectedUser,
-                            onFindFriends: {
-                                withAnimation {
-                                    isSearching = true
-                                }
-                            }
+                        TrendingListView(
+                            selectedSong: $selectedSong
                         )
                     }
                 }
@@ -91,6 +85,9 @@ struct SocialView: View {
                 }
                 group.addTask {
                     await socialViewModel.fetchFeed()
+                }
+                group.addTask {
+                    await socialViewModel.fetchTrendingTracks()
                 }
             }
         }

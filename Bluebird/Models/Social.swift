@@ -175,3 +175,12 @@ struct FeedResponse: Codable {
     let has_more: Bool
     let next_offset: Int
 }
+
+// MARK: - Trending
+
+struct TrendingTrack: Codable, Identifiable {
+    let track: SongDetail
+    let play_count: Int
+
+    var id: String { track.track_id }
+}

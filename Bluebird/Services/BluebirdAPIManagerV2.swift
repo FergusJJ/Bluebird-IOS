@@ -757,6 +757,12 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
+    func getTrendingTracks() async -> Result<[TrendingTrack], BluebirdAPIError> {
+        return await makeRequest(
+            path: "/api/social/trending"
+        )
+    }
+
     // MARK: - Special Cases
 
     @MainActor

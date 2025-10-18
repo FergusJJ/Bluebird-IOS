@@ -2,7 +2,8 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var spotifyViewModel: SpotifyViewModel
-    @EnvironmentObject var searchViewModel: GenericSearchViewModel<SongDetail, SearchSongResult>
+    @EnvironmentObject var searchViewModel:
+        GenericSearchViewModel<SongDetail, SearchSongResult>
     @EnvironmentObject var appState: AppState
 
     @State private var isSearching = false
@@ -35,8 +36,12 @@ struct HomeView: View {
                                 isSearching = false
                                 DispatchQueue.main.async {
                                     UIApplication.shared.sendAction(
-                                        #selector(UIResponder.resignFirstResponder),
-                                        to: nil, from: nil, for: nil
+                                        #selector(
+                                            UIResponder.resignFirstResponder
+                                        ),
+                                        to: nil,
+                                        from: nil,
+                                        for: nil
                                     )
                                 }
                             }
@@ -90,11 +95,13 @@ struct HomeView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(Color.themePrimary)
 
-                Text("Connect your Spotify account to see your listening history and real-time updates")
-                    .font(.subheadline)
-                    .foregroundColor(Color.themeSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                Text(
+                    "Connect your Spotify account to see your listening history and real-time updates"
+                )
+                .font(.subheadline)
+                .foregroundColor(Color.themeSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
             }
 
             Button(action: {
@@ -125,7 +132,11 @@ struct HomeView: View {
         List {
             ForEach(searchViewModel.searchResults) { result in
                 NavigationLink(destination: destinationView(for: result)) {
-                    ClickableSongRowView(song: result, isInHistory: false, isPlaying: false)
+                    ClickableSongRowView(
+                        song: result,
+                        isInHistory: false,
+                        isPlaying: false
+                    )
                 }
                 .listRowBackground(Color.themeElement)
             }
@@ -143,16 +154,26 @@ struct HomeView: View {
     private var songHistoryList: some View {
         List {
             if let currentlyPlayingSong = spotifyViewModel.currentlyPlaying {
-                NavigationLink(destination: destinationView(for: currentlyPlayingSong)) {
-                    ClickableSongRowView(song: currentlyPlayingSong, isInHistory: true, isPlaying: true)
-                        .id(spotifyViewModel.currentlyPlaying?.track_id)
+                NavigationLink(
+                    destination: destinationView(for: currentlyPlayingSong)
+                ) {
+                    ClickableSongRowView(
+                        song: currentlyPlayingSong,
+                        isInHistory: true,
+                        isPlaying: true
+                    )
+                    .id(spotifyViewModel.currentlyPlaying?.track_id)
                 }
                 .listRowBackground(Color.themeElement)
             }
 
             ForEach(spotifyViewModel.sortedSongs) { song in
                 NavigationLink(destination: destinationView(for: song)) {
-                    ClickableSongRowView(song: song, isInHistory: true, isPlaying: false)
+                    ClickableSongRowView(
+                        song: song,
+                        isInHistory: true,
+                        isPlaying: false
+                    )
                 }
                 .listRowBackground(Color.themeElement)
                 .onAppear {
@@ -174,16 +195,23 @@ struct HomeView: View {
         .scrollContentBackground(.hidden)
         .background(Color.themeBackground)
         .refreshable {
-            await spotifyViewModel.loadCurrentlyPlaying()
-            await spotifyViewModel.refreshHistory()
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    await spotifyViewModel.loadCurrentlyPlaying()
+                }
+                group.addTask {
+                    await spotifyViewModel.refreshHistory()
+                }
+            }
         }
         .onAppear {
             Task {
                 await spotifyViewModel.loadCurrentlyPlaying()
 
                 // Check if cache is empty or stale (older than 1 hour)
-                let shouldRefresh = spotifyViewModel.songHistory.isEmpty ||
-                    spotifyViewModel.isCacheStale()
+                let shouldRefresh =
+                    spotifyViewModel.songHistory.isEmpty
+                    || spotifyViewModel.isCacheStale()
 
                 if shouldRefresh {
                     await spotifyViewModel.refreshHistory()

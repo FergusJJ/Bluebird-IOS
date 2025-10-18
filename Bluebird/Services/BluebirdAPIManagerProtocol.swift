@@ -125,6 +125,7 @@ protocol BluebirdAccountAPIService {
         id: String,
         scope: LeaderboardScope
     ) async -> Result<LeaderboardResponse, BluebirdAPIError>
+    func getTrendingTracks() async -> Result<[TrendingTrack], BluebirdAPIError>
 }
 
 protocol SpotifyAPIService {

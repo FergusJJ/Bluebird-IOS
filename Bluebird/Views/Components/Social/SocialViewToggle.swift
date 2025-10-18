@@ -2,7 +2,7 @@ import SwiftUI
 
 enum SocialViewType {
     case feed
-    case currentlyPlaying
+    case trending
 }
 
 struct SocialViewToggle: View {
@@ -26,15 +26,15 @@ struct SocialViewToggle: View {
             Divider()
                 .background(Color.themeSecondary.opacity(0.3))
 
-            Button(action: { selectedView = .currentlyPlaying }) {
-                Text("Now Playing")
+            Button(action: { selectedView = .trending }) {
+                Text("Trending")
                     .font(.subheadline)
-                    .fontWeight(selectedView == .currentlyPlaying ? .semibold : .regular)
-                    .foregroundColor(selectedView == .currentlyPlaying ? Color.themePrimary : Color.themeSecondary)
+                    .fontWeight(selectedView == .trending ? .semibold : .regular)
+                    .foregroundColor(selectedView == .trending ? Color.themePrimary : Color.themeSecondary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 36)
                     .background(
-                        selectedView == .currentlyPlaying ? Color.themeElement : Color.clear
+                        selectedView == .trending ? Color.themeElement : Color.clear
                     )
             }
             .buttonStyle(PlainButtonStyle())

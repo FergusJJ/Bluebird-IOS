@@ -15,7 +15,7 @@ struct SocialFeedListView: View {
 
     var body: some View {
         Group {
-            if socialViewModel.feedPosts.isEmpty && !socialViewModel.isLoadingFeed {
+            if socialViewModel.feedPosts.isEmpty && socialViewModel.friendsCurrentlyPlaying.isEmpty && !socialViewModel.isLoadingFeed {
                 EmptyFeedStateView(onFindFriends: onFindFriends)
             } else {
                 feedList
@@ -48,12 +48,59 @@ struct SocialFeedListView: View {
             UserProfileView(userProfile: profile)
         }
         .refreshable {
-            await socialViewModel.fetchFeed(forceRefresh: true)
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    await socialViewModel.fetchFeed(forceRefresh: true)
+                }
+                group.addTask {
+                    await socialViewModel.fetchFriendsCurrentlyPlaying()
+                }
+            }
         }
     }
 
     private var feedList: some View {
         List {
+            // Currently Playing Section
+            let _ = print("DEBUG: friendsCurrentlyPlaying count = \(socialViewModel.friendsCurrentlyPlaying.count)")
+            if !socialViewModel.friendsCurrentlyPlaying.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "waveform")
+                            .font(.headline)
+                            .foregroundColor(Color.themeAccent)
+                        Text("Friends Listening Now")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color.themePrimary)
+                    }
+
+                    ForEach(
+                        Array(socialViewModel.friendsCurrentlyPlaying).sorted(by: {
+                            $0.key < $1.key
+                        }).prefix(3),
+                        id: \.key
+                    ) { _, trackAndUser in
+                        FriendSongRowView(
+                            song: trackAndUser.track,
+                            username: trackAndUser.profile.username,
+                            profilePictureURL: !trackAndUser.profile.avatar_url.isEmpty
+                                ? URL(string: trackAndUser.profile.avatar_url)
+                                : nil,
+                            onSongTap: {
+                                selectedSong = trackAndUser.track
+                            },
+                            onProfileTap: {
+                                selectedUser = trackAndUser.profile
+                            }
+                        )
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
+            }
+
+            // Feed Posts
             ForEach(socialViewModel.feedPosts) { feedPost in
                 FeedPostRowView(
                     feedPost: feedPost,

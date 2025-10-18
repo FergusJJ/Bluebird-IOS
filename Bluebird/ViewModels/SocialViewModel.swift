@@ -14,6 +14,10 @@ class SocialViewModel: ObservableObject {
     @Published private(set) var feedHasMore = false
     @Published private(set) var feedNextOffset = 0
 
+    @Published var trendingTracks: [TrendingTrack] = []
+    @Published var isLoadingTrending = false
+    @Published var showAllTrending = false
+
     private var appState: AppState
     private let cacheManager = CacheManager.shared
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
@@ -50,17 +54,54 @@ class SocialViewModel: ObservableObject {
     }
 
     func fetchFriendsCurrentlyPlaying() async {
+        print("DEBUG: fetchFriendsCurrentlyPlaying called")
         let result =
             await bluebirdAccountAPIService.getFriendsCurrentlyPlaying()
         switch result {
         case let .success(userIDTrackMap):
+            print("DEBUG: Got currently playing data - count: \(userIDTrackMap.friends.count)")
             friendsCurrentlyPlaying = userIDTrackMap.friends
+            print("DEBUG: Set friendsCurrentlyPlaying - count now: \(friendsCurrentlyPlaying.count)")
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error refreshing history: \(presentationError)")
             appState.setError(presentationError)
         }
+    }
+
+    func fetchTrendingTracks() async {
+        // Prevent concurrent requests
+        print("fetchTrendingTracks - isLoadingTrending=\(isLoadingTrending)")
+        guard !isLoadingTrending else { return }
+        print("fetchTrendingTracks - passed guard isLoadingTrending=\(isLoadingTrending)")
+
+        isLoadingTrending = true
+        defer {isLoadingTrending = false}
+        print("fetchTrendingTracks - getting result")
+        let result = await bluebirdAccountAPIService.getTrendingTracks()
+        print("fetchTrendingTracks - got result")
+        switch result {
+        case let .success(tracks):
+            trendingTracks = tracks
+
+        case let .failure(serviceError):
+            // Silently ignore cancellation errors (code -999) - these happen when refresh controls overlap
+            if case .networkError(let error as NSError) = serviceError,
+               error.domain == NSURLErrorDomain,
+               error.code == NSURLErrorCancelled {
+                print("Trending fetch cancelled by iOS (refresh control conflict, this is normal)")
+                return
+            }
+
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching trending tracks: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
+    func toggleShowAllTrending() {
+        showAllTrending.toggle()
     }
 
     func sendFriendRequest(to userId: String) async {
