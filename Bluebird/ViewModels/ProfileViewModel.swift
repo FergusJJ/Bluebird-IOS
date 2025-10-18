@@ -153,7 +153,8 @@ class ProfileViewModel: ObservableObject {
                     message: "",
                     username: username,
                     bio: bio,
-                    avatarUrl: avatarURL?.absoluteString ?? ""
+                    avatarUrl: avatarURL?.absoluteString ?? "",
+                    showTooltips: false
                 ),
                 stats: stats
             )

@@ -23,6 +23,8 @@ protocol BluebirdAccountAPIService {
     func getConnectedAccountDetail(accessToken: String) async -> Result<
         ConnectedAccountDetails, BluebirdAPIError
     >
+    func getOnboardingStatus() async -> Result<OnboardingStatusResponse, BluebirdAPIError>
+    func completeOnboarding() async -> Result<Void, BluebirdAPIError>
 
     // MARK: - Songs routes
 

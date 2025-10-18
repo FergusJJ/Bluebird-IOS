@@ -16,6 +16,20 @@ struct ProfileInfo: Decodable {
     let username: String
     let bio: String
     let avatarUrl: String
+    let showTooltips: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case message, username, bio, avatarUrl
+        case showTooltips = "show_tooltips"
+    }
+}
+
+struct OnboardingStatusResponse: Decodable {
+    let showTooltips: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case showTooltips = "show_tooltips"
+    }
 }
 
 struct HeadlineViewStats: Decodable {

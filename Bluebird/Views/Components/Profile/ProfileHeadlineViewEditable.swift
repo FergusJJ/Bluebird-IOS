@@ -83,7 +83,7 @@ struct ProfileHeadlineViewEditable: View {
                 totalMinutesListened: profileViewModel.totalMinutesListened,
                 totalPlays: profileViewModel.totalPlays,
                 totalUniqueArtists: profileViewModel.totalUniqueArtists,
-                friendCount: 1 // TODO: Get own friends on load
+                friendCount: 1  // TODO: Get own friends on load
             )
             .padding(.horizontal)
         }
@@ -108,20 +108,6 @@ struct ProfileHeadlineViewEditable: View {
 
     @ViewBuilder
     fileprivate var profileImageContainer: some View {
-        ZStack {
-            // Glow effect
-            Circle()
-                .fill(Color.themeAccent.opacity(0.2))
-                .frame(width: 110, height: 110)
-                .blur(radius: 10)
-
-            // Main image with playing indicator
-            ProfilePictureView(editableMode: editableMode, isCurrentlyPlaying: profileViewModel.isCurrentlyPlaying())
-                .frame(width: 100, height: 100)
-                .overlay(
-                    Circle()
-                        .stroke(Color.themeAccent.opacity(0.5), lineWidth: 3)
-                )
-        }
+        ProfilePictureView(editableMode: editableMode, isCurrentlyPlaying: profileViewModel.isCurrentlyPlaying())
     }
 }

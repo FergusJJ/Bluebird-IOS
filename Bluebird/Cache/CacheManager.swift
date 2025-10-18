@@ -191,7 +191,8 @@ class CacheManager: ObservableObject {
             message: "",
             username: cached.username,
             bio: cached.bio,
-            avatarUrl: cached.avatarUrl
+            avatarUrl: cached.avatarUrl,
+            showTooltips: false
         )
 
         let stats = HeadlineViewStats(

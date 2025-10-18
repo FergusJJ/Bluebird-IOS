@@ -36,7 +36,7 @@ final class CachedProfile {
     var totalPlays: Int
     var totalUniqueArtists: Int
     var lastUpdated: Date
-
+    
     @Relationship(inverse: \CachedUserAccount.profile) var account: CachedUserAccount?
 
     init(username: String, bio: String, avatarUrl: String) {

@@ -55,7 +55,15 @@ struct AppRouterView: View {
                 .toolbarColorScheme(colorScheme, for: .tabBar)
                 .applyAdaptiveNavigationBar()
                 .overlay(
-                    // Spotify connection modal overlay
+                    Group {
+                        if appState.shouldShowOnboarding {
+                            OnboardingOverlayView()
+                                .transition(.opacity)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.3), value: appState.shouldShowOnboarding)
+                )
+                .overlay(
                     Group {
                         if appState.shouldShowSpotifyModal {
                             Color.black.opacity(0.3)

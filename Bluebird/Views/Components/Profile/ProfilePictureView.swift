@@ -42,28 +42,66 @@ struct ProfilePictureView: View {
 
     private var profileImageStack: some View {
         ZStack(alignment: .bottomTrailing) {
-            if isCurrentlyPlaying && !editableMode {
+            profileImageContainer
+        }
+    }
+    
+    private var profileImageContainer: some View {
+        Group {
+            if isCurrentlyPlaying {
                 animatedProfileImage
             } else {
                 staticProfileImage
-            }
-
-            if editableMode {
-                editModeOverlay
             }
         }
     }
 
     private var staticProfileImage: some View {
         ZStack {
-            profileImageContent
+            // Glow effect
+            Circle()
+                .fill(Color.themeAccent.opacity(0.2))
+                .frame(width: 110, height: 110)
+                .blur(radius: 10)
 
-            if profileViewModel.isLoading {
-                loadingOverlay
+            // Main image
+            ZStack {
+                if let image = profileViewModel.selectedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else if let imageUrl = profileViewModel.avatarURL {
+                    CachedAsyncImage(url: imageUrl)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(Color.themeElement)
+                        .frame(width: 100, height: 100)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .padding(25)
+                                .foregroundColor(Color.themePrimary)
+                        )
+                }
+
+                if profileViewModel.isLoading {
+                    ProgressView()
+                        .frame(width: 100, height: 100)
+                        .background(Color.themeBackground.opacity(0.4))
+                        .clipShape(Circle())
+                }
             }
+            .overlay(
+                Circle()
+                    .stroke(Color.themeAccent.opacity(0.5), lineWidth: 3)
+            )
         }
-        .frame(width: 100, height: 100)
-        .clipShape(Circle())
     }
 
     private var animatedProfileImage: some View {
@@ -132,7 +170,7 @@ struct ProfilePictureView: View {
                 loadingOverlay
             }
         }
-        .frame(width: 96, height: 96)
+        .frame(width: 100, height: 100)
         .clipShape(Circle())
     }
 
@@ -142,15 +180,22 @@ struct ProfilePictureView: View {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    .frame(width: 100, height: 100)
             } else if let imageUrl = profileViewModel.avatarURL {
                 CachedAsyncImage(url: imageUrl)
                     .aspectRatio(contentMode: .fill)
+                    .frame(width: 100, height: 100)
             } else {
-                Image(systemName: "person.fill")
-                    .resizable()
-                    .padding(15)
-                    .foregroundColor(Color.themePrimary)
-                    .background(Color.themeBackground.opacity(0.4))
+                Circle()
+                    .fill(Color.themeElement)
+                    .frame(width: 100, height: 100)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(25)
+                            .foregroundColor(Color.themePrimary)
+                    )
             }
         }
     }

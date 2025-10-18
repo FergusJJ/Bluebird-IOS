@@ -14,6 +14,7 @@ struct ContentView: View {
         >
     @StateObject private var userSearchViewModel:
         GenericSearchViewModel<UserProfile, SearchUserResult>
+    @StateObject private var onboardingManager: OnboardingManager
 
     @Environment(\.scenePhase) var scenePhase
 
@@ -61,6 +62,12 @@ struct ContentView: View {
                 }
             )
         )
+        _onboardingManager = StateObject(
+            wrappedValue: OnboardingManager(
+                appState: appState,
+                apiService: apiManager
+            )
+        )
     }
 
     var body: some View {
@@ -72,6 +79,7 @@ struct ContentView: View {
                 .environmentObject(userSearchViewModel)
                 .environmentObject(statsViewModel)
                 .environmentObject(socialViewModel)
+                .environmentObject(onboardingManager)
                 //
                 .modifier(ErrorAlertViewModifier())
                 .onOpenURL { url in

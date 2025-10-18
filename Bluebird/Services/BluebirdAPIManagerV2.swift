@@ -223,6 +223,16 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
+    func getOnboardingStatus() async -> Result<OnboardingStatusResponse, BluebirdAPIError> {
+        return await makeRequest(path: "/api/me/onboarding")
+    }
+
+    func completeOnboarding() async -> Result<Void, BluebirdAPIError> {
+        let result: Result<SuccessResponse, BluebirdAPIError> =
+            await makeRequest(path: "/api/me/onboarding", method: "PATCH")
+        return result.map { _ in () }
+    }
+
     func refreshSpotifyAccessToken() async -> Result<String, BluebirdAPIError> {
         let result: Result<SpotifyRefreshResponse, BluebirdAPIError> =
             await makeRequest(path: "/api/spotify/refresh")

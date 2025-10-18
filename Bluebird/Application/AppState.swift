@@ -13,6 +13,8 @@ class AppState: ObservableObject {
     @Published var errorToDisplay: AppError?
     @Published var isInitialSignup = false
     @Published var shouldShowSpotifyModal = false
+    @Published var shouldShowOnboarding = false
+    @Published var hasCompletedOnboarding = false
 
     @AppStorage("userColorScheme") private var storedScheme: String = "system"
     @AppStorage("spotifyModalDontAskAgain") private var dontAskAgainForSpotify: Bool = false
@@ -414,6 +416,8 @@ class AppState: ObservableObject {
             currentArtist = ""
             isInitialSignup = false
             shouldShowSpotifyModal = false
+            shouldShowOnboarding = false
+            hasCompletedOnboarding = false
 
             return true
         } catch {
@@ -556,7 +560,6 @@ class AppState: ObservableObject {
 
     // MARK: - Cache stuff
 
-    @MainActor
     private func setupUserCache(userId: String, email: String, username: String? = nil) async {
         // Try to get username if not provided
         let finalUsername: String
@@ -580,14 +583,28 @@ class AppState: ObservableObject {
             username: finalUsername,
             email: email
         )
+
+        await checkOnboardingStatus()
     }
 
-    @MainActor
+    private func checkOnboardingStatus() async {
+        let result = await authAPIService.getOnboardingStatus()
+        switch result {
+        case let .success(response):
+            print("AppState: Onboarding status check successful. show_tooltips = \(response.showTooltips)")
+            hasCompletedOnboarding = !response.showTooltips
+            shouldShowOnboarding = response.showTooltips
+        case let .failure(error):
+            print("AppState: Failed to check onboarding status: \(error.localizedDescription)")
+            hasCompletedOnboarding = true
+            shouldShowOnboarding = false
+        }
+    }
+
     private func clearUserCache() async {
         cacheManager.clearCurrentUserData()
     }
 
-    @MainActor
     private func establishSpotifySessionClientID(
         accessToken: String,
         refreshToken: String,
@@ -670,7 +687,6 @@ class AppState: ObservableObject {
         }
     }
 
-    @MainActor
     private func establishSpotifySession() async -> Bool {
         guard !isEstablishingSpotifySession else {
             print("EstablishSpotifySession SKIPPED: Already in progress.")
