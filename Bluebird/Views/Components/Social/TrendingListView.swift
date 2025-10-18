@@ -32,7 +32,6 @@ struct TrendingListView: View {
 
     private var trendingList: some View {
         LazyVStack(spacing: 8, pinnedViews: []) {
-            // Header
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: "chart.line.uptrend.xyaxis")
@@ -51,7 +50,6 @@ struct TrendingListView: View {
             .padding(.top, 20)
             .padding(.bottom, 8)
 
-            // Trending tracks
             ForEach(Array(displayedTracks.enumerated()), id: \.element.id) { index, trendingTrack in
                 Button(action: {
                     selectedSong = trendingTrack.track
@@ -69,7 +67,6 @@ struct TrendingListView: View {
                 .padding(.horizontal, 16)
             }
 
-            // See All / Show Less button
             if socialViewModel.trendingTracks.count > 5 {
                 Button(action: {
                     withAnimation {

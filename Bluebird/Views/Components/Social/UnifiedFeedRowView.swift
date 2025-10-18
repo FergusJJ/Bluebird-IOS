@@ -1,49 +1,76 @@
 import SwiftUI
 
-struct FeedPostRowView: View {
-    @EnvironmentObject var profileViewModel: ProfileViewModel
-
-    let feedPost: FeedPostItem
+struct UnifiedFeedRowView: View {
+    let unifiedFeedItem: UnifiedFeedItem
     let currentUserID: String?
     let onEntityTap: () -> Void
     let onProfileTap: () -> Void
-    let onDeleteTap: () -> Void
+    let onDeleteTap: (() -> Void)?
+
+    var body: some View {
+        switch unifiedFeedItem.content_type {
+        case .repost:
+            RepostInUnifiedFeedView(
+                unifiedFeedItem: unifiedFeedItem,
+                currentUserID: currentUserID,
+                onEntityTap: onEntityTap,
+                onProfileTap: onProfileTap,
+                onDeleteTap: onDeleteTap
+            )
+
+        case .highlightLoving, .highlightDiscovery:
+            HighlightRowView(
+                unifiedFeedItem: unifiedFeedItem,
+                onEntityTap: onEntityTap,
+                onProfileTap: onProfileTap
+            )
+        }
+    }
+}
+
+// Separate view for reposts in unified feed (similar to FeedPostRowView but using UnifiedFeedItem)
+struct RepostInUnifiedFeedView: View {
+    @EnvironmentObject var profileViewModel: ProfileViewModel
+
+    let unifiedFeedItem: UnifiedFeedItem
+    let currentUserID: String?
+    let onEntityTap: () -> Void
+    let onProfileTap: () -> Void
+    let onDeleteTap: (() -> Void)?
 
     private var isCurrentUser: Bool {
         guard let currentUserID = currentUserID else { return false }
-        return feedPost.post.author.user_id == currentUserID
+        return unifiedFeedItem.author.user_id == currentUserID
     }
 
     private var entityImageURL: String? {
-        if let track = feedPost.track_detail {
+        if let track = unifiedFeedItem.track_detail {
             return track.album_image_url
-        } else if let album = feedPost.album_detail {
+        } else if let album = unifiedFeedItem.album_detail {
             return album.image_url
-        } else if let artist = feedPost.artist_detail {
+        } else if let artist = unifiedFeedItem.artist_detail {
             return artist.spotify_uri
         }
         return nil
     }
 
     private var entityName: String {
-        if let track = feedPost.track_detail {
+        if let track = unifiedFeedItem.track_detail {
             return track.name
-        } else if let album = feedPost.album_detail {
+        } else if let album = unifiedFeedItem.album_detail {
             return album.name
-        } else if let artist = feedPost.artist_detail {
+        } else if let artist = unifiedFeedItem.artist_detail {
             return artist.name
         }
         return ""
     }
 
     private var entitySubtext: String {
-        if let track = feedPost.track_detail {
+        if let track = unifiedFeedItem.track_detail {
             return track.artists.map { $0.name }.joined(separator: ", ")
-        } else if let album = feedPost.album_detail {
+        } else if let album = unifiedFeedItem.album_detail {
             return album.artists.map { $0.name }.joined(separator: ", ")
-        } /*else if let artist = feedPost.artist_detail {
-            return "Artist"
-        }*/
+        }
         return ""
     }
 
@@ -52,8 +79,10 @@ struct FeedPostRowView: View {
             Button(action: onProfileTap) {
                 HStack(spacing: 10) {
                     ZStack {
-                        if !feedPost.post.author.avatar_url.isEmpty,
-                           let url = URL(string: feedPost.post.author.avatar_url)
+                        if !unifiedFeedItem.author.avatar_url.isEmpty,
+                            let url = URL(
+                                string: unifiedFeedItem.author.avatar_url
+                            )
                         {
                             CachedAsyncImage(url: url)
                                 .aspectRatio(contentMode: .fill)
@@ -74,9 +103,11 @@ struct FeedPostRowView: View {
                             .frame(width: 28, height: 28)
                     }
 
-                    Text(isCurrentUser ? "You" : feedPost.post.author.username)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color.themePrimary)
+                    Text(
+                        isCurrentUser ? "You" : unifiedFeedItem.author.username
+                    )
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.themePrimary)
 
                     Text("reposted")
                         .font(.system(size: 14, weight: .medium))
@@ -84,8 +115,8 @@ struct FeedPostRowView: View {
 
                     Spacer()
 
-                    if isCurrentUser {
-                        Button(action: onDeleteTap) {
+                    if isCurrentUser, let onDelete = onDeleteTap {
+                        Button(action: onDelete) {
                             Image(systemName: "trash")
                                 .font(.system(size: 13))
                                 .foregroundColor(Color.themeSecondary)
@@ -114,7 +145,9 @@ struct FeedPostRowView: View {
 
             Button(action: onEntityTap) {
                 VStack(alignment: .leading, spacing: 0) {
-                    if let imageURL = entityImageURL, let url = URL(string: imageURL) {
+                    if let imageURL = entityImageURL,
+                        let url = URL(string: imageURL)
+                    {
                         GeometryReader { geometry in
                             CachedAsyncImage(url: url)
                                 .aspectRatio(contentMode: .fill)
@@ -139,8 +172,10 @@ struct FeedPostRowView: View {
                                 .lineLimit(1)
                         }
 
-                        if !feedPost.post.caption.isEmpty {
-                            Text(feedPost.post.caption)
+                        if let caption = unifiedFeedItem.caption,
+                            !caption.isEmpty
+                        {
+                            Text(caption)
                                 .font(.system(size: 15))
                                 .foregroundColor(Color.themePrimary)
                                 .lineLimit(4)
@@ -148,27 +183,42 @@ struct FeedPostRowView: View {
                         }
 
                         HStack(spacing: 16) {
-                            HStack(spacing: 5) {
-                                Image(systemName: feedPost.post.user_has_liked ? "heart.fill" : "heart")
+                            if let likesCount = unifiedFeedItem.likes_count,
+                                let userHasLiked = unifiedFeedItem
+                                    .user_has_liked
+                            {
+                                HStack(spacing: 5) {
+                                    Image(
+                                        systemName: userHasLiked
+                                            ? "heart.fill" : "heart"
+                                    )
                                     .font(.system(size: 13))
-                                    .foregroundColor(feedPost.post.user_has_liked ? .red : Color.themeSecondary)
-                                Text("\(feedPost.post.likes_count)")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(Color.themeSecondary)
+                                    .foregroundColor(
+                                        userHasLiked
+                                            ? .red : Color.themeSecondary
+                                    )
+                                    Text("\(likesCount)")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(Color.themeSecondary)
+                                }
                             }
 
-                            HStack(spacing: 5) {
-                                Image(systemName: "bubble.right")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(Color.themeSecondary)
-                                Text("\(feedPost.post.comments_count)")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(Color.themeSecondary)
+                            if let commentsCount = unifiedFeedItem
+                                .comments_count
+                            {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "bubble.right")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color.themeSecondary)
+                                    Text("\(commentsCount)")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(Color.themeSecondary)
+                                }
                             }
 
                             Spacer()
 
-                            Text(timeAgoString(from: feedPost.post.created_at))
+                            Text(timeAgoString(from: unifiedFeedItem.timestamp))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(Color.themeSecondary.opacity(0.8))
                         }
@@ -211,7 +261,11 @@ struct FeedPostRowView: View {
 
     private func timeAgoString(from date: Date) -> String {
         let now = Date()
-        let components = Calendar.current.dateComponents([.minute, .hour, .day, .weekOfYear], from: date, to: now)
+        let components = Calendar.current.dateComponents(
+            [.minute, .hour, .day, .weekOfYear],
+            from: date,
+            to: now
+        )
 
         if let week = components.weekOfYear, week > 0 {
             return week == 1 ? "1 week ago" : "\(week) weeks ago"

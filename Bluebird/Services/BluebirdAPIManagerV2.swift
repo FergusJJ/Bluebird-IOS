@@ -742,6 +742,32 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
+    func getUnifiedFeed(
+        limit: Int?,
+        offset: Int?,
+        includeHighlights: Bool = true
+    ) async -> Result<UnifiedFeedResponse, BluebirdAPIError> {
+        let isoDecoder = JSONDecoder()
+        isoDecoder.dateDecodingStrategy = .iso8601
+
+        var queryItems: [URLQueryItem] = []
+        if let limit = limit {
+            queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        }
+        if let offset = offset {
+            queryItems.append(URLQueryItem(name: "offset", value: String(offset)))
+        }
+        if includeHighlights {
+            queryItems.append(URLQueryItem(name: "include_highlights", value: "true"))
+        }
+
+        return await makeRequest(
+            path: "/api/social/feed",
+            queryItems: queryItems.isEmpty ? nil : queryItems,
+            decoder: isoDecoder
+        )
+    }
+
     func getLeaderboard(
         type: LeaderboardType,
         id: String,

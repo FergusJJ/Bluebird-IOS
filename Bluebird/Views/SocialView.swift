@@ -14,7 +14,7 @@ struct SocialView: View {
     @State private var selectedArtist: ArtistDetail?
     @State private var selectedUser: UserProfile?
     @State private var showDeletePostModal = false
-    @State private var postToDelete: FeedPost?
+    @State private var postToDelete: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +28,6 @@ struct SocialView: View {
                 .zIndex(2)
             }
 
-            // View toggle (only show when not searching)
             if !isSearching {
                 SocialViewToggle(selectedView: $selectedView)
                     .padding(.horizontal, 16)
@@ -84,7 +83,7 @@ struct SocialView: View {
                     await socialViewModel.fetchFriendsCurrentlyPlaying()
                 }
                 group.addTask {
-                    await socialViewModel.fetchFeed()
+                    await socialViewModel.fetchUnifiedFeed()
                 }
                 group.addTask {
                     await socialViewModel.fetchTrendingTracks()
@@ -92,12 +91,12 @@ struct SocialView: View {
             }
         }
         .sheet(isPresented: $showDeletePostModal) {
-            if let post = postToDelete {
+            if let postID = postToDelete {
                 DeletePostConfirmationModal(
-                    post: post,
+                    postID: postID,
                     onConfirm: {
                         Task {
-                            let success = await socialViewModel.deletePost(postID: post.post_id)
+                            let success = await socialViewModel.deletePost(postID: postID)
                             if success {
                                 showDeletePostModal = false
                                 postToDelete = nil

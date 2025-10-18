@@ -120,6 +120,11 @@ protocol BluebirdAccountAPIService {
         limit: Int?,
         offset: Int?
     ) async -> Result<FeedResponse, BluebirdAPIError>
+    func getUnifiedFeed(
+        limit: Int?,
+        offset: Int?,
+        includeHighlights: Bool
+    ) async -> Result<UnifiedFeedResponse, BluebirdAPIError>
     func getLeaderboard(
         type: LeaderboardType,
         id: String,

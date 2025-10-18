@@ -6,20 +6,17 @@ struct TrendingTrackRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Rank badge
             Text("#\(rank)")
                 .font(.headline)
                 .fontWeight(.bold)
                 .foregroundColor(rankColor)
                 .frame(width: 35, alignment: .leading)
 
-            // Album art
             CachedAsyncImage(url: URL(string: track.album_image_url)!)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 50, height: 50)
                 .cornerRadius(4)
 
-            // Track info
             VStack(alignment: .leading, spacing: 4) {
                 Text(track.name)
                     .font(.headline)

@@ -1,50 +1,75 @@
 import SwiftUI
 
-struct FeedPostRowView: View {
-    @EnvironmentObject var profileViewModel: ProfileViewModel
-
-    let feedPost: FeedPostItem
-    let currentUserID: String?
+struct HighlightRowView: View {
+    let unifiedFeedItem: UnifiedFeedItem
     let onEntityTap: () -> Void
     let onProfileTap: () -> Void
-    let onDeleteTap: () -> Void
-
-    private var isCurrentUser: Bool {
-        guard let currentUserID = currentUserID else { return false }
-        return feedPost.post.author.user_id == currentUserID
-    }
 
     private var entityImageURL: String? {
-        if let track = feedPost.track_detail {
+        if let track = unifiedFeedItem.track_detail {
             return track.album_image_url
-        } else if let album = feedPost.album_detail {
+        } else if let album = unifiedFeedItem.album_detail {
             return album.image_url
-        } else if let artist = feedPost.artist_detail {
+        } else if let artist = unifiedFeedItem.artist_detail {
             return artist.spotify_uri
         }
         return nil
     }
 
     private var entityName: String {
-        if let track = feedPost.track_detail {
+        if let track = unifiedFeedItem.track_detail {
             return track.name
-        } else if let album = feedPost.album_detail {
+        } else if let album = unifiedFeedItem.album_detail {
             return album.name
-        } else if let artist = feedPost.artist_detail {
+        } else if let artist = unifiedFeedItem.artist_detail {
             return artist.name
         }
         return ""
     }
 
     private var entitySubtext: String {
-        if let track = feedPost.track_detail {
+        if let track = unifiedFeedItem.track_detail {
             return track.artists.map { $0.name }.joined(separator: ", ")
-        } else if let album = feedPost.album_detail {
+        } else if let album = unifiedFeedItem.album_detail {
             return album.artists.map { $0.name }.joined(separator: ", ")
-        } /*else if let artist = feedPost.artist_detail {
-            return "Artist"
-        }*/
+        }
         return ""
+    }
+
+    private var highlightText: String {
+        let username = unifiedFeedItem.author.username
+        let entityTypeText = unifiedFeedItem.entity_type == "artist" ? "artist" : unifiedFeedItem.entity_type
+
+        switch unifiedFeedItem.content_type {
+        case .highlightLoving:
+            return "\(username) has been loving this \(entityTypeText)"
+        case .highlightDiscovery:
+            return "\(username) just discovered this \(entityTypeText)"
+        default:
+            return ""
+        }
+    }
+
+    private var highlightIcon: String {
+        switch unifiedFeedItem.content_type {
+        case .highlightLoving:
+            return "heart.fill"
+        case .highlightDiscovery:
+            return "sparkles"
+        default:
+            return "star.fill"
+        }
+    }
+
+    private var highlightColor: Color {
+        switch unifiedFeedItem.content_type {
+        case .highlightLoving:
+            return .pink
+        case .highlightDiscovery:
+            return .purple
+        default:
+            return Color.themeAccent
+        }
     }
 
     var body: some View {
@@ -52,8 +77,8 @@ struct FeedPostRowView: View {
             Button(action: onProfileTap) {
                 HStack(spacing: 10) {
                     ZStack {
-                        if !feedPost.post.author.avatar_url.isEmpty,
-                           let url = URL(string: feedPost.post.author.avatar_url)
+                        if !unifiedFeedItem.author.avatar_url.isEmpty,
+                           let url = URL(string: unifiedFeedItem.author.avatar_url)
                         {
                             CachedAsyncImage(url: url)
                                 .aspectRatio(contentMode: .fill)
@@ -70,39 +95,27 @@ struct FeedPostRowView: View {
                         }
 
                         Circle()
-                            .stroke(Color.themeAccent, lineWidth: 2)
+                            .stroke(highlightColor, lineWidth: 2)
                             .frame(width: 28, height: 28)
                     }
 
-                    Text(isCurrentUser ? "You" : feedPost.post.author.username)
-                        .font(.system(size: 14, weight: .semibold))
+                    Image(systemName: highlightIcon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(highlightColor)
+
+                    Text(highlightText)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(Color.themePrimary)
 
-                    Text("reposted")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color.themeSecondary)
-
                     Spacer()
-
-                    if isCurrentUser {
-                        Button(action: onDeleteTap) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 13))
-                                .foregroundColor(Color.themeSecondary)
-                                .padding(8)
-                                .background(Color.themeBackground.opacity(0.6))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(
                     LinearGradient(
                         colors: [
-                            Color.themeAccent.opacity(0.12),
-                            Color.themeAccent.opacity(0.04),
+                            highlightColor.opacity(0.12),
+                            highlightColor.opacity(0.04),
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
@@ -139,40 +152,25 @@ struct FeedPostRowView: View {
                                 .lineLimit(1)
                         }
 
-                        if !feedPost.post.caption.isEmpty {
-                            Text(feedPost.post.caption)
-                                .font(.system(size: 15))
-                                .foregroundColor(Color.themePrimary)
-                                .lineLimit(4)
-                                .padding(.top, 4)
-                        }
-
-                        HStack(spacing: 16) {
-                            HStack(spacing: 5) {
-                                Image(systemName: feedPost.post.user_has_liked ? "heart.fill" : "heart")
+                        // Show play count for "loving" highlights
+                        if unifiedFeedItem.content_type == .highlightLoving,
+                           let playCount = unifiedFeedItem.play_count {
+                            HStack(spacing: 6) {
+                                Image(systemName: "play.circle.fill")
                                     .font(.system(size: 13))
-                                    .foregroundColor(feedPost.post.user_has_liked ? .red : Color.themeSecondary)
-                                Text("\(feedPost.post.likes_count)")
+                                    .foregroundColor(highlightColor)
+                                Text("\(playCount) plays this week")
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundColor(Color.themeSecondary)
                             }
-
-                            HStack(spacing: 5) {
-                                Image(systemName: "bubble.right")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(Color.themeSecondary)
-                                Text("\(feedPost.post.comments_count)")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(Color.themeSecondary)
-                            }
-
-                            Spacer()
-
-                            Text(timeAgoString(from: feedPost.post.created_at))
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color.themeSecondary.opacity(0.8))
+                            .padding(.top, 2)
                         }
-                        .padding(.top, 2)
+
+                        Text(timeAgoString(from: unifiedFeedItem.timestamp))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color.themeSecondary.opacity(0.8))
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.top, 2)
                     }
                     .padding(.horizontal, 14)
                     .padding(.top, 14)
