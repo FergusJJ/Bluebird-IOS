@@ -11,8 +11,48 @@ struct SocialFeedListView: View {
     @Binding var showDeletePostModal: Bool
 
     let currentUserID: String?
+    let onFindFriends: () -> Void
 
     var body: some View {
+        Group {
+            if socialViewModel.feedPosts.isEmpty && !socialViewModel.isLoadingFeed {
+                EmptyFeedStateView(onFindFriends: onFindFriends)
+            } else {
+                feedList
+            }
+        }
+        .navigationDestination(item: $selectedSong) { song in
+            SongDetailView(
+                trackID: song.track_id,
+                imageURL: song.album_image_url,
+                name: song.name
+            )
+        }
+        .navigationDestination(item: $selectedAlbum) { album in
+            AlbumDetailView(
+                albumID: album.album_id,
+                albumName: album.name,
+                albumImageURL: album.image_url
+            )
+        }
+        .navigationDestination(item: $selectedArtist) { artist in
+            ArtistDetailView(
+                artist: SongDetailArtist(
+                    id: artist.artist_id,
+                    image_url: artist.spotify_uri,
+                    name: artist.name
+                )
+            )
+        }
+        .navigationDestination(item: $selectedUser) { profile in
+            UserProfileView(userProfile: profile)
+        }
+        .refreshable {
+            await socialViewModel.fetchFeed(forceRefresh: true)
+        }
+    }
+
+    private var feedList: some View {
         List {
             ForEach(socialViewModel.feedPosts) { feedPost in
                 FeedPostRowView(
@@ -59,35 +99,6 @@ struct SocialFeedListView: View {
         .listRowSpacing(8)
         .scrollContentBackground(.hidden)
         .background(Color.themeBackground)
-        .navigationDestination(item: $selectedSong) { song in
-            SongDetailView(
-                trackID: song.track_id,
-                imageURL: song.album_image_url,
-                name: song.name
-            )
-        }
-        .navigationDestination(item: $selectedAlbum) { album in
-            AlbumDetailView(
-                albumID: album.album_id,
-                albumName: album.name,
-                albumImageURL: album.image_url
-            )
-        }
-        .navigationDestination(item: $selectedArtist) { artist in
-            ArtistDetailView(
-                artist: SongDetailArtist(
-                    id: artist.artist_id,
-                    image_url: artist.spotify_uri,
-                    name: artist.name
-                )
-            )
-        }
-        .navigationDestination(item: $selectedUser) { profile in
-            UserProfileView(userProfile: profile)
-        }
-        .refreshable {
-            await socialViewModel.fetchFeed(forceRefresh: true)
-        }
     }
 
     private func handleFeedEntityTap(feedPost: FeedPostItem) {

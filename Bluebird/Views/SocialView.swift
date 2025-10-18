@@ -63,12 +63,22 @@ struct SocialView: View {
                             selectedUser: $selectedUser,
                             postToDelete: $postToDelete,
                             showDeletePostModal: $showDeletePostModal,
-                            currentUserID: CacheManager.shared.getCurrentUserId()
+                            currentUserID: CacheManager.shared.getCurrentUserId(),
+                            onFindFriends: {
+                                withAnimation {
+                                    isSearching = true
+                                }
+                            }
                         )
                     } else {
                         NowPlayingListView(
                             selectedSong: $selectedSong,
-                            selectedUser: $selectedUser
+                            selectedUser: $selectedUser,
+                            onFindFriends: {
+                                withAnimation {
+                                    isSearching = true
+                                }
+                            }
                         )
                     }
                 }

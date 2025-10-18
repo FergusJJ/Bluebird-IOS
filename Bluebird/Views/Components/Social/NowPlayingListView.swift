@@ -6,7 +6,32 @@ struct NowPlayingListView: View {
     @Binding var selectedSong: SongDetail?
     @Binding var selectedUser: UserProfile?
 
+    let onFindFriends: () -> Void
+
     var body: some View {
+        Group {
+            if socialViewModel.friendsCurrentlyPlaying.isEmpty {
+                EmptyNowPlayingStateView(onFindFriends: onFindFriends)
+            } else {
+                nowPlayingList
+            }
+        }
+        .navigationDestination(item: $selectedSong) { song in
+            SongDetailView(
+                trackID: song.track_id,
+                imageURL: song.album_image_url,
+                name: song.name
+            )
+        }
+        .navigationDestination(item: $selectedUser) { profile in
+            UserProfileView(userProfile: profile)
+        }
+        .refreshable {
+            await socialViewModel.fetchFriendsCurrentlyPlaying()
+        }
+    }
+
+    private var nowPlayingList: some View {
         List {
             ForEach(
                 Array(socialViewModel.friendsCurrentlyPlaying).sorted(by: {
@@ -33,18 +58,5 @@ struct NowPlayingListView: View {
         .listRowSpacing(8)
         .scrollContentBackground(.hidden)
         .background(Color.themeBackground)
-        .navigationDestination(item: $selectedSong) { song in
-            SongDetailView(
-                trackID: song.track_id,
-                imageURL: song.album_image_url,
-                name: song.name
-            )
-        }
-        .navigationDestination(item: $selectedUser) { profile in
-            UserProfileView(userProfile: profile)
-        }
-        .refreshable {
-            await socialViewModel.fetchFriendsCurrentlyPlaying()
-        }
     }
 }
