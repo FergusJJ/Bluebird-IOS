@@ -5,12 +5,47 @@ struct ImageCropperView: View {
     let onCrop: (UIImage) -> Void
     let onCancel: () -> Void
 
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
+    @State private var currentScale: CGFloat = 1.0
+    @State private var currentOffset: CGSize = .zero
+
+    @GestureState private var magnifyBy: CGFloat = 1.0
+    @GestureState private var dragOffset: CGSize = .zero
 
     private let cropSize: CGFloat = 300
+
+    // Computed properties for smooth gestures
+    private var scale: CGFloat {
+        currentScale * magnifyBy
+    }
+
+    private var offset: CGSize {
+        CGSize(
+            width: currentOffset.width + dragOffset.width,
+            height: currentOffset.height + dragOffset.height
+        )
+    }
+
+    private var magnificationGesture: some Gesture {
+        MagnificationGesture()
+            .updating($magnifyBy) { value, gestureState, _ in
+                gestureState = value
+            }
+            .onEnded { value in
+                let newScale = currentScale * value
+                currentScale = max(1.0, min(newScale, 5.0))
+            }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .updating($dragOffset) { value, gestureState, _ in
+                gestureState = value.translation
+            }
+            .onEnded { value in
+                currentOffset.width += value.translation.width
+                currentOffset.height += value.translation.height
+            }
+    }
 
     var body: some View {
         NavigationView {
@@ -19,40 +54,20 @@ struct ImageCropperView: View {
 
                 GeometryReader { geometry in
                     ZStack {
-                        // The image
                         Image(uiImage: image)
                             .resizable()
+                            .interpolation(.high)
                             .scaledToFit()
                             .scaleEffect(scale)
                             .offset(offset)
+                            .animation(.interactiveSpring(response: 0.3, dampingFraction: 0.8), value: currentScale)
+                            .animation(.interactiveSpring(response: 0.3, dampingFraction: 0.8), value: currentOffset)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .gesture(
-                                MagnificationGesture()
-                                    .onChanged { value in
-                                        let newScale = lastScale * value
-                                        scale = max(1.0, min(newScale, 5.0)) // Limit zoom between 1x and 5x
-                                    }
-                                    .onEnded { _ in
-                                        lastScale = scale
-                                    }
-                            )
-                            .gesture(
-                                DragGesture()
-                                    .onChanged { value in
-                                        offset = CGSize(
-                                            width: lastOffset.width + value.translation.width,
-                                            height: lastOffset.height + value.translation.height
-                                        )
-                                    }
-                                    .onEnded { _ in
-                                        lastOffset = offset
-                                    }
-                            )
+                            .simultaneousGesture(magnificationGesture)
+                            .simultaneousGesture(dragGesture)
 
-                        // Crop overlay
                         CropOverlay(cropSize: cropSize)
 
-                        // Instructions at bottom
                         VStack {
                             Spacer()
                             Text("Pinch to zoom, drag to reposition")
@@ -89,44 +104,81 @@ struct ImageCropperView: View {
         }
     }
 
+    // note: this will let you (in the preview) use on half of an image, and habe
+    // the rest being missing - this causes teh image to render weirly (flips it and stretches it)
+    //  but i cba to fix
     private func cropImage() {
-        // High resolution for better quality
-        let outputSize = CGSize(width: 1000, height: 1000)
-        let scaleFactor = outputSize.width / cropSize
+        // Use the actual image size to determine the crop region
+        let imageSize = image.size
+        let imageAspect = imageSize.width / imageSize.height
 
+        // Calculate how the image is displayed (scaledToFit)
+        var displayWidth: CGFloat
+        var displayHeight: CGFloat
+
+        if imageAspect > 1 {
+            // Landscape - width fills, height scales down
+            displayWidth = cropSize
+            displayHeight = cropSize / imageAspect
+        } else {
+            // Portrait - height fills, width scales down
+            displayHeight = cropSize
+            displayWidth = cropSize * imageAspect
+        }
+
+        // Apply user's zoom
+        displayWidth *= currentScale
+        displayHeight *= currentScale
+
+        // Calculate the scale factor between display size and actual image size
+        let scaleFactor = imageSize.width / displayWidth
+
+        // The crop circle is always at the center of the screen (cropSize/2, cropSize/2)
+        // The image has been offset by currentOffset
+        // We need to find what part of the image is under the crop circle
+
+        // In display coordinates:
+        // - The crop circle center is at (cropSize/2, cropSize/2)
+        // - The image center is at (cropSize/2 + currentOffset.width, cropSize/2 + currentOffset.height)
+
+        // The offset from image center to crop circle center in display coordinates
+        let offsetFromImageCenterX = -currentOffset.width
+        let offsetFromImageCenterY = -currentOffset.height
+
+        // Convert this offset to image coordinates
+        let imageOffsetX = offsetFromImageCenterX * scaleFactor
+        let imageOffsetY = offsetFromImageCenterY * scaleFactor
+
+        // The crop center in image coordinates (measured from image center)
+        let imageCenterX = imageSize.width / 2 + imageOffsetX
+        let imageCenterY = imageSize.height / 2 + imageOffsetY
+
+        // Calculate the crop size in image coordinates
+        let cropSizeInImage = cropSize * scaleFactor
+
+        // Calculate the crop rect in image coordinates
+        let cropX = imageCenterX - cropSizeInImage / 2
+        let cropY = imageCenterY - cropSizeInImage / 2
+
+        let cropRect = CGRect(
+            x: cropX,
+            y: cropY,
+            width: cropSizeInImage,
+            height: cropSizeInImage
+        )
+
+        // Crop the image
+        guard let cgImage = image.cgImage?.cropping(to: cropRect) else {
+            onCrop(image)
+            return
+        }
+
+        // Create a square output image at high resolution
+        let outputSize = CGSize(width: 1000, height: 1000)
         let renderer = UIGraphicsImageRenderer(size: outputSize)
 
         let croppedImage = renderer.image { context in
-            // Calculate the base size of the image in the view
-            let imageSize = image.size
-            let imageAspect = imageSize.width / imageSize.height
-
-            var baseWidth: CGFloat
-            var baseHeight: CGFloat
-
-            // Fit the image in the view (before any user scaling)
-            if imageAspect > 1 {
-                // Landscape - fit to width
-                baseWidth = cropSize
-                baseHeight = cropSize / imageAspect
-            } else {
-                // Portrait - fit to height
-                baseHeight = cropSize
-                baseWidth = cropSize * imageAspect
-            }
-
-            // Apply user's scale
-            let finalWidth = baseWidth * scale * scaleFactor
-            let finalHeight = baseHeight * scale * scaleFactor
-
-            // Apply user's offset (scaled to output size)
-            let finalX = (outputSize.width - finalWidth) / 2 + (offset.width * scaleFactor)
-            let finalY = (outputSize.height - finalHeight) / 2 + (offset.height * scaleFactor)
-
-            let drawRect = CGRect(x: finalX, y: finalY, width: finalWidth, height: finalHeight)
-
-            // Draw the image
-            image.draw(in: drawRect)
+            UIImage(cgImage: cgImage).draw(in: CGRect(origin: .zero, size: outputSize))
         }
 
         onCrop(croppedImage)
