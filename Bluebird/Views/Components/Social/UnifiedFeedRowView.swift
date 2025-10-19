@@ -24,6 +24,14 @@ struct UnifiedFeedRowView: View {
                 onEntityTap: onEntityTap,
                 onProfileTap: onProfileTap
             )
+
+        case .highlightMilestone:
+            MilestoneRowView(
+                unifiedFeedItem: unifiedFeedItem,
+                currentUserID: currentUserID,
+                onEntityTap: onEntityTap,
+                onProfileTap: onProfileTap
+            )
         }
     }
 }

@@ -24,7 +24,12 @@ struct NowPlayingListView: View {
             )
         }
         .navigationDestination(item: $selectedUser) { profile in
-            UserProfileView(userProfile: profile)
+            if let currentUserID = CacheManager.shared.getCurrentUserId(),
+               profile.user_id.lowercased() == currentUserID.lowercased() {
+                ProfileViewV2()
+            } else {
+                UserProfileView(userProfile: profile)
+            }
         }
         .refreshable {
             await socialViewModel.fetchFriendsCurrentlyPlaying()

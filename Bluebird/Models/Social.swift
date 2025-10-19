@@ -182,6 +182,7 @@ enum FeedContentType: String, Codable {
     case repost
     case highlightLoving = "highlight_loving"
     case highlightDiscovery = "highlight_discovery"
+    case highlightMilestone = "highlight_milestone"
 }
 
 struct UnifiedFeedItem: Codable, Identifiable {

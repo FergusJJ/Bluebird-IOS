@@ -15,7 +15,10 @@ struct SocialFeedListView: View {
 
     var body: some View {
         Group {
-            if socialViewModel.unifiedFeedItems.isEmpty && socialViewModel.friendsCurrentlyPlaying.isEmpty && !socialViewModel.isLoadingUnifiedFeed {
+            if socialViewModel.unifiedFeedItems.isEmpty
+                && socialViewModel.friendsCurrentlyPlaying.isEmpty
+                && !socialViewModel.isLoadingUnifiedFeed
+            {
                 EmptyFeedStateView(onFindFriends: onFindFriends)
             } else {
                 feedList
@@ -45,7 +48,7 @@ struct SocialFeedListView: View {
             )
         }
         .navigationDestination(item: $selectedUser) { profile in
-            UserProfileView(userProfile: profile)
+            handleGetProfileDestinationDebug(profile: profile)
         }
         .refreshable {
             await withTaskGroup(of: Void.self) { group in
@@ -62,86 +65,98 @@ struct SocialFeedListView: View {
     private var feedList: some View {
         ScrollViewReader { proxy in
             List {
-            if !socialViewModel.friendsCurrentlyPlaying.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "waveform")
-                            .font(.headline)
-                            .foregroundColor(Color.themeAccent)
-                        Text("Friends Listening Now")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(Color.themePrimary)
-                    }
-
-                    ForEach(
-                        Array(socialViewModel.friendsCurrentlyPlaying).sorted(by: {
-                            $0.key < $1.key
-                        }).prefix(3),
-                        id: \.key
-                    ) { _, trackAndUser in
-                        FriendSongRowView(
-                            song: trackAndUser.track,
-                            username: trackAndUser.profile.username,
-                            profilePictureURL: !trackAndUser.profile.avatar_url.isEmpty
-                                ? URL(string: trackAndUser.profile.avatar_url)
-                                : nil,
-                            onSongTap: {
-                                selectedSong = trackAndUser.track
-                            },
-                            onProfileTap: {
-                                selectedUser = trackAndUser.profile
-                            }
-                        )
-                    }
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
-            }
-
-            ForEach(socialViewModel.unifiedFeedItems) { feedItem in
-                UnifiedFeedRowView(
-                    unifiedFeedItem: feedItem,
-                    currentUserID: currentUserID,
-                    onEntityTap: {
-                        handleUnifiedFeedEntityTap(feedItem: feedItem)
-                    },
-                    onProfileTap: {
-                        selectedUser = feedItem.author
-                    },
-                    onDeleteTap: feedItem.content_type == .repost ? {
-                        if let postID = feedItem.post_id {
-                            postToDelete = postID
-                            showDeletePostModal = true
+                if !socialViewModel.friendsCurrentlyPlaying.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "waveform")
+                                .font(.headline)
+                                .foregroundColor(Color.themeAccent)
+                            Text("Friends Listening Now")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color.themePrimary)
                         }
-                    } : nil
-                )
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            }
 
-            if socialViewModel.unifiedFeedHasMore {
-                Button(action: {
-                    Task {
-                        await socialViewModel.loadMoreUnifiedFeedItems()
+                        ForEach(
+                            Array(socialViewModel.friendsCurrentlyPlaying)
+                                .sorted(by: {
+                                    $0.key < $1.key
+                                }).prefix(3),
+                            id: \.key
+                        ) { _, trackAndUser in
+                            FriendSongRowView(
+                                song: trackAndUser.track,
+                                username: trackAndUser.profile.username,
+                                profilePictureURL: !trackAndUser.profile
+                                    .avatar_url.isEmpty
+                                    ? URL(
+                                        string: trackAndUser.profile.avatar_url
+                                    )
+                                    : nil,
+                                onSongTap: {
+                                    selectedSong = trackAndUser.track
+                                },
+                                onProfileTap: {
+                                    selectedUser = trackAndUser.profile
+                                }
+                            )
+                        }
                     }
-                }) {
-                    if socialViewModel.isLoadingUnifiedFeed {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    } else {
-                        Text("Load More")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(Color.themeAccent)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(
+                        EdgeInsets(
+                            top: 8,
+                            leading: 16,
+                            bottom: 16,
+                            trailing: 16
+                        )
+                    )
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-            }
+
+                ForEach(socialViewModel.unifiedFeedItems) { feedItem in
+                    UnifiedFeedRowView(
+                        unifiedFeedItem: feedItem,
+                        currentUserID: currentUserID,
+                        onEntityTap: {
+                            handleUnifiedFeedEntityTap(feedItem: feedItem)
+                        },
+                        onProfileTap: {
+                            selectedUser = feedItem.author
+                        },
+                        onDeleteTap: feedItem.content_type == .repost
+                            ? {
+                                if let postID = feedItem.post_id {
+                                    postToDelete = postID
+                                    showDeletePostModal = true
+                                }
+                            } : nil
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                }
+
+                if socialViewModel.unifiedFeedHasMore {
+                    Button(action: {
+                        Task {
+                            await socialViewModel.loadMoreUnifiedFeedItems()
+                        }
+                    }) {
+                        if socialViewModel.isLoadingUnifiedFeed {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        } else {
+                            Text("Load More")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color.themeAccent)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
             }
             .listRowSpacing(8)
             .scrollContentBackground(.hidden)
@@ -156,6 +171,27 @@ struct SocialFeedListView: View {
             selectedAlbum = album
         } else if let artist = feedItem.artist_detail {
             selectedArtist = artist
+        }
+    }
+    
+    @ViewBuilder
+    private func handleGetProfileDestinationDebug(profile: UserProfile)
+        -> some View
+    {
+        let _ = print("=== Profile Navigation Debug ===")
+        let _ = print("Profile ID: \(profile.user_id)")
+        let _ = print("Profile Username: \(profile.username)")
+        let _ = print("Current User ID: \(currentUserID ?? "nil")")
+        let _ = print("IDs Match: \(currentUserID != nil && profile.user_id.lowercased() == currentUserID!.lowercased())")
+
+        if let currentUserID = currentUserID,
+            profile.user_id.lowercased() == currentUserID.lowercased()
+        {
+            let _ = print("✅ Navigating to ProfileViewV2 (own profile)")
+            ProfileViewV2()
+        } else {
+            let _ = print("➡️ Navigating to UserProfileView (other user)")
+            UserProfileView(userProfile: profile)
         }
     }
 }
