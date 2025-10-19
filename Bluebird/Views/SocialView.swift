@@ -13,8 +13,7 @@ struct SocialView: View {
     @State private var selectedAlbum: AlbumDetail?
     @State private var selectedArtist: ArtistDetail?
     @State private var selectedUser: UserProfile?
-    @State private var showDeletePostModal = false
-    @State private var postToDelete: String?
+    @State private var postToDelete: IdentifiableString?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,7 +60,6 @@ struct SocialView: View {
                             selectedArtist: $selectedArtist,
                             selectedUser: $selectedUser,
                             postToDelete: $postToDelete,
-                            showDeletePostModal: $showDeletePostModal,
                             currentUserID: CacheManager.shared.getCurrentUserId(),
                             onFindFriends: {
                                 withAnimation {
@@ -90,27 +88,23 @@ struct SocialView: View {
                 }
             }
         }
-        .sheet(isPresented: $showDeletePostModal) {
-            if let postID = postToDelete {
-                DeletePostConfirmationModal(
-                    postID: postID,
-                    onConfirm: {
-                        Task {
-                            let success = await socialViewModel.deletePost(postID: postID)
-                            if success {
-                                showDeletePostModal = false
-                                postToDelete = nil
-                            }
+        .sheet(item: $postToDelete) { identifiablePost in
+            DeletePostConfirmationModal(
+                postID: identifiablePost.value,
+                onConfirm: {
+                    Task {
+                        let success = await socialViewModel.deletePost(postID: identifiablePost.value)
+                        if success {
+                            postToDelete = nil
                         }
-                    },
-                    onCancel: {
-                        showDeletePostModal = false
-                        postToDelete = nil
                     }
-                )
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-            }
+                },
+                onCancel: {
+                    postToDelete = nil
+                }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.themeBackground.ignoresSafeArea())

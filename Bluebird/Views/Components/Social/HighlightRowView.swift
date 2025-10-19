@@ -38,7 +38,8 @@ struct HighlightRowView: View {
 
     private var highlightText: String {
         let username = unifiedFeedItem.author.username
-        let entityTypeText = unifiedFeedItem.entity_type == "artist" ? "artist" : unifiedFeedItem.entity_type
+        let entityTypeText =
+            unifiedFeedItem.entity_type == "artist" ? "artist" : unifiedFeedItem.entity_type
 
         switch unifiedFeedItem.content_type {
         case .highlightLoving:
@@ -78,7 +79,7 @@ struct HighlightRowView: View {
                 HStack(spacing: 10) {
                     ZStack {
                         if !unifiedFeedItem.author.avatar_url.isEmpty,
-                           let url = URL(string: unifiedFeedItem.author.avatar_url)
+                            let url = URL(string: unifiedFeedItem.author.avatar_url)
                         {
                             CachedAsyncImage(url: url)
                                 .aspectRatio(contentMode: .fill)
@@ -129,14 +130,23 @@ struct HighlightRowView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     if let imageURL = entityImageURL, let url = URL(string: imageURL) {
                         GeometryReader { geometry in
-                            CachedAsyncImage(url: url)
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: geometry.size.height)
-                                .clipped()
+                            ZStack(alignment: .bottom) {
+                                CachedAsyncImage(url: url)
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                    .clipped()
+
+                                LinearGradient(
+                                    colors: [Color.clear, Color.black.opacity(0.15)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            }
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 300)
+                        .frame(height: 280)
                         .background(Color.themeBackground)
+                        .cornerRadius(8)
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -154,7 +164,8 @@ struct HighlightRowView: View {
 
                         // Show play count for "loving" highlights
                         if unifiedFeedItem.content_type == .highlightLoving,
-                           let playCount = unifiedFeedItem.play_count {
+                            let playCount = unifiedFeedItem.play_count
+                        {
                             HStack(spacing: 6) {
                                 Image(systemName: "play.circle.fill")
                                     .font(.system(size: 13))
@@ -168,7 +179,7 @@ struct HighlightRowView: View {
 
                         Text(timeAgoString(from: unifiedFeedItem.timestamp))
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Color.themeSecondary.opacity(0.8))
+                            .foregroundColor(Color.themeSecondary.opacity(0.6))
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .padding(.top, 2)
                     }
@@ -181,35 +192,30 @@ struct HighlightRowView: View {
             .buttonStyle(PlainButtonStyle())
         }
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.themeElement)
-
-                // Subtle inner highlight
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.themeElement.opacity(0.4))
+                .overlay(
+                    VStack {
                         LinearGradient(
-                            colors: [
-                                Color.themeHighlight.opacity(0.6),
-                                Color.clear,
-                            ],
+                            colors: [Color.themeHighlight, Color.clear],
                             startPoint: .top,
                             endPoint: .center
-                        )
-                    )
-            }
+                        ).cornerRadius(16)
+                    }
+                )
+                .shadow(color: .themeShadow, radius: 4, x: 0, y: 2)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.themePrimary.opacity(0.08), lineWidth: 0.5)
+                .stroke(highlightColor.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: Color.themeShadow, radius: 6, x: 0, y: 3)
     }
 
     private func timeAgoString(from date: Date) -> String {
         let now = Date()
-        let components = Calendar.current.dateComponents([.minute, .hour, .day, .weekOfYear], from: date, to: now)
+        let components = Calendar.current.dateComponents(
+            [.minute, .hour, .day, .weekOfYear], from: date, to: now)
 
         if let week = components.weekOfYear, week > 0 {
             return week == 1 ? "1 week ago" : "\(week) weeks ago"

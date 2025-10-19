@@ -6,6 +6,8 @@ struct UnrepostConfirmationModal: View {
     let onCancel: () -> Void
 
     var body: some View {
+        let _ = print("is repost profile avatar empty: \(repost.profile.avatar_url.isEmpty)")
+        let _ = print("repost created at: \(repost.created_at)")
         VStack(spacing: 20) {
             HStack {
                 Spacer()

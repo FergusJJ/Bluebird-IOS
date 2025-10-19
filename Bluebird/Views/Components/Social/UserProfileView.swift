@@ -28,30 +28,8 @@ struct UserProfileView: View {
                         privateProfileView()
                     } else {
                         VStack(spacing: 32) {
-                            if detail.pinned_tracks.isEmpty &&
-                                detail.pinned_albums.isEmpty &&
-                                detail.pinned_artists.isEmpty
-                            {
-                                emptyPinsView()
-                            } else {
-                                VStack(spacing: 24) {
-                                    if !detail.pinned_tracks.isEmpty {
-                                        pinnedTracksView(tracks: detail.pinned_tracks)
-                                    }
-
-                                    if !detail.pinned_albums.isEmpty {
-                                        pinnedAlbumsView(albums: detail.pinned_albums)
-                                    }
-
-                                    if !detail.pinned_artists.isEmpty {
-                                        pinnedArtistsView(
-                                            artists: detail.pinned_artists
-                                        )
-                                    }
-                                }
+                            pinsSection(detail: detail)
                                 .padding(.horizontal)
-                            }
-
                             repostsSection()
                                 .padding(.horizontal)
                         }
@@ -471,11 +449,11 @@ struct UserProfileView: View {
             HStack {
                 Image(systemName: "music.note")
                     .foregroundColor(Color.themeAccent)
-                    .font(.headline)
+                    .font(.subheadline)
                 Text("Pinned Tracks")
-                    .font(.headline)
+                    .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundStyle(Color.themePrimary)
+                    .foregroundStyle(Color.themeSecondary)
                 Spacer()
             }
 
@@ -501,11 +479,11 @@ struct UserProfileView: View {
             HStack {
                 Image(systemName: "square.stack")
                     .foregroundColor(Color.themeAccent)
-                    .font(.headline)
+                    .font(.subheadline)
                 Text("Pinned Albums")
-                    .font(.headline)
+                    .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundStyle(Color.themePrimary)
+                    .foregroundStyle(Color.themeSecondary)
                 Spacer()
             }
 
@@ -531,11 +509,11 @@ struct UserProfileView: View {
             HStack {
                 Image(systemName: "person.wave.2")
                     .foregroundColor(Color.themeAccent)
-                    .font(.headline)
+                    .font(.subheadline)
                 Text("Pinned Artists")
-                    .font(.headline)
+                    .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundStyle(Color.themePrimary)
+                    .foregroundStyle(Color.themeSecondary)
                 Spacer()
             }
 
@@ -580,6 +558,43 @@ struct UserProfileView: View {
     }
 
     @ViewBuilder
+    fileprivate func pinsSection(detail: UserProfileDetail) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "pin")
+                    .foregroundColor(Color.themeAccent)
+                    .font(.headline)
+                Text("\(userProfile.username)'s Pins")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.themePrimary)
+                Spacer()
+            }
+
+            if detail.pinned_tracks.isEmpty &&
+                detail.pinned_albums.isEmpty &&
+                detail.pinned_artists.isEmpty
+            {
+                emptyPinsView()
+            } else {
+                VStack(spacing: 24) {
+                    if !detail.pinned_tracks.isEmpty {
+                        pinnedTracksView(tracks: detail.pinned_tracks)
+                    }
+
+                    if !detail.pinned_albums.isEmpty {
+                        pinnedAlbumsView(albums: detail.pinned_albums)
+                    }
+
+                    if !detail.pinned_artists.isEmpty {
+                        pinnedArtistsView(artists: detail.pinned_artists)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     fileprivate func emptyPinsView() -> some View {
         VStack(spacing: 16) {
             Spacer()
@@ -610,6 +625,38 @@ struct UserProfileView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
     }
+    
+    @ViewBuilder
+    fileprivate func emptyRepostsView() -> some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.themeElement)
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "arrow.2.squarepath")
+                    .font(.system(size: 35))
+                    .foregroundColor(Color.themeSecondary)
+            }
+
+            Text("No Reposts Yet")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(Color.themePrimary)
+
+            Text("This user hasn't reposted anything yet")
+                .font(.subheadline)
+                .foregroundColor(Color.themeSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
 
     @ViewBuilder
     fileprivate func repostsSection() -> some View {
@@ -630,11 +677,7 @@ struct UserProfileView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
             } else if socialViewModel.userReposts.isEmpty {
-                Text("No reposts yet")
-                    .font(.subheadline)
-                    .foregroundColor(Color.themeSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
+                emptyRepostsView()
             } else {
                 VStack(spacing: 16) {
                     ForEach(socialViewModel.userReposts) { repostItem in

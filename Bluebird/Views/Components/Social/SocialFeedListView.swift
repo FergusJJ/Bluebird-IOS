@@ -1,5 +1,10 @@
 import SwiftUI
 
+struct IdentifiableString: Identifiable {
+    let id = UUID()
+    let value: String
+}
+
 struct SocialFeedListView: View {
     @EnvironmentObject var socialViewModel: SocialViewModel
 
@@ -7,8 +12,7 @@ struct SocialFeedListView: View {
     @Binding var selectedAlbum: AlbumDetail?
     @Binding var selectedArtist: ArtistDetail?
     @Binding var selectedUser: UserProfile?
-    @Binding var postToDelete: String?
-    @Binding var showDeletePostModal: Bool
+    @Binding var postToDelete: IdentifiableString?
 
     let currentUserID: String?
     let onFindFriends: () -> Void
@@ -48,7 +52,7 @@ struct SocialFeedListView: View {
             )
         }
         .navigationDestination(item: $selectedUser) { profile in
-            handleGetProfileDestinationDebug(profile: profile)
+            handleGetProfileDestination(profile: profile)
         }
         .refreshable {
             await withTaskGroup(of: Void.self) { group in
@@ -126,12 +130,11 @@ struct SocialFeedListView: View {
                         onDeleteTap: feedItem.content_type == .repost
                             ? {
                                 if let postID = feedItem.post_id {
-                                    postToDelete = postID
-                                    showDeletePostModal = true
+                                    postToDelete = IdentifiableString(value: postID)
                                 }
                             } : nil
                     )
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 0, leading: 14, bottom: 0, trailing: 14))
                     .listRowBackground(Color.clear)
                 }
 
@@ -158,7 +161,7 @@ struct SocialFeedListView: View {
                     .listRowInsets(EdgeInsets())
                 }
             }
-            .listRowSpacing(8)
+            .listRowSpacing(16)
             .scrollContentBackground(.hidden)
             .background(Color.themeBackground)
         }
@@ -175,19 +178,12 @@ struct SocialFeedListView: View {
     }
     
     @ViewBuilder
-    private func handleGetProfileDestinationDebug(profile: UserProfile)
+    private func handleGetProfileDestination(profile: UserProfile)
         -> some View
     {
-        let _ = print("=== Profile Navigation Debug ===")
-        let _ = print("Profile ID: \(profile.user_id)")
-        let _ = print("Profile Username: \(profile.username)")
-        let _ = print("Current User ID: \(currentUserID ?? "nil")")
-        let _ = print("IDs Match: \(currentUserID != nil && profile.user_id.lowercased() == currentUserID!.lowercased())")
-
         if let currentUserID = currentUserID,
             profile.user_id.lowercased() == currentUserID.lowercased()
         {
-            let _ = print("✅ Navigating to ProfileViewV2 (own profile)")
             ProfileViewV2()
         } else {
             let _ = print("➡️ Navigating to UserProfileView (other user)")

@@ -113,7 +113,7 @@ struct RepostInUnifiedFeedView: View {
                     Text(
                         isCurrentUser ? "You" : unifiedFeedItem.author.username
                     )
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(Color.themePrimary)
 
                     Text("reposted")
@@ -156,14 +156,24 @@ struct RepostInUnifiedFeedView: View {
                         let url = URL(string: imageURL)
                     {
                         GeometryReader { geometry in
-                            CachedAsyncImage(url: url)
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: geometry.size.height)
-                                .clipped()
+                            ZStack(alignment: .bottom) {
+                                CachedAsyncImage(url: url)
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                    .clipped()
+
+                                // Subtle bottom gradient for depth
+                                LinearGradient(
+                                    colors: [Color.clear, Color.black.opacity(0.15)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            }
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 300)
+                        .frame(height: 280)
                         .background(Color.themeBackground)
+                        .cornerRadius(8)
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -185,7 +195,7 @@ struct RepostInUnifiedFeedView: View {
                             Text(caption)
                                 .font(.system(size: 15))
                                 .foregroundColor(Color.themePrimary)
-                                .lineLimit(4)
+                                .lineLimit(3)
                                 .padding(.top, 4)
                         }
 
@@ -227,7 +237,7 @@ struct RepostInUnifiedFeedView: View {
 
                             Text(timeAgoString(from: unifiedFeedItem.timestamp))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color.themeSecondary.opacity(0.8))
+                                .foregroundColor(Color.themeSecondary.opacity(0.6))
                         }
                         .padding(.top, 2)
                     }
@@ -240,30 +250,23 @@ struct RepostInUnifiedFeedView: View {
             .buttonStyle(PlainButtonStyle())
         }
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.themeElement)
-
-                // Subtle inner highlight
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.themeElement.opacity(0.4))
+                .overlay(
+                    VStack {
                         LinearGradient(
-                            colors: [
-                                Color.themeHighlight.opacity(0.6),
-                                Color.clear,
-                            ],
+                            colors: [Color.themeHighlight, Color.clear],
                             startPoint: .top,
                             endPoint: .center
-                        )
-                    )
-            }
+                        ).cornerRadius(16)
+                    })
+                .shadow(color: .themeShadow, radius: 4, x: 0, y: 2)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.themePrimary.opacity(0.08), lineWidth: 0.5)
+                .stroke(Color.themeAccent.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: Color.themeShadow, radius: 6, x: 0, y: 3)
     }
 
     private func timeAgoString(from date: Date) -> String {

@@ -8,46 +8,24 @@ struct ProfileViewV2: View {
     @State private var selectedArtist: ArtistDetail?
 
     @State private var isEditing = false
-    @State private var showUnrepostModal = false
     @State private var repostToDelete: Repost?
 
     var body: some View {
         Group {
             ScrollView {
-            VStack(spacing: 0) {
-                ProfileHeadlineViewEditable(editableMode: isEditing)
+                VStack(spacing: 0) {
+                    ProfileHeadlineViewEditable(editableMode: isEditing)
 
-                VStack(spacing: 32) {
-                    // Pins section
-                    if profileViewModel.pinnedTracks.isEmpty &&
-                        profileViewModel.pinnedAlbums.isEmpty &&
-                        profileViewModel.pinnedArtists.isEmpty
-                    {
-                        emptyPinsView()
-                    } else {
-                        VStack(spacing: 24) {
-                            if !profileViewModel.pinnedTracks.isEmpty {
-                                pinnedTracksView()
-                            }
-
-                            if !profileViewModel.pinnedAlbums.isEmpty {
-                                pinnedAlbumsView()
-                            }
-
-                            if !profileViewModel.pinnedArtists.isEmpty {
-                                pinnedArtistsView()
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 20)
+                    VStack(spacing: 32) {
+                        // Pins section
+                        pinsSection()
+                            .padding(.horizontal)
+                        // Reposts section
+                        repostsSection()
+                            .padding(.horizontal)
                     }
-
-                    // Reposts section
-                    repostsSection()
-                        .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .padding(.bottom, 20)
-            }
             }
         }
         .scrollContentBackground(.hidden)
@@ -74,30 +52,28 @@ struct ProfileViewV2: View {
             logAvatar()
             await profileViewModel.fetchMyReposts()
         }
-        .sheet(isPresented: $showUnrepostModal) {
-            if let repost = repostToDelete {
-                UnrepostConfirmationModal(
-                    repost: repost,
-                    onConfirm: {
-                        Task {
-                            let success = await profileViewModel.deleteRepost(postID: repost.post_id)
-                            if success {
-                                showUnrepostModal = false
-                                repostToDelete = nil
-                            }
+        .sheet(item: $repostToDelete) { repost in
+            UnrepostConfirmationModal(
+                repost: repost,
+                onConfirm: {
+                    Task {
+                        let success = await profileViewModel.deleteRepost(
+                            postID: repost.post_id
+                        )
+                        if success {
+                            repostToDelete = nil
                         }
-                    },
-                    onCancel: {
-                        showUnrepostModal = false
-                        repostToDelete = nil
                     }
-                )
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-            }
+                },
+                onCancel: {
+                    repostToDelete = nil
+                }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
     }
-    
+
     @ViewBuilder
     fileprivate func topMilestonesView() -> some View {
         if !profileViewModel.milestones.isEmpty {
@@ -118,11 +94,11 @@ struct ProfileViewV2: View {
             HStack {
                 Image(systemName: "music.note")
                     .foregroundColor(Color.themeAccent)
-                    .font(.headline)
+                    .font(.subheadline)
                 Text("Pinned Tracks")
-                    .font(.headline)
+                    .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundStyle(Color.themePrimary)
+                    .foregroundStyle(Color.themeSecondary)
                 Spacer()
             }
 
@@ -148,11 +124,11 @@ struct ProfileViewV2: View {
             HStack {
                 Image(systemName: "square.stack")
                     .foregroundColor(Color.themeAccent)
-                    .font(.headline)
+                    .font(.subheadline)
                 Text("Pinned Albums")
-                    .font(.headline)
+                    .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundStyle(Color.themePrimary)
+                    .foregroundStyle(Color.themeSecondary)
                 Spacer()
             }
 
@@ -178,11 +154,11 @@ struct ProfileViewV2: View {
             HStack {
                 Image(systemName: "person.wave.2")
                     .foregroundColor(Color.themeAccent)
-                    .font(.headline)
+                    .font(.subheadline)
                 Text("Pinned Artists")
-                    .font(.headline)
+                    .font(.subheadline)
                     .fontWeight(.bold)
-                    .foregroundStyle(Color.themePrimary)
+                    .foregroundStyle(Color.themeSecondary)
                 Spacer()
             }
 
@@ -224,16 +200,88 @@ struct ProfileViewV2: View {
                 .fontWeight(.semibold)
                 .foregroundColor(Color.themePrimary)
 
-            Text("Pin your favorite tracks, albums, and artists to showcase them on your profile")
-                .font(.subheadline)
-                .foregroundColor(Color.themeSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            Text(
+                "Pin your favorite tracks, albums, and artists to showcase them on your profile"
+            )
+            .font(.subheadline)
+            .foregroundColor(Color.themeSecondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
 
             Spacer()
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
+    }
+
+    @ViewBuilder
+    fileprivate func emptyRepostsView() -> some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.themeElement)
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "arrow.2.squarepath")
+                    .font(.system(size: 35))
+                    .foregroundColor(Color.themeSecondary)
+            }
+
+            Text("No Reposts Yet")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(Color.themePrimary)
+
+            Text(
+                "Share your friends' music discoveries by reposting their posts to your profile"
+            )
+            .font(.subheadline)
+            .foregroundColor(Color.themeSecondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+
+    @ViewBuilder func pinsSection() -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "pin")
+                    .foregroundColor(Color.themeAccent)
+                    .font(.headline)
+                Text("Your Pins")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.themePrimary)
+                Spacer()
+            }
+
+            if profileViewModel.pinnedTracks.isEmpty
+                && profileViewModel.pinnedAlbums.isEmpty
+                && profileViewModel.pinnedArtists.isEmpty
+            {
+                emptyPinsView()
+            } else {
+                VStack(spacing: 24) {
+                    if !profileViewModel.pinnedTracks.isEmpty {
+                        pinnedTracksView()
+                    }
+
+                    if !profileViewModel.pinnedAlbums.isEmpty {
+                        pinnedAlbumsView()
+                    }
+
+                    if !profileViewModel.pinnedArtists.isEmpty {
+                        pinnedArtistsView()
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -250,19 +298,18 @@ struct ProfileViewV2: View {
                 Spacer()
             }
 
-            if profileViewModel.isLoadingReposts && profileViewModel.myReposts.isEmpty {
+            if profileViewModel.isLoadingReposts
+                && profileViewModel.myReposts.isEmpty
+            {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
             } else if profileViewModel.myReposts.isEmpty {
-                Text("No reposts yet")
-                    .font(.subheadline)
-                    .foregroundColor(Color.themeSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
+                emptyRepostsView()
             } else {
                 VStack(spacing: 16) {
                     ForEach(profileViewModel.myReposts) { repostItem in
+                        let _ = print("in repostItem: \(repostItem.repost)")
                         RepostRowView(
                             repostItem: repostItem,
                             isCurrentUser: true,
@@ -274,7 +321,6 @@ struct ProfileViewV2: View {
                             },
                             onUnrepostTap: {
                                 repostToDelete = repostItem.repost
-                                showUnrepostModal = true
                             }
                         )
                     }
@@ -301,7 +347,6 @@ struct ProfileViewV2: View {
             }
         }
     }
-    
 
     private func handleRepostEntityTap(repostItem: RepostItem) {
         if let track = repostItem.track_detail {
@@ -312,7 +357,7 @@ struct ProfileViewV2: View {
             selectedArtist = artist
         }
     }
-    
+
     func logAvatar() {
         guard let avatar = profileViewModel.avatarURL else {
             print("no avatar")
@@ -321,4 +366,3 @@ struct ProfileViewV2: View {
         print(avatar)
     }
 }
-

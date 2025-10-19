@@ -7,6 +7,8 @@ struct DeletePostConfirmationModal: View {
 
     var body: some View {
         VStack(spacing: 20) {
+            Spacer()
+                .frame(height: 1)
             HStack {
                 Spacer()
                 Button(action: onCancel) {
@@ -62,10 +64,11 @@ struct DeletePostConfirmationModal: View {
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
+
+            Spacer()
         }
-        .background(Color.themeBackground)
-        .cornerRadius(20)
-        .padding(.horizontal, 30)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.themeBackground.ignoresSafeArea())
     }
 
     private func timeAgoString(from date: Date) -> String {
