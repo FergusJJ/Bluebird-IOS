@@ -10,6 +10,9 @@ struct ProfilePictureView: View {
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var rotationDegrees = 0.0
     @State private var glowOpacity = 0.3
+    @State private var showExpandedImage = false
+    @State private var showImageCropper = false
+    @State private var imageToCrop: UIImage?
 
     var body: some View {
         if editableMode {
@@ -30,13 +33,46 @@ struct ProfilePictureView: View {
             }
             .onChange(of: profileImage) { _, newImage in
                 if let image = newImage {
-                    Task {
-                        await profileViewModel.updateProfilePicture(with: image)
+                    imageToCrop = image
+                    profileImage = nil // Reset for next pick
+                    showImagePicker = false // Dismiss picker first
+
+                    // Delay cropper to let picker dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showImageCropper = true
                     }
+                }
+            }
+            .fullScreenCover(isPresented: $showImageCropper) {
+                if let imageToCrop = imageToCrop {
+                    ImageCropperView(
+                        image: imageToCrop,
+                        onCrop: { croppedImage in
+                            Task {
+                                await profileViewModel.updateProfilePicture(with: croppedImage)
+                                showImageCropper = false
+                            }
+                        },
+                        onCancel: {
+                            showImageCropper = false
+                            self.imageToCrop = nil
+                        }
+                    )
                 }
             }
         } else {
             profileImageStack
+                .onTapGesture {
+                    if profileViewModel.avatarURL != nil || profileViewModel.selectedImage != nil {
+                        showExpandedImage = true
+                    }
+                }
+                .sheet(isPresented: $showExpandedImage) {
+                    ExpandedImageView(
+                        image: profileViewModel.selectedImage,
+                        imageUrl: profileViewModel.avatarURL
+                    )
+                }
         }
     }
 
@@ -73,9 +109,9 @@ struct ProfilePictureView: View {
                         .frame(width: 100, height: 100)
                         .clipShape(Circle())
                 } else if let imageUrl = profileViewModel.avatarURL {
-                    CachedAsyncImage(url: imageUrl)
-                        .aspectRatio(contentMode: .fill)
+                    CachedAsyncImage(url: imageUrl, contentMode: .fill)
                         .frame(width: 100, height: 100)
+                        .clipped()
                         .clipShape(Circle())
                 } else {
                     Circle()
@@ -182,9 +218,9 @@ struct ProfilePictureView: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 100, height: 100)
             } else if let imageUrl = profileViewModel.avatarURL {
-                CachedAsyncImage(url: imageUrl)
-                    .aspectRatio(contentMode: .fill)
+                CachedAsyncImage(url: imageUrl, contentMode: .fill)
                     .frame(width: 100, height: 100)
+                    .clipped()
             } else {
                 Circle()
                     .fill(Color.themeElement)

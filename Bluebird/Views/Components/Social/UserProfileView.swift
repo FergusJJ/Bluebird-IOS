@@ -12,6 +12,7 @@ struct UserProfileView: View {
     @State private var showFriends = false
     @State private var rotationDegrees = 0.0
     @State private var glowOpacity = 0.3
+    @State private var showExpandedImage = false
 
     private var isCurrentlyPlaying: Bool {
         socialViewModel.friendsCurrentlyPlaying[userProfile.user_id] != nil
@@ -172,10 +173,23 @@ struct UserProfileView: View {
 
     @ViewBuilder
     fileprivate var profileImageContainer: some View {
-        if isCurrentlyPlaying {
-            animatedProfileImage
-        } else {
-            staticProfileImage
+        Group {
+            if isCurrentlyPlaying {
+                animatedProfileImage
+            } else {
+                staticProfileImage
+            }
+        }
+        .onTapGesture {
+            if !userProfile.avatar_url.isEmpty {
+                showExpandedImage = true
+            }
+        }
+        .sheet(isPresented: $showExpandedImage) {
+            ExpandedImageView(
+                image: nil,
+                imageUrl: userProfile.avatar_url.isEmpty ? nil : URL(string: userProfile.avatar_url)
+            )
         }
     }
 
@@ -200,9 +214,9 @@ struct UserProfileView: View {
                                 .foregroundColor(Color.themePrimary)
                         )
                 } else {
-                    CachedAsyncImage(url: URL(string: userProfile.avatar_url)!)
-                        .aspectRatio(contentMode: .fill)
+                    CachedAsyncImage(url: URL(string: userProfile.avatar_url)!, contentMode: .fill)
                         .frame(width: 100, height: 100)
+                        .clipped()
                         .clipShape(Circle())
                 }
             }
@@ -285,9 +299,9 @@ struct UserProfileView: View {
                             .foregroundColor(Color.themePrimary)
                     )
             } else {
-                CachedAsyncImage(url: URL(string: userProfile.avatar_url)!)
-                    .aspectRatio(contentMode: .fill)
+                CachedAsyncImage(url: URL(string: userProfile.avatar_url)!, contentMode: .fill)
                     .frame(width: 96, height: 96)
+                    .clipped()
                     .clipShape(Circle())
             }
         }

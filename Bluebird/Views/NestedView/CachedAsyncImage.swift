@@ -2,14 +2,16 @@ import SwiftUI
 
 struct CachedAsyncImage: View {
     let url: URL
+    var contentMode: ContentMode = .fill
 
     @State private var image: UIImage?
 
     var body: some View {
-        Group {
+        ZStack {
             if let image = image {
                 Image(uiImage: image)
                     .resizable()
+                    .aspectRatio(contentMode: contentMode)
             } else {
                 Color.themeSecondary.opacity(0.3)
             }
