@@ -590,6 +590,15 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
+    func getAllFriends(for userID: String) async -> Result<
+        [UserProfile], BluebirdAPIError
+    > {
+        return await makeRequest(
+            path: "/api/social/friends",
+            queryItems: [URLQueryItem(name: "user_id", value: userID)]
+        )
+    }
+
     func searchUsers(query: String) async -> Result<
         SearchUserResult, BluebirdAPIError
     > {
@@ -786,6 +795,17 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
     func getTrendingTracks() async -> Result<[TrendingTrack], BluebirdAPIError> {
         return await makeRequest(
             path: "/api/social/trending"
+        )
+    }
+
+    func getMilestones(userID: String) async -> Result<[UserMilestone], BluebirdAPIError> {
+        let isoDecoder = JSONDecoder()
+        isoDecoder.dateDecodingStrategy = .iso8601
+
+        return await makeRequest(
+            path: "/api/milestones",
+            queryItems: [URLQueryItem(name: "user_id", value: userID)],
+            decoder: isoDecoder
         )
     }
 

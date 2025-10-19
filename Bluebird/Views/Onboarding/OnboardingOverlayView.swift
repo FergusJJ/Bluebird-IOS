@@ -77,7 +77,7 @@ struct OnboardingOverlayView: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(Color.themePrimary)
+                                .background(Color.themeAccent)
                                 .cornerRadius(12)
                         }
                     } else {
@@ -89,7 +89,7 @@ struct OnboardingOverlayView: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
-                                .background(Color.themePrimary)
+                                .background(Color.themeAccent)
                                 .cornerRadius(12)
                         }
                     }

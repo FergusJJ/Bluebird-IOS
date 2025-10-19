@@ -97,6 +97,20 @@ struct ProfileViewV2: View {
             }
         }
     }
+    
+    @ViewBuilder
+    fileprivate func topMilestonesView() -> some View {
+        if !profileViewModel.milestones.isEmpty {
+            MilestonesPreviewView(
+                milestones: profileViewModel.milestones,
+                onTap: {
+                    // TODO: Navigate to milestones list
+                    print("Navigate to milestones")
+                }
+            )
+            .padding(.horizontal)
+        }
+    }
 
     @ViewBuilder
     fileprivate func pinnedTracksView() -> some View {
@@ -287,6 +301,7 @@ struct ProfileViewV2: View {
             }
         }
     }
+    
 
     private func handleRepostEntityTap(repostItem: RepostItem) {
         if let track = repostItem.track_detail {
@@ -297,7 +312,7 @@ struct ProfileViewV2: View {
             selectedArtist = artist
         }
     }
-
+    
     func logAvatar() {
         guard let avatar = profileViewModel.avatarURL else {
             print("no avatar")
@@ -307,144 +322,3 @@ struct ProfileViewV2: View {
     }
 }
 
-/*
-
- ---
- Repost Endpoints Specification
-
- 1. Get Current User's Reposts
-
- GET /api/me/reposts
-
- Query Parameters:
-
- | Parameter | Type   | Required | Default | Description                                        |
- |-----------|--------|----------|---------|----------------------------------------------------|
- | cursor    | string | ❌ No     | ""      | Pagination cursor (post_id from previous response) |
- | limit     | number | ❌ No     | 50      | Number of reposts per page (max 50)                |
-
- Example Requests:
- GET /api/me/reposts
- GET /api/me/reposts?limit=25
- GET /api/me/reposts?cursor=abc-123-def&limit=50
-
- ---
- 2. Get Any User's Reposts
-
- GET /api/social/users/reposts
-
- Query Parameters:
-
- | Parameter | Type   | Required | Default | Description                                        |
- |-----------|--------|----------|---------|----------------------------------------------------|
- | user_id   | string | ✅ Yes    | -       | The user ID whose reposts to fetch                 |
- | cursor    | string | ❌ No     | ""      | Pagination cursor (post_id from previous response) |
- | limit     | number | ❌ No     | 50      | Number of reposts per page (max 50)                |
-
- Example Requests:
- GET /api/social/users/reposts?user_id=abc-123
- GET /api/social/users/reposts?user_id=abc-123&limit=25
- GET /api/social/users/reposts?user_id=abc-123&cursor=xyz-789&limit=50
-
- ---
- Response Structure
-
- {
-   reposts: [
-     {
-       repost: {
-         post_id: string,
-         profile: {
-           user_id: string,
-           username: string,
-           avatar_url: string,
-           bio: string
-         },
-         entity_type: string,  // "track", "album", or "artist"
-         entity_id: string,
-         caption: string,
-         created_at: string,   // ISO 8601 timestamp
-         likes_count: number,
-         comments_count: number,
-         user_has_liked: boolean
-       },
-       track_detail: TrackDetail | null,
-       album_detail: AlbumDetail | null,
-       artist_detail: ArtistDetail | null
-     }
-     // ... up to 50 entries
-   ],
-   next_cursor: string  // Empty string if no more pages
- }
-
- ---
- Example Response
-
- Track Repost:
- {
-   "reposts": [
-     {
-       "repost": {
-         "post_id": "550e8400-e29b-41d4-a716-446655440000",
-         "profile": {
-           "user_id": "abc-123-def",
-           "username": "fergus",
-           "avatar_url": "https://project.supabase.co/storage/v1/object/public/avatars/user.jpg",
-           "bio": "Music lover"
-         },
-         "entity_type": "track",
-         "entity_id": "3n3Ppam7vgaVa1iaRUc9Lp",
-         "caption": "This song is amazing!",
-         "created_at": "2025-01-15T14:30:00Z",
-         "likes_count": 12,
-         "comments_count": 3,
-         "user_has_liked": true
-       },
-       "track_detail": {
-         "track_id": "3n3Ppam7vgaVa1iaRUc9Lp",
-         "name": "Mr. Brightside",
-         "duration_ms": 222973,
-         "spotify_url": "https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUc9Lp",
-         "album": {...},
-         "track_artists": [...]
-       },
-       "album_detail": null,
-       "artist_detail": null
-     }
-   ],
-   "next_cursor": "550e8400-e29b-41d4-a716-446655440000"
- }
-
- Empty Response:
- {
-   "reposts": [],
-   "next_cursor": ""
- }
-
- ---
- Important Notes for iOS Developer
-
- 1. All keys always present: Every field in the response exists (never missing), even if empty/null
- 2. Entity details: Based on entity_type, only ONE of these will be non-null:
-   - entity_type: "track" → track_detail populated, others null
-   - entity_type: "album" → album_detail populated, others null
-   - entity_type: "artist" → artist_detail populated, others null
- 3. Pagination:
-   - First page: omit cursor or use empty string
-   - Subsequent pages: use next_cursor from previous response
-   - No more pages when next_cursor is empty string ""
-   - Cursor is only set if exactly 50 results returned (full page)
- 4. Timestamps: All created_at fields use .Truncate(time.Second) for Swift compatibility
- 5. Profile info: Includes the user who made the repost (consistent with friends feed structure)
- 6. Engagement: user_has_liked is relative to the requesting user, not the repost author
-
- ---
- Error Responses
-
- Missing user_id (for /social/users/reposts):
- {
-   "errorCode": "MISSING_QUERY",
-   "error": "Missing query parameter: user_id"
- }
-
- */

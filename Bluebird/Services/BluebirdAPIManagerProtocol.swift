@@ -91,6 +91,9 @@ protocol BluebirdAccountAPIService {
     func getUser(userID: String) async -> Result<
         UserProfileDetail, BluebirdAPIError
     >
+    func getAllFriends(for userID: String) async -> Result<
+        [UserProfile], BluebirdAPIError
+    >
     func sendFriendRequest(to userID: String) async -> Result<
         FriendRequestResponse, BluebirdAPIError
     >
@@ -131,6 +134,7 @@ protocol BluebirdAccountAPIService {
         scope: LeaderboardScope
     ) async -> Result<LeaderboardResponse, BluebirdAPIError>
     func getTrendingTracks() async -> Result<[TrendingTrack], BluebirdAPIError>
+    func getMilestones(userID: String) async -> Result<[UserMilestone], BluebirdAPIError>
 }
 
 protocol SpotifyAPIService {

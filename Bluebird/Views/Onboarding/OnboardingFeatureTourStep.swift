@@ -5,13 +5,13 @@ struct OnboardingFeatureTourStep: View {
         VStack(spacing: 32) {
             Image(systemName: "square.grid.2x2.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.themePrimary)
+                .foregroundColor(.themeAccent)
                 .padding(.top, 40)
 
             VStack(spacing: 12) {
                 Text("Explore Your Tabs")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(Color.themePrimary)
+                    .foregroundColor(Color.themeAccent)
 
                 Text("Navigate through four main sections")
                     .font(.body)

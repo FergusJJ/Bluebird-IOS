@@ -52,6 +52,15 @@ class ProfileViewModel: ObservableObject {
     @Published var isLoadingReposts = false
     @Published private(set) var repostsNextCursor: String = ""
 
+    // MARK: - Milestones
+
+    @Published var milestones: [UserMilestone] = []
+
+    // MARK: - Friends
+
+    @Published var friends: [UserProfile] = []
+    @Published var friendCount: Int = 0
+
     // MARK: - settings page stuff
 
     @Published var connectedAccountDetails: ConnectedAccountDetails?
@@ -81,6 +90,8 @@ class ProfileViewModel: ObservableObject {
                 guard let self = self else { return }
                 Task {
                     await self.syncAllPinnedContent()
+                    await self.syncMilestones()
+                    await self.syncFriends()
                     self.pinsFetched = true
                 }
             }
@@ -580,6 +591,54 @@ class ProfileViewModel: ObservableObject {
     private func removePin(_ pin: Pin) {
         pinsById[pin.id] = nil
         orderedPins.removeAll { $0.id == pin.id }
+    }
+
+    // MARK: - Milestones
+
+    func syncMilestones() async {
+        // Load from cache first
+        if let cached = cacheManager.getMilestones() {
+            milestones = cached
+        }
+
+        // Fetch fresh data from API
+        guard let userId = cacheManager.getCurrentUserId() else {
+            print("Failed to sync milestones: No user ID")
+            return
+        }
+
+        let result = await bluebirdAccountAPIService.getMilestones(userID: userId)
+        switch result {
+        case let .success(fetchedMilestones):
+            milestones = fetchedMilestones
+            cacheManager.saveMilestones(fetchedMilestones)
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching milestones: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
+    // MARK: - Friends
+
+    func syncFriends() async {
+        guard let userId = cacheManager.getCurrentUserId() else {
+            print("Failed to sync friends: No user ID")
+            return
+        }
+
+        let result = await bluebirdAccountAPIService.getAllFriends(for: userId)
+        switch result {
+        case let .success(fetchedFriends):
+            friends = fetchedFriends
+            friendCount = fetchedFriends.count
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching friends: \(presentationError)")
+            appState.setError(presentationError)
+        }
     }
 
     // MARK: - Reposts

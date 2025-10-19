@@ -5,13 +5,13 @@ struct OnboardingFriendsStep: View {
         VStack(spacing: 32) {
             Image(systemName: "person.2.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.themePrimary)
+                .foregroundColor(.themeAccent)
                 .padding(.top, 40)
 
             VStack(spacing: 12) {
                 Text("Connect with Friends")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(Color.themePrimary)
+                    .foregroundColor(Color.themeAccent)
 
                 Text("Share your music journey with others")
                     .font(.body)
@@ -55,9 +55,9 @@ struct InstructionCard: View {
         HStack(alignment: .top, spacing: 16) {
             Text(number)
                 .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(.themePrimary)
                 .frame(width: 32, height: 32)
-                .background(Color.themePrimary)
+                .background(Color.themeElement)
                 .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 4) {

@@ -7,13 +7,13 @@ struct OnboardingWelcomeStep: View {
         VStack(spacing: 24) {
             Image(systemName: "waveform")
                 .font(.system(size: 70))
-                .foregroundColor(.themePrimary)
+                .foregroundColor(.themeAccent)
                 .padding(.top, 40)
 
             VStack(spacing: 12) {
                 Text("Welcome, \(username)!")
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(Color.themePrimary)
+                    .foregroundColor(Color.themeAccent)
                     .multilineTextAlignment(.center)
 
                 Text("Let's get you started with Bluebird")

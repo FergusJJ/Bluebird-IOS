@@ -24,6 +24,12 @@ class SocialViewModel: ObservableObject {
     @Published var isLoadingTrending = false
     @Published var showAllTrending = false
 
+    // Milestones for viewed user profile
+    @Published var userMilestones: [UserMilestone] = []
+
+    // Friends for viewed user profile
+    @Published var userFriends: [UserProfile] = []
+
     private var appState: AppState
     private let cacheManager = CacheManager.shared
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
@@ -55,6 +61,32 @@ class SocialViewModel: ObservableObject {
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error fetching user profile: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
+    func fetchUserMilestones(userId: String) async {
+        let result = await bluebirdAccountAPIService.getMilestones(userID: userId)
+        switch result {
+        case let .success(milestones):
+            userMilestones = milestones
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching user milestones: \(presentationError)")
+            appState.setError(presentationError)
+        }
+    }
+
+    func fetchUserFriends(userId: String) async {
+        let result = await bluebirdAccountAPIService.getAllFriends(for: userId)
+        switch result {
+        case let .success(friends):
+            userFriends = friends
+
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching user friends: \(presentationError)")
             appState.setError(presentationError)
         }
     }

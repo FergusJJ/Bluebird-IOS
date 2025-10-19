@@ -15,6 +15,7 @@ final class CachedUserAccount {
     @Relationship(deleteRule: .cascade) var songHistory: [CachedSongHistory] = []
     @Relationship(deleteRule: .cascade) var stats: CachedStats?
     @Relationship(deleteRule: .cascade) var pins: CachedPins?
+    @Relationship(deleteRule: .cascade) var milestones: CachedMilestone?
     @Relationship(deleteRule: .cascade) var socialCache: [CachedUserProfile] = []
 
     init(userId: String, username: String, email: String) {
@@ -320,3 +321,26 @@ final class CachedUserProfile {
         return try? JSONDecoder().decode(UserProfileDetail.self, from: profileData)
     }
 }
+
+@Model
+final class CachedMilestone {
+    var milestones: Data
+    var lastUpdated: Date
+    
+    @Relationship(inverse: \CachedUserAccount.milestones) var account: CachedUserAccount?
+    
+    init() {
+        milestones = Data()
+        lastUpdated = Date()
+    }
+    
+    func setMilestones(_ userMilestones: [UserMilestone]) {
+        milestones = (try? JSONEncoder().encode(userMilestones)) ?? Data()
+        lastUpdated = Date()
+    }
+    func getMilestones() -> [UserMilestone] {
+        let milestoneCache = (try? JSONDecoder().decode([UserMilestone].self, from: milestones)) ?? []
+        return milestoneCache 
+    }
+}
+

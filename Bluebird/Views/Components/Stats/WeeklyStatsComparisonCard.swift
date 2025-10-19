@@ -78,7 +78,9 @@ struct WeeklyStatsComparisonCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("\(count)")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(
+                            .system(size: 24, weight: .bold, design: .rounded)
+                        )
                         .foregroundColor(Color.themePrimary)
 
                     Text(entityType)
@@ -90,8 +92,10 @@ struct WeeklyStatsComparisonCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chart.bar.fill")
                             .font(.system(size: 10))
-                        Text(String(format: "More than %.0f%%", 100 - percentile))
-                            .font(.system(size: 12, weight: .bold))
+                        Text(
+                            "\( count == 0 ? "More than 0%" :  String(format: "More than %.0f%%", 100 - percentile))"
+                        )
+                        .font(.system(size: 12, weight: .bold))
                     }
                     .foregroundColor(Color.themeAccent)
                     .padding(.horizontal, 8)

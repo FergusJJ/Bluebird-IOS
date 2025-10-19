@@ -5,6 +5,7 @@ struct HeadlineStatsView: View {
     let totalPlays: Int
     let totalUniqueArtists: Int
     let friendCount: Int
+    var onFriendsTap: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 8) {
@@ -34,9 +35,17 @@ struct HeadlineStatsView: View {
                     accentColor: Color.purple
                 )
 
-                Button(action: {
-                    // Navigate to friends list (not implemented yet)
-                }) {
+                if let onFriendsTap = onFriendsTap {
+                    Button(action: onFriendsTap) {
+                        CompactStatView(
+                            value: formatNumber(friendCount),
+                            label: "Friends",
+                            icon: "person.2.fill",
+                            accentColor: Color.blue
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else {
                     CompactStatView(
                         value: formatNumber(friendCount),
                         label: "Friends",
@@ -44,7 +53,6 @@ struct HeadlineStatsView: View {
                         accentColor: Color.blue
                     )
                 }
-                .buttonStyle(PlainButtonStyle())
             }
         }
     }

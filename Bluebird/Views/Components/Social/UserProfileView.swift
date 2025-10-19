@@ -8,6 +8,8 @@ struct UserProfileView: View {
     @State private var selectedAlbum: AlbumDetail?
     @State private var selectedArtist: ArtistDetail?
     @State private var showRemoveFriendAlert = false
+    @State private var showMilestones = false
+    @State private var showFriends = false
     @State private var rotationDegrees = 0.0
     @State private var glowOpacity = 0.3
 
@@ -86,6 +88,16 @@ struct UserProfileView: View {
                         forceRefresh: false
                     )
                 }
+                group.addTask {
+                    await socialViewModel.fetchUserMilestones(
+                        userId: userProfile.user_id
+                    )
+                }
+                group.addTask {
+                    await socialViewModel.fetchUserFriends(
+                        userId: userProfile.user_id
+                    )
+                }
             }
         }
         .alert("Remove Friend", isPresented: $showRemoveFriendAlert) {
@@ -98,6 +110,18 @@ struct UserProfileView: View {
         } message: {
             Text(
                 "Are you sure you want to remove \(userProfile.username)? You will have to request them again."
+            )
+        }
+        .navigationDestination(isPresented: $showMilestones) {
+            MilestonesListView(
+                milestones: socialViewModel.userMilestones,
+                username: userProfile.username
+            )
+        }
+        .navigationDestination(isPresented: $showFriends) {
+            FriendsListView(
+                friends: socialViewModel.userFriends,
+                username: userProfile.username
             )
         }
     }
@@ -127,12 +151,26 @@ struct UserProfileView: View {
 
             if let detail = socialViewModel.currentUserProfile {
                 if !detail.is_private || detail.friendship_status == .friends {
+                    // Milestones
+                    if !socialViewModel.userMilestones.isEmpty {
+                        MilestonesPreviewView(
+                            milestones: socialViewModel.userMilestones,
+                            onTap: {
+                                showMilestones = true
+                            }
+                        )
+                        .padding(.horizontal)
+                    }
+
                     HeadlineStatsView(
                         totalMinutesListened: detail.total_minutes_listened
                             ?? 0,
                         totalPlays: detail.total_plays ?? 0,
                         totalUniqueArtists: detail.total_unique_artists ?? 0,
-                        friendCount: detail.friend_count
+                        friendCount: socialViewModel.userFriends.count,
+                        onFriendsTap: {
+                            showFriends = true
+                        }
                     )
                     .padding(.horizontal)
                 }

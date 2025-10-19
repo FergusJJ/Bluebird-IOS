@@ -25,7 +25,7 @@ struct SearchUserResult: Decodable {
     let query: String
 }
 
-struct UserProfile: Encodable, Decodable, Identifiable, Hashable {
+struct UserProfile: Codable, Identifiable, Hashable {
     let user_id: String
     let username: String
     let avatar_url: String
@@ -225,4 +225,13 @@ struct TrendingTrack: Codable, Identifiable {
     let play_count: Int
 
     var id: String { track.track_id }
+}
+
+
+// MARK: - Milestones
+
+struct UserMilestone: Codable {
+    let artist: ArtistDetail
+    let milestone: Int
+    let unlocked_at: Date
 }

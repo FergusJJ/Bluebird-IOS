@@ -6,6 +6,8 @@ struct ProfileHeadlineViewEditable: View {
     let editableMode: Bool
     @State private var isEditing = false
     @State private var editingBio = ""
+    @State private var showMilestones = false
+    @State private var showFriends = false
 
     var body: some View {
         VStack(alignment: .center, spacing: 16) {
@@ -78,12 +80,26 @@ struct ProfileHeadlineViewEditable: View {
                 }
             }
 
+            // Milestones
+            if !profileViewModel.milestones.isEmpty {
+                MilestonesPreviewView(
+                    milestones: profileViewModel.milestones,
+                    onTap: {
+                        showMilestones = true
+                    }
+                )
+                .padding(.horizontal)
+            }
+
             // Stats
             HeadlineStatsView(
                 totalMinutesListened: profileViewModel.totalMinutesListened,
                 totalPlays: profileViewModel.totalPlays,
                 totalUniqueArtists: profileViewModel.totalUniqueArtists,
-                friendCount: 1  // TODO: Get own friends on load
+                friendCount: profileViewModel.friendCount,
+                onFriendsTap: {
+                    showFriends = true
+                }
             )
             .padding(.horizontal)
         }
@@ -103,6 +119,18 @@ struct ProfileHeadlineViewEditable: View {
                 await profileViewModel.loadProfile()
                 await profileViewModel.loadHeadlineStats()
             }
+        }
+        .navigationDestination(isPresented: $showMilestones) {
+            MilestonesListView(
+                milestones: profileViewModel.milestones,
+                username: profileViewModel.username
+            )
+        }
+        .navigationDestination(isPresented: $showFriends) {
+            FriendsListView(
+                friends: profileViewModel.friends,
+                username: profileViewModel.username
+            )
         }
     }
 

@@ -21,6 +21,7 @@ class CacheManager: ObservableObject {
                 CachedStats.self,
                 CachedPins.self,
                 CachedUserProfile.self,
+                CachedMilestone.self
             ])
 
             let modelConfiguration = ModelConfiguration(
@@ -48,6 +49,7 @@ class CacheManager: ObservableObject {
                 CachedStats.self,
                 CachedPins.self,
                 CachedUserProfile.self,
+                CachedMilestone.self
             ])
 
             let modelConfiguration = ModelConfiguration(
@@ -425,6 +427,26 @@ class CacheManager: ObservableObject {
     )? {
         guard let pins = getCurrentAccount()?.pins else { return nil }
         return pins.getPins()
+    }
+   
+    // MARK: - milestones
+    
+    func saveMilestones(_ milestones: [UserMilestone]) {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+        if account.milestones == nil {
+            let cachedMilestones = CachedMilestone()
+            account.milestones = cachedMilestones
+            context.insert(cachedMilestones)
+        }
+        account.milestones?.setMilestones(milestones)
+        try? context.save()
+    }
+    
+    func getMilestones() -> ([UserMilestone])? {
+        guard let milestones = getCurrentAccount()?.milestones else { return nil }
+        return milestones.getMilestones()
     }
 
     // MARK: - Social Cache

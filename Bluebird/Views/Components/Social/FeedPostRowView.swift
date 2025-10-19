@@ -206,7 +206,7 @@ struct FeedPostRowView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.themePrimary.opacity(0.08), lineWidth: 0.5)
         )
-        .shadow(color: Color.themeShadow, radius: 6, x: 0, y: 3)
+        .shadow(color: Color.themeShadow, radius: 3, x: 0, y: 3)
     }
 
     private func timeAgoString(from date: Date) -> String {

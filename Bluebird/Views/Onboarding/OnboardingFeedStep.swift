@@ -7,7 +7,7 @@ struct OnboardingFeedStep: View {
         VStack(spacing: 32) {
             Image(systemName: "sparkles")
                 .font(.system(size: 60))
-                .foregroundColor(.themePrimary)
+                .foregroundColor(.themeAccent)
                 .padding(.top, 40)
 
             VStack(spacing: 12) {

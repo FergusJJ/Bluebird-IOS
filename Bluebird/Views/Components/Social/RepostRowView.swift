@@ -198,6 +198,17 @@ struct RepostRowView: View {
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        /*
+        .overlay(
+            VStack {
+                LinearGradient(
+                    colors: [Color.themeHighlight, Color.clear],
+                    startPoint: .top,
+                    endPoint: .center
+                ).cornerRadius(12)
+            })
+        .shadow(color: .themeShadow, radius: 4, x: 0, y: 2)
+        */
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.themePrimary.opacity(0.08), lineWidth: 0.5)
