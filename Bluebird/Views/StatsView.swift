@@ -6,105 +6,50 @@ struct StatsView: View {
 
     @State private var selectedTrack: TrackWithPlayCount?
     @State private var selectedArtist: ArtistWithPlayCount?
-    @State private var statsNumDays: Int = 14
+    @State private var statsNumDays: Int = 7
+
+    @State private var viewID = UUID()
+    @State private var isRefreshing = false
 
     var body: some View {
         Group {
             if appState.isSpotifyConnected == .istrue {
                 ScrollView {
-                VStack(spacing: 20) {
-                    HStack {
-                        percentageChange()
-                        Spacer()
-                        DaysToggleButton(forDays: $statsNumDays)
-                    }
-                    .padding(.top, 0)
-                    Text("Weekly Plays")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(Color.themePrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    DailyPlaysBarGraph(dailyPlays: statsViewModel.dailyPlays)
+                    VStack(spacing: 20) {
+                        HStack {
+                            percentageChange()
+                            Spacer()
+                            DaysToggleButton(forDays: $statsNumDays)
+                        }
+                        .padding(.top, 0)
+                        Text("Weekly Plays")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.themePrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        DailyPlaysBarGraph(
+                            dailyPlays: statsViewModel.dailyPlays
+                        )
                         .frame(height: 250)
 
-                    Text("Listening Clock")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(Color.themePrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    HourlyPlaysClockView(
-                        hourlyPlays: statsViewModel.hourlyPlays
-                    )
-                    .aspectRatio(1, contentMode: .fit)
-
-                    // MARK: - weekly comparison
-
-                    VStack(spacing: 16) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "chart.bar.fill")
-                                .foregroundColor(Color.themeAccent)
-                                .font(.system(size: 16))
-                            Text("Weekly Listening")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(Color.themePrimary)
-                            Spacer()
-                            Text("Past 7 Days")
-                                .font(.caption)
-                                .foregroundColor(
-                                    Color.themePrimary.opacity(0.5)
-                                )
-                        }
-                        WeeklyStatsComparisonCard(
-                            comparison: statsViewModel.weeklyComparison
+                        Text("Listening Clock")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.themePrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HourlyPlaysClockView(
+                            hourlyPlays: statsViewModel.hourlyPlays
                         )
-                    }
+                        .aspectRatio(1, contentMode: .fit)
 
-                    // MARK: - top tracks/artists
+                        // MARK: - weekly comparison
 
-                    Divider()
-                    if !statsViewModel.topArtists.artists.isEmpty {
-                        topArtists()
-                    }
-                    if !statsViewModel.topTracks.tracks.isEmpty {
-                        topTracks()
-                    }
-
-                    Divider()
-                        .padding(.vertical, 8)
-                    VStack(spacing: 16) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "chart.pie.fill")
-                                .foregroundColor(Color.themeAccent)
-                                .font(.system(size: 16))
-                            Text("Top Genres")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(Color.themePrimary)
-                            Spacer()
-                            Text("Past 2 Weeks")
-                                .font(.caption)
-                                .foregroundColor(
-                                    Color.themePrimary.opacity(0.5)
-                                )
-                        }
-                        TopGenresBarGraph(allGenres: statsViewModel.topGenres)
-                            .frame(height: 250)
-                    }
-
-                    // MARK: - discoveries
-
-                    if !statsViewModel.discoveredArtists.isEmpty
-                        || !statsViewModel.discoveredTracks.isEmpty
-                    {
-                        Divider()
-                            .padding(.vertical, 8)
                         VStack(spacing: 16) {
                             HStack(spacing: 8) {
-                                Image(systemName: "sparkles")
+                                Image(systemName: "chart.bar.fill")
                                     .foregroundColor(Color.themeAccent)
                                     .font(.system(size: 16))
-                                Text("New Discoveries")
+                                Text("Weekly Listening")
                                     .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundColor(Color.themePrimary)
@@ -115,141 +60,165 @@ struct StatsView: View {
                                         Color.themePrimary.opacity(0.5)
                                     )
                             }
-                            if !statsViewModel.discoveredArtists.isEmpty {
-                                discoveredArtists()
+                            WeeklyStatsComparisonCard(
+                                comparison: statsViewModel.weeklyComparison
+                            )
+                        }
+
+                        // MARK: - top tracks/artists
+
+                        Divider()
+                        if !statsViewModel.topArtists.artists.isEmpty {
+                            topArtists()
+                        }
+                        if !statsViewModel.topTracks.tracks.isEmpty {
+                            topTracks()
+                        }
+
+                        Divider()
+                            .padding(.vertical, 8)
+                        VStack(spacing: 16) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "chart.pie.fill")
+                                    .foregroundColor(Color.themeAccent)
+                                    .font(.system(size: 16))
+                                Text("Top Genres")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(Color.themePrimary)
+                                Spacer()
+                                Text("Past 2 Weeks")
+                                    .font(.caption)
+                                    .foregroundColor(
+                                        Color.themePrimary.opacity(0.5)
+                                    )
                             }
-                            if !statsViewModel.discoveredTracks.isEmpty {
-                                discoveredTracks()
+                            TopGenresBarGraph(
+                                allGenres: statsViewModel.topGenres
+                            )
+                            .frame(height: 250)
+                        }
+
+                        // MARK: - discoveries
+
+                        if !statsViewModel.discoveredArtists.isEmpty
+                            || !statsViewModel.discoveredTracks.isEmpty
+                        {
+                            Divider()
+                                .padding(.vertical, 8)
+                            VStack(spacing: 16) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "sparkles")
+                                        .foregroundColor(Color.themeAccent)
+                                        .font(.system(size: 16))
+                                    Text("New Discoveries")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(Color.themePrimary)
+                                    Spacer()
+                                    Text("Past 7 Days")
+                                        .font(.caption)
+                                        .foregroundColor(
+                                            Color.themePrimary.opacity(0.5)
+                                        )
+                                }
+                                if !statsViewModel.discoveredArtists.isEmpty {
+                                    discoveredArtists()
+                                }
+                                if !statsViewModel.discoveredTracks.isEmpty {
+                                    discoveredTracks()
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .padding(.bottom, 20)
-            }
-            .task {
-                await withTaskGroup(of: Void.self) { group in
-                    group.addTask {
-                        await statsViewModel.fetchHourlyPlays(for: statsNumDays)
-                    }
-                    group.addTask {
-                        await statsViewModel.fetchDailyPlays()
-                    }
-                    group.addTask {
-                        await statsViewModel.fetchTopTracks(for: statsNumDays)
-                    }
-                    group.addTask {
-                        await statsViewModel.fetchTopArtists(for: statsNumDays)
-                    }
-                    group.addTask {
-                        await statsViewModel.fetchTopGenres(for: statsNumDays)
-                    }
-                    group.addTask {
-                        await statsViewModel.fetchDiscoveredTracksArtists()
-                    }
-                    group.addTask {
-                        await statsViewModel.fetchWeeklyStatsComparison()
-                    }
+                .refreshable {
+                    await refreshAllStats()
                 }
-            }
-            .onChange(of: statsNumDays) { _, _ in
-                Task { @MainActor in
-                    await withTaskGroup(of: Void.self) { group in
-                        group.addTask {
-                            await statsViewModel.fetchHourlyPlays(
-                                for: statsNumDays
-                            )
-                        }
-                        group.addTask {
-                            await statsViewModel.fetchDailyPlays()
-                        }
-                        group.addTask {
-                            await statsViewModel.fetchTopTracks(
-                                for: statsNumDays
-                            )
-                        }
-                        group.addTask {
-                            await statsViewModel.fetchTopArtists(
-                                for: statsNumDays
-                            )
-                        }
-                        group.addTask {
-                            await statsViewModel.fetchTopGenres(
-                                for: statsNumDays
-                            )
-                        }
-                    }
+                .task(id: statsNumDays) {
+                    await loadAllStats()
                 }
-            }
-            .navigationDestination(item: $selectedArtist) { artist in
-                ArtistDetailView(
-                    artist: SongDetailArtist(
-                        id: artist.artist.artist_id,
-                        image_url: artist.artist.spotify_uri,
-                        name: artist.artist.name
-                    )
-                )
-            }
-            .navigationDestination(item: $selectedTrack) { track in
-                SongDetailView(
-                    trackID: track.track.track_id,
-                    imageURL: track.track.album_image_url,
-                    name: track.track.name
-                )
-            }
-            } else if appState.isSpotifyConnected == .loading {
-            VStack {
-                ProgressView()
-                Text("Loading...")
-                    .font(.subheadline)
-                    .foregroundColor(Color.themeSecondary)
-                    .padding(.top, 8)
-            }
-            } else {
-            VStack(spacing: 24) {
-                Spacer()
-
-                Image(systemName: "chart.pie")
-                    .font(.system(size: 60))
-                    .foregroundColor(Color.themeSecondary.opacity(0.5))
-
-                VStack(spacing: 12) {
-                    Text("Connect to Spotify")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color.themePrimary)
-
-                    Text(
-                        "Connect your Spotify account to see detailed stats and insights about your music"
-                    )
-                    .font(.subheadline)
-                    .foregroundColor(Color.themeSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                .onChange(of: statsNumDays) { _, _ in
+                    Task {await refreshStatsForDays()}
                 }
-
-                Button(action: {
+                .onAppear {
                     Task {
-                        await appState.connectSpotify()
+                        if shouldRefreshStats() {
+                            await refreshAllStats()
+                        }
                     }
-                }) {
-                    HStack {
-                        Image(systemName: "link")
-                        Text("Connect Spotify")
-                    }
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.spotifyGreen)
-                    .cornerRadius(25)
                 }
-                .padding(.top, 8)
+                .navigationDestination(item: $selectedArtist) { artist in
+                    ArtistDetailView(
+                        artist: SongDetailArtist(
+                            id: artist.artist.artist_id,
+                            image_url: artist.artist.spotify_uri,
+                            name: artist.artist.name
+                        )
+                    )
+                }
+                .navigationDestination(item: $selectedTrack) { track in
+                    SongDetailView(
+                        trackID: track.track.track_id,
+                        imageURL: track.track.album_image_url,
+                        name: track.track.name
+                    )
+                }
+            } else if appState.isSpotifyConnected == .loading {
+                VStack {
+                    ProgressView()
+                    Text("Loading...")
+                        .font(.subheadline)
+                        .foregroundColor(Color.themeSecondary)
+                        .padding(.top, 8)
+                }
+            } else {
+                VStack(spacing: 24) {
+                    Spacer()
 
-                Spacer()
-            }
+                    Image(systemName: "chart.pie")
+                        .font(.system(size: 60))
+                        .foregroundColor(Color.themeSecondary.opacity(0.5))
+
+                    VStack(spacing: 12) {
+                        Text("Connect to Spotify")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color.themePrimary)
+
+                        Text(
+                            "Connect your Spotify account to see detailed stats and insights about your music"
+                        )
+                        .font(.subheadline)
+                        .foregroundColor(Color.themeSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                    }
+
+                    Button(action: {
+                        Task {
+                            await appState.connectSpotify()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "link")
+                            Text("Connect Spotify")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color.spotifyGreen)
+                        .cornerRadius(25)
+                    }
+                    .padding(.top, 8)
+
+                    Spacer()
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -260,7 +229,7 @@ struct StatsView: View {
         .applyAdaptiveNavigationBar()
         .applyDefaultTabBarStyling()
     }
-    
+
     @ViewBuilder
     fileprivate func topArtists() -> some View {
         VStack(spacing: 12) {
@@ -408,17 +377,17 @@ struct StatsView: View {
                 {
                     TopEntityCard(
                         imageURL:
-                        statsViewModel
+                            statsViewModel
                             .discoveredTracks[
                                 1
                             ].track.album_image_url,
                         name:
-                        statsViewModel
+                            statsViewModel
                             .discoveredTracks[
                                 1
                             ].track.name,
                         playCount:
-                        statsViewModel
+                            statsViewModel
                             .discoveredTracks[
                                 1
                             ].play_count,
@@ -428,9 +397,9 @@ struct StatsView: View {
                     .onTapGesture {
                         selectedTrack =
                             statsViewModel
-                                .discoveredTracks[
-                                    1
-                                ]
+                            .discoveredTracks[
+                                1
+                            ]
                     }
                 }
 
@@ -439,17 +408,17 @@ struct StatsView: View {
                 {
                     TopEntityCard(
                         imageURL:
-                        statsViewModel
+                            statsViewModel
                             .discoveredTracks[
                                 2
                             ].track.album_image_url,
                         name:
-                        statsViewModel
+                            statsViewModel
                             .discoveredTracks[
                                 2
                             ].track.name,
                         playCount:
-                        statsViewModel
+                            statsViewModel
                             .discoveredTracks[
                                 2
                             ].play_count,
@@ -459,9 +428,9 @@ struct StatsView: View {
                     .onTapGesture {
                         selectedTrack =
                             statsViewModel
-                                .discoveredTracks[
-                                    2
-                                ]
+                            .discoveredTracks[
+                                2
+                            ]
                     }
                 } else if statsViewModel
                     .discoveredTracks
@@ -520,17 +489,17 @@ struct StatsView: View {
                 {
                     TopEntityCard(
                         imageURL:
-                        statsViewModel
+                            statsViewModel
                             .discoveredArtists[
                                 1
                             ].artist.spotify_uri,
                         name:
-                        statsViewModel
+                            statsViewModel
                             .discoveredArtists[
                                 1
                             ].artist.name,
                         playCount:
-                        statsViewModel
+                            statsViewModel
                             .discoveredArtists[
                                 1
                             ].play_count,
@@ -540,9 +509,9 @@ struct StatsView: View {
                     .onTapGesture {
                         selectedArtist =
                             statsViewModel
-                                .discoveredArtists[
-                                    1
-                                ]
+                            .discoveredArtists[
+                                1
+                            ]
                     }
                 }
 
@@ -552,17 +521,17 @@ struct StatsView: View {
                 {
                     TopEntityCard(
                         imageURL:
-                        statsViewModel
+                            statsViewModel
                             .discoveredArtists[
                                 2
                             ].artist.spotify_uri,
                         name:
-                        statsViewModel
+                            statsViewModel
                             .discoveredArtists[
                                 2
                             ].artist.name,
                         playCount:
-                        statsViewModel
+                            statsViewModel
                             .discoveredArtists[
                                 2
                             ].play_count,
@@ -572,9 +541,9 @@ struct StatsView: View {
                     .onTapGesture {
                         selectedArtist =
                             statsViewModel
-                                .discoveredArtists[
-                                    2
-                                ]
+                            .discoveredArtists[
+                                2
+                            ]
                     }
                 } else if statsViewModel
                     .discoveredArtists
@@ -617,5 +586,70 @@ struct StatsView: View {
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func loadAllStats() async {
+        guard !isRefreshing else {return}
+        isRefreshing = true
+        defer { isRefreshing = false}
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await statsViewModel.fetchHourlyPlays(for: statsNumDays)
+            }
+            group.addTask { await statsViewModel.fetchDailyPlays() }
+            group.addTask {
+                await statsViewModel.fetchTopTracks(for: statsNumDays)
+            }
+            group.addTask {
+                await statsViewModel.fetchTopArtists(for: statsNumDays)
+            }
+            group.addTask {
+                await statsViewModel.fetchTopGenres(for: statsNumDays)
+            }
+            group.addTask {
+                await statsViewModel.fetchDiscoveredTracksArtists()
+            }
+            group.addTask { await statsViewModel.fetchWeeklyStatsComparison() }
+        }
+    }
+    
+    private func refreshStatsForDays() async {
+        guard !isRefreshing else { return }
+        
+        isRefreshing = true
+        defer { isRefreshing = false }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await statsViewModel.fetchHourlyPlays(for: statsNumDays)
+            }
+            group.addTask { await statsViewModel.fetchDailyPlays() }
+            group.addTask {
+                await statsViewModel.fetchTopTracks(for: statsNumDays)
+            }
+            group.addTask {
+                await statsViewModel.fetchTopArtists(for: statsNumDays)
+            }
+            group.addTask {
+                await statsViewModel.fetchTopGenres(for: statsNumDays)
+            }
+        }
+    }
+    
+    private func shouldRefreshStats() -> Bool {
+        // Check if any critical data is missing or stale
+        return statsViewModel.dailyPlays.isEmpty ||
+               statsViewModel.topTracks.tracks.isEmpty ||
+               statsViewModel.topArtists.artists.isEmpty
+    }
+    
+    private func refreshAllStats() async {
+        guard !isRefreshing else { return }
+        
+        isRefreshing = true
+        defer { isRefreshing = false }
+        statsViewModel.clearCaches()
+        CacheManager.shared.invalidateStatsCache()
+        await loadAllStats()
+        viewID = UUID()
     }
 }

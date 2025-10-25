@@ -464,4 +464,15 @@ class StatsViewModel: ObservableObject {
             appState.setError(presentationError)
         }
     }
+    
+    func clearCaches() {
+        hourlyPlaysCache.removeAll()
+        topTracksCache.removeAll()
+        topArtistsCache.removeAll()
+        topGenresCache.removeAll()
+        dailyPlaysCache = nil
+        discoveriesCache = nil
+        weeklyComparisonCache = nil
+        trackTrendCache.removeAll()
+    }
 }

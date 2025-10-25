@@ -506,6 +506,12 @@ class CacheManager: ObservableObject {
     }
 
     // MARK: - Cache Invalidation
+    
+    func invalidateProfile() {
+        guard let account = getCurrentAccount() else { return }
+        account.profile?.lastUpdated = Date().addingTimeInterval(-3600)
+        try? context?.save()
+    }
 
     func invalidateStatsCache() {
         guard let stats = getCurrentAccount()?.stats else { return }
@@ -516,7 +522,8 @@ class CacheManager: ObservableObject {
         stats.topTracksExpiry = Date()
         stats.topGenresExpiry = Date()
         stats.discoveriesExpiry = Date()
-
+        stats.weeklyComparisonExpiry = Date()
+        
         try? context?.save()
     }
 
