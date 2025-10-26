@@ -13,7 +13,7 @@ struct ProfilePictureView: View {
         if editableMode {
             Menu {
                 Button(
-                    "Choose from liibrary",
+                    "Choose from library",
                     systemImage: "photo.on.rectangle"
                 ) {
                     self.showImagePicker = true
