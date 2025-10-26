@@ -24,9 +24,10 @@ struct ImageCropperView: View {
         onCancel: @escaping () -> Void,
         onCrop: @escaping (UIImage) -> Void
     ) {
-        self.image = image
+        self.image = Self.normailzeOrientation(image)
         self.onCancel = onCancel
         self.onCrop = onCrop
+
     }
 
     var body: some View {
@@ -38,7 +39,7 @@ struct ImageCropperView: View {
                         .aspectRatio(contentMode: .fit)
                         .offset(offset)
                         .simultaneousGesture(dragGesture)
-/*
+                   /*
                     Circle()
                         .fill(Color.red)
                         .frame(width: 10, height: 10)
@@ -93,11 +94,11 @@ struct ImageCropperView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         /**
-                        
+
                         need to figure out the bounds of the corners of the square which
                             captures the circle.
                          not sure how the zoon/will effect the translatioon vice versa
-                        
+
                          */
                         onCancel()
                     }
@@ -129,7 +130,8 @@ struct ImageCropperView: View {
     var dragGesture: some Gesture {
         DragGesture()
             .onChanged { offsetDelta in
-                withAnimation {
+
+                withAnimation(.easeOut) {
                     offset = CGSize(
                         width: prevOffset.width + offsetDelta.translation.width,
                         height: prevOffset.height
@@ -137,6 +139,7 @@ struct ImageCropperView: View {
                     )
                     updateDebugPoints()
                 }
+
             }.onEnded { _ in
                 pinImageToContainer()
                 updateDebugPoints()
@@ -144,18 +147,24 @@ struct ImageCropperView: View {
             }
     }
 
-    private func calcMetrics(containerSize: CGSize) -> (
+    private func calcMetrics(containerSize: CGSize, debug: Bool = false) -> (
         scaleRatio: CGFloat, imageOffset: CGSize, drawnImageSize: CGSize
     ) {
-        let imageSize = image.size
         let imageRatio = image.size.width / image.size.height
         let containerRatio = containerSize.width / containerSize.height
+        if debug {
+            print(
+                "[DEBUG]\nimage image_width: \(image.size.width) | container_width: \(containerSize.width)\nimage_height: \(image.size.height) | container_height: \(containerSize.height)\nimage_ratio:\(imageRatio) | container_ratio: \(containerRatio)"
+            )
+            print("[DEBUG] orientation: \(image.imageOrientation)")
+
+        }
         var drawnImageSize: CGSize
 
         var scaleRatio: CGFloat  // transformatrion from 'image space' to 'screen space'
         if imageRatio > containerRatio {
             //height shrunk to fit full image in screen
-            scaleRatio = imageSize.width / containerSize.width
+            scaleRatio = (image.size.width * image.scale) / containerSize.width
             drawnImageSize = CGSize(
                 width: containerSize.width,
                 height: containerSize.width / imageRatio
@@ -163,9 +172,10 @@ struct ImageCropperView: View {
         } else {
             //image is more portrait than container is
             // so width has been shrunk
-            scaleRatio = imageSize.height / containerSize.height
+            scaleRatio =
+                (image.size.height * image.scale) / containerSize.height
             drawnImageSize = CGSize(
-                width: containerSize.height * imageRatio,
+                width: containerSize.height * imageRatio,  // maintain aspect ratio using new height
                 height: containerSize.height
             )
         }
@@ -183,7 +193,8 @@ struct ImageCropperView: View {
             return nil
         }
         let (scaleRatio, imageOffset, _) = calcMetrics(
-            containerSize: containerSize
+            containerSize: containerSize,
+            debug: true
         )
         let centerScreen = CGPoint(
             x: containerSize.width / 2,
@@ -198,7 +209,7 @@ struct ImageCropperView: View {
 
         // size of the crop rectangle in 'image space'
         let cropSizeOnImage = displayCropSize * scaleRatio
-        
+
         let cropRect = CGRect(
             x: cropCx - (cropSizeOnImage / 2.0),
             y: cropCy - (cropSizeOnImage / 2.0),
@@ -323,6 +334,21 @@ struct ImageCropperView: View {
         }
         return newImage
 
+    }
+
+    private static func normailzeOrientation(_ image: UIImage) -> UIImage {
+        if image.imageOrientation == .up {
+            return image
+        }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = image.scale
+        format.opaque = false
+
+        let renderer = UIGraphicsImageRenderer(size: image.size, format: format)
+        let normalized = renderer.image { ctx in
+            image.draw(in: CGRect(origin: .zero, size: image.size))
+        }
+        return normalized
     }
 }
 

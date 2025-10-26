@@ -13,7 +13,7 @@ struct ProfilePictureView: View {
         if editableMode {
             Menu {
                 Button(
-                    "Choose from liibrary",
+                    "Choose from library",
                     systemImage: "photo.on.rectangle"
                 ) {
                     self.showImagePicker = true
@@ -33,6 +33,7 @@ struct ProfilePictureView: View {
                     ImageCropperView(
                         image: image,
                         onCancel: {
+                            profileImage = nil
                             showCropView = false
                         },
                         onCrop: { img in
@@ -43,7 +44,7 @@ struct ProfilePictureView: View {
                                     )
                                 if success {
                                     profileImage = nil
-                                    
+
                                 }
                             }
                             showCropView = false
