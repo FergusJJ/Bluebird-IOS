@@ -309,7 +309,6 @@ struct ProfileViewV2: View {
             } else {
                 VStack(spacing: 16) {
                     ForEach(profileViewModel.myReposts) { repostItem in
-                        let _ = print("in repostItem: \(repostItem.repost)")
                         RepostRowView(
                             repostItem: repostItem,
                             isCurrentUser: true,

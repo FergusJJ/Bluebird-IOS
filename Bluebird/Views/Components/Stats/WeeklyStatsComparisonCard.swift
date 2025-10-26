@@ -93,7 +93,7 @@ struct WeeklyStatsComparisonCard: View {
                         Image(systemName: "chart.bar.fill")
                             .font(.system(size: 10))
                         Text(
-                            "\( count == 0 ? "More than 0%" :  String(format: "More than %.0f%%", 100 - percentile))"
+                            "\( count == 0 ? "More than 0%" :  String(format: "Top %.0f%%", 100 - percentile))"
                         )
                         .font(.system(size: 12, weight: .bold))
                     }
@@ -105,7 +105,7 @@ struct WeeklyStatsComparisonCard: View {
                             .fill(Color.themeAccent.opacity(0.15))
                     )
 
-                    Text("of all users")
+                    Text("of all listeners")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(Color.themePrimary.opacity(0.5))
                 }
