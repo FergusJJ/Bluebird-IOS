@@ -3,6 +3,7 @@ import SwiftUI
 struct FriendsListView: View {
     let friends: [UserProfile]
     let username: String
+    let isRequests: Bool
 
     private var currentUserID: String? {
         CacheManager.shared.getCurrentUserId()
@@ -22,10 +23,10 @@ struct FriendsListView: View {
                     Image(systemName: "person.2.slash")
                         .font(.system(size: 40))
                         .foregroundColor(Color.themeSecondary)
-                    Text("No friends yet")
+                    Text(isRequests ? "No requests" : "No friends yet")
                         .font(.headline)
                         .foregroundColor(Color.themePrimary)
-                    Text("Add friends to see them here")
+                    Text(isRequests ? "No incoming friend requests" : "Add friends to see them here")
                         .font(.subheadline)
                         .foregroundColor(Color.themeSecondary)
                 }
@@ -36,7 +37,7 @@ struct FriendsListView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color.themeBackground)
-        .navigationTitle("\(username)'s Friends")
+        .navigationTitle(isRequests ? "Friend requests" : "\(username)'s Friends")
         .navigationBarTitleDisplayMode(.inline)
     }
 

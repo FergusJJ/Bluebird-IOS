@@ -116,7 +116,7 @@ struct ProfileHeadlineViewEditable: View {
         )
         .onAppear {
             Task {
-                await profileViewModel.loadProfile()
+                await profileViewModel.loadProfile(forceRefresh: true)
                 await profileViewModel.loadHeadlineStats()
             }
         }
@@ -129,7 +129,8 @@ struct ProfileHeadlineViewEditable: View {
         .navigationDestination(isPresented: $showFriends) {
             FriendsListView(
                 friends: profileViewModel.friends,
-                username: profileViewModel.username
+                username: profileViewModel.username,
+                isRequests: false
             )
         }
     }

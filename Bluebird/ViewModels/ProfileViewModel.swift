@@ -60,6 +60,8 @@ class ProfileViewModel: ObservableObject {
 
     @Published var friends: [UserProfile] = []
     @Published var friendCount: Int = 0
+    @Published var incomingRequests: [UserProfile] = []
+    @Published var incomingRequestsCount: Int = 0
 
     // MARK: - settings page stuff
 
@@ -85,7 +87,7 @@ class ProfileViewModel: ObservableObject {
     private func observeLoginState() {
         appState.$isLoggedIn
             .removeDuplicates()
-            .filter { $0 == .istrue } // only fire when user logs in
+            .filter { $0 == .istrue }  // only fire when user logs in
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 Task {
@@ -106,7 +108,7 @@ class ProfileViewModel: ObservableObject {
         return "\(appState.currentSong) - \(appState.currentArtist)"
     }
 
-    func loadProfile() async {
+    func loadProfile(forceRefresh: Bool = false) async {
         let (cachedProfile, cachedStats) = cacheManager.getProfile()
         if let profile = cachedProfile {
             username = profile.username
@@ -118,21 +120,23 @@ class ProfileViewModel: ObservableObject {
             totalUniqueArtists = stats.unique_artists
             totalMinutesListened = stats.total_duration_millis / (60 * 1000)
         }
-
-        guard appState.isLoggedIn == .istrue else {
+        
+        guard appState.isLoggedIn == .istrue && forceRefresh
+        else {
+            print("load profile guard failed")
             return
         }
+        
         let result = await bluebirdAccountAPIService.getProfile()
         switch result {
-        case let .success(profileInfo):
+        case .success(let profileInfo):
             print("got profile \(profileInfo.avatarUrl)")
             username = profileInfo.username
             bio = profileInfo.bio
             avatarURL = URL(string: profileInfo.avatarUrl)
-
             // Save to cache
             cacheManager.saveProfile(profileInfo, stats: cachedStats)
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading profile info: \(presentationError)")
             appState.setError(presentationError)
@@ -151,25 +155,28 @@ class ProfileViewModel: ObservableObject {
         guard appState.isLoggedIn == .istrue else {
             return
         }
-        let result = await bluebirdAccountAPIService.getHeadlineStats(for: numDays)
+        let result = await bluebirdAccountAPIService.getHeadlineStats(
+            for: numDays
+        )
         switch result {
-        case let .success(stats):
+        case .success(let stats):
             totalPlays = stats.total_plays
             totalUniqueArtists = stats.unique_artists
             totalMinutesListened = (stats.total_duration_millis / (60 * 1000))
 
             // Save to cache
             cacheManager.saveProfile(
-                cachedProfile ?? ProfileInfo(
-                    message: "",
-                    username: username,
-                    bio: bio,
-                    avatarUrl: avatarURL?.absoluteString ?? "",
-                    showTooltips: false
-                ),
+                cachedProfile
+                    ?? ProfileInfo(
+                        message: "",
+                        username: username,
+                        bio: bio,
+                        avatarUrl: avatarURL?.absoluteString ?? "",
+                        showTooltips: false
+                    ),
                 stats: stats
             )
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading headline stats info: \(presentationError)")
             appState.setError(presentationError)
@@ -210,8 +217,8 @@ class ProfileViewModel: ObservableObject {
 
         let result = await supabaseManager.uploadAvatar(avatar: image)
 
-        guard case let .success(fileName) = result else {
-            if case let .failure(error) = result {
+        guard case .success(let fileName) = result else {
+            if case .failure(let error) = result {
                 if let supabaseError = error as? SupabaseError {
                     let presentationError = AppError(from: supabaseError)
                     print(
@@ -252,11 +259,13 @@ class ProfileViewModel: ObservableObject {
             print("FetchConnectedSpotifyDetails failed: Access token is nil.")
             return
         }
-        let res = await bluebirdAccountAPIService.getConnectedAccountDetail(accessToken: spotifyAccessToken)
+        let res = await bluebirdAccountAPIService.getConnectedAccountDetail(
+            accessToken: spotifyAccessToken
+        )
         switch res {
-        case let .success(details):
+        case .success(let details):
             connectedAccountDetails = details
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print(
                 "An API error occurred: \(presentationError.localizedDescription)"
@@ -275,7 +284,8 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - Pins
 
-    func updatePin(for id: String, entity: String, isDelete: Bool) async -> Bool {
+    func updatePin(for id: String, entity: String, isDelete: Bool) async -> Bool
+    {
         if isLoading {
             return false
         }
@@ -322,7 +332,7 @@ class ProfileViewModel: ObservableObject {
             // Update UI arrays after pin change
             updateAllUIArrays()
             return true
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print(
                 "An API error occurred: \(presentationError.localizedDescription)"
@@ -344,7 +354,7 @@ class ProfileViewModel: ObservableObject {
         let stringQuery = entities.joined(separator: ",")
         let result = await bluebirdAccountAPIService.getPins(query: stringQuery)
         switch result {
-        case let .success(getPinsResult):
+        case .success(let getPinsResult):
             print("Got \(getPinsResult.total) pins")
             orderedPins.removeAll()
             pinsById.removeAll()
@@ -352,7 +362,7 @@ class ProfileViewModel: ObservableObject {
                 addPin(pin)
             }
             return true
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print(
                 "An API error occurred fetching pins: \(presentationError.localizedDescription)"
@@ -381,7 +391,7 @@ class ProfileViewModel: ObservableObject {
             print("Successfully update profile info!")
             return true
         // probably want some ui feedback here like a popup
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print(
                 "An API error occurred: \(presentationError.localizedDescription)"
@@ -480,12 +490,12 @@ class ProfileViewModel: ObservableObject {
         )
 
         switch res {
-        case let .success(getEntityResponse):
+        case .success(let getEntityResponse):
             for trackDetail in getEntityResponse.tracks {
                 pinnedTrackDetails[trackDetail.track_id] = trackDetail
             }
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading track details: \(presentationError)")
             appState.setError(presentationError)
@@ -500,12 +510,12 @@ class ProfileViewModel: ObservableObject {
         )
 
         switch res {
-        case let .success(getEntityResponse):
+        case .success(let getEntityResponse):
             for albumDetail in getEntityResponse.albums {
                 pinnedAlbumDetails[albumDetail.album_id] = albumDetail
             }
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading album details: \(presentationError)")
             appState.setError(presentationError)
@@ -520,19 +530,20 @@ class ProfileViewModel: ObservableObject {
         )
 
         switch res {
-        case let .success(getEntityResponse):
+        case .success(let getEntityResponse):
             for artistDetail in getEntityResponse.artists {
                 pinnedArtistDetails[artistDetail.artist_id] = artistDetail
             }
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading artist details: \(presentationError)")
             appState.setError(presentationError)
         }
     }
 
-    private func fetchDetailsForNewPin(id: String, entityType: EntityType) async {
+    private func fetchDetailsForNewPin(id: String, entityType: EntityType) async
+    {
         switch entityType {
         case .track:
             await fetchAndCacheTrackDetails(trackIDs: [id])
@@ -548,28 +559,28 @@ class ProfileViewModel: ObservableObject {
     private func updatePinnedTracksUIArray() {
         pinnedTracks =
             orderedPins
-                .filter { $0.entity_type == .track }
-                .compactMap { pin in
-                    pinnedTrackDetails[pin.entity_id]
-                }
+            .filter { $0.entity_type == .track }
+            .compactMap { pin in
+                pinnedTrackDetails[pin.entity_id]
+            }
     }
 
     private func updatePinnedAlbumsUIArray() {
         pinnedAlbums =
             orderedPins
-                .filter { $0.entity_type == .album }
-                .compactMap { pin in
-                    pinnedAlbumDetails[pin.entity_id]
-                }
+            .filter { $0.entity_type == .album }
+            .compactMap { pin in
+                pinnedAlbumDetails[pin.entity_id]
+            }
     }
 
     private func updatePinnedArtistsUIArray() {
         pinnedArtists =
             orderedPins
-                .filter { $0.entity_type == .artist }
-                .compactMap { pin in
-                    pinnedArtistDetails[pin.entity_id]
-                }
+            .filter { $0.entity_type == .artist }
+            .compactMap { pin in
+                pinnedArtistDetails[pin.entity_id]
+            }
     }
 
     private func updateAllUIArrays() {
@@ -607,13 +618,15 @@ class ProfileViewModel: ObservableObject {
             return
         }
 
-        let result = await bluebirdAccountAPIService.getMilestones(userID: userId)
+        let result = await bluebirdAccountAPIService.getMilestones(
+            userID: userId
+        )
         switch result {
-        case let .success(fetchedMilestones):
+        case .success(let fetchedMilestones):
             milestones = fetchedMilestones
             cacheManager.saveMilestones(fetchedMilestones)
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error fetching milestones: \(presentationError)")
             appState.setError(presentationError)
@@ -630,16 +643,36 @@ class ProfileViewModel: ObservableObject {
 
         let result = await bluebirdAccountAPIService.getAllFriends(for: userId)
         switch result {
-        case let .success(fetchedFriends):
+        case .success(let fetchedFriends):
             friends = fetchedFriends
             friendCount = fetchedFriends.count
             cacheManager.invalidateProfile()
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error fetching friends: \(presentationError)")
             appState.setError(presentationError)
         }
+    }
+
+    func fetchFriendRequests() async {
+        guard let userId = cacheManager.getCurrentUserId() else {
+            print("Failed to sync friends: No user ID")
+            return
+        }
+        let result = await bluebirdAccountAPIService.getPendingRequests(
+            for: userId
+        )
+        switch result {
+        case .success(let requests):
+            incomingRequests = requests
+            incomingRequestsCount = requests.count
+        case .failure(let serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("Error fetching incoming requests: \(presentationError)")
+            appState.setError(presentationError)
+        }
+
     }
 
     // MARK: - Reposts
@@ -650,40 +683,46 @@ class ProfileViewModel: ObservableObject {
             return
         }
 
+        if isLoadingReposts {
+            return
+        }
         isLoadingReposts = true
+        defer { isLoadingReposts = false }
         let result = await bluebirdAccountAPIService.getCurrentUserReposts(
             cursor: nil,
             limit: 50
         )
 
         switch result {
-        case let .success(response):
+        case .success(let response):
             myReposts = response.reposts
             repostsNextCursor = response.next_cursor
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error fetching reposts: \(presentationError)")
             appState.setError(presentationError)
         }
-        isLoadingReposts = false
     }
 
     func loadMoreReposts() async {
         guard !repostsNextCursor.isEmpty && !isLoadingReposts else { return }
-
+        if isLoadingReposts {
+            return
+        }
         isLoadingReposts = true
+        defer { isLoadingReposts = false }
         let result = await bluebirdAccountAPIService.getCurrentUserReposts(
             cursor: repostsNextCursor,
             limit: 50
         )
 
         switch result {
-        case let .success(response):
+        case .success(let response):
             myReposts.append(contentsOf: response.reposts)
             repostsNextCursor = response.next_cursor
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error loading more reposts: \(presentationError)")
             appState.setError(presentationError)
@@ -692,7 +731,9 @@ class ProfileViewModel: ObservableObject {
     }
 
     func deleteRepost(postID: String) async -> Bool {
-        let result = await bluebirdAccountAPIService.deleteRepost(postID: postID)
+        let result = await bluebirdAccountAPIService.deleteRepost(
+            postID: postID
+        )
 
         switch result {
         case .success():
@@ -700,7 +741,7 @@ class ProfileViewModel: ObservableObject {
             myReposts.removeAll { $0.repost.post_id == postID }
             return true
 
-        case let .failure(serviceError):
+        case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
             print("Error deleting repost: \(presentationError)")
             appState.setError(presentationError)

@@ -94,6 +94,9 @@ protocol BluebirdAccountAPIService {
     func getAllFriends(for userID: String) async -> Result<
         [UserProfile], BluebirdAPIError
     >
+    func getPendingRequests(for userID: String) async -> Result<
+        [UserProfile], BluebirdAPIError
+    >
     func sendFriendRequest(to userID: String) async -> Result<
         FriendRequestResponse, BluebirdAPIError
     >

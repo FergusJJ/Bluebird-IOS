@@ -35,13 +35,13 @@ struct ProfileViewV2: View {
         .applyAdaptiveNavigationBar()
         .applyDefaultTabBarStyling()
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Button(action: { isEditing.toggle() }) {
                     Image(systemName: isEditing ? "pencil.line" : "pencil")
                         .foregroundColor(Color.themeAccent)
                 }
             }
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .topBarLeading) {
                 NavigationLink(destination: SettingsView()) {
                     Image(systemName: "gearshape.fill")
                         .foregroundColor(Color.themeAccent)
@@ -49,7 +49,7 @@ struct ProfileViewV2: View {
             }
         }
         .task {
-            logAvatar()
+            //logAvatar()
             await profileViewModel.fetchMyReposts()
         }
         .sheet(item: $repostToDelete) { repost in

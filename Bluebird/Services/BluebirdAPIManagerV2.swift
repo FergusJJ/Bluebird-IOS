@@ -598,6 +598,17 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
             queryItems: [URLQueryItem(name: "user_id", value: userID)]
         )
     }
+    
+    func getPendingRequests(for userID: String) async -> Result<
+        [UserProfile], BluebirdAPIError> {
+            return await makeRequest(
+                path: "/api/social/friends",
+                queryItems: [
+                    URLQueryItem(name: "user_id", value: userID),
+                    URLQueryItem(name: "incoming", value: "yes")
+                ]
+            )
+        }
 
     func searchUsers(query: String) async -> Result<
         SearchUserResult, BluebirdAPIError

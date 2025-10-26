@@ -27,7 +27,8 @@ struct UserProfileView: View {
                     .padding(.bottom, 20)
 
                 if let detail = socialViewModel.currentUserProfile {
-                    if detail.is_private && detail.friendship_status != .friends {
+                    if detail.is_private && detail.friendship_status != .friends
+                    {
                         privateProfileView()
                     } else {
                         VStack(spacing: 32) {
@@ -84,7 +85,8 @@ struct UserProfileView: View {
         .navigationDestination(isPresented: $showFriends) {
             FriendsListView(
                 friends: socialViewModel.userFriends,
-                username: userProfile.username
+                username: userProfile.username,
+                isRequests: false
             )
         }
     }
@@ -682,11 +684,15 @@ struct UserProfileView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
-            } else if socialViewModel.getReposts(for: userProfile.user_id).isEmpty {
+            } else if socialViewModel.getReposts(for: userProfile.user_id)
+                .isEmpty
+            {
                 emptyRepostsView()
             } else {
                 VStack(spacing: 16) {
-                    ForEach(socialViewModel.getReposts(for: userProfile.user_id)) { repostItem in
+                    ForEach(
+                        socialViewModel.getReposts(for: userProfile.user_id)
+                    ) { repostItem in
                         RepostRowView(
                             repostItem: repostItem,
                             isCurrentUser: false,
@@ -702,7 +708,9 @@ struct UserProfileView: View {
                         )
                     }
 
-                    if !socialViewModel.getRepostsCursor(for: userProfile.user_id).isEmpty {
+                    if !socialViewModel.getRepostsCursor(
+                        for: userProfile.user_id
+                    ).isEmpty {
                         Button(action: {
                             Task {
                                 await socialViewModel.loadMoreUserReposts(

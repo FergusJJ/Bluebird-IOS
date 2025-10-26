@@ -14,6 +14,7 @@ struct SocialView: View {
     @State private var selectedArtist: ArtistDetail?
     @State private var selectedUser: UserProfile?
     @State private var postToDelete: IdentifiableString?
+    @State private var showFriendRequests: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,7 +61,8 @@ struct SocialView: View {
                             selectedArtist: $selectedArtist,
                             selectedUser: $selectedUser,
                             postToDelete: $postToDelete,
-                            currentUserID: CacheManager.shared.getCurrentUserId(),
+                            currentUserID: CacheManager.shared
+                                .getCurrentUserId(),
                             onFindFriends: {
                                 withAnimation {
                                     isSearching = true
@@ -81,11 +83,18 @@ struct SocialView: View {
                     await socialViewModel.fetchFriendsCurrentlyPlaying()
                 }
                 group.addTask {
+                    await profileViewModel.fetchFriendRequests()
+                }
+                group.addTask {
                     await socialViewModel.fetchUnifiedFeed()
                 }
                 group.addTask {
                     await socialViewModel.fetchTrendingTracks()
                 }
+                group.addTask {
+                    await profileViewModel.loadProfile()
+                }
+
             }
         }
         .sheet(item: $postToDelete) { identifiablePost in
@@ -93,7 +102,9 @@ struct SocialView: View {
                 postID: identifiablePost.value,
                 onConfirm: {
                     Task {
-                        let success = await socialViewModel.deletePost(postID: identifiablePost.value)
+                        let success = await socialViewModel.deletePost(
+                            postID: identifiablePost.value
+                        )
                         if success {
                             postToDelete = nil
                         }
@@ -113,12 +124,29 @@ struct SocialView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Image(systemName: "person.crop.badge.magnifyingglass.fill")
-                    .foregroundColor(Color.themePrimary)
+                    .foregroundStyle(Color.themePrimary)
                     .onTapGesture {
                         withAnimation { isSearching.toggle() }
                     }
             }
+            ToolbarItem(placement: .topBarLeading) {
+                Image(systemName: "person.2.fill")
+                    .foregroundStyle(Color.themePrimary)
+                    .onTapGesture {
+                        //open friend requests tab
+                        showFriendRequests = true
+                    }
+            }
         }
+        .navigationDestination(isPresented: $showFriendRequests) {
+            // need to add a thing to this that will allow you to confirm/deny without having to click on the user
+            FriendsListView(
+                friends: profileViewModel.incomingRequests,
+                username: profileViewModel.username,
+                isRequests: true
+            )
+        }
+
         .applyDefaultTabBarStyling()
     }
 }

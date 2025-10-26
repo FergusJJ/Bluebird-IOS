@@ -5,7 +5,7 @@ class SocialViewModel: ObservableObject {
     @Published var currentUserProfile: UserProfileDetail?
     @Published var friendsCurrentlyPlaying: [String: FriendCurrentlyPlaying] =
         [:]
-    
+
     @Published var userRepostsCache: [String: [RepostItem]] = [:]
     @Published private(set) var repostsCursorCache: [String: String] = [:]
     @Published var isLoadingReposts = false
@@ -95,18 +95,11 @@ class SocialViewModel: ObservableObject {
     }
 
     func fetchFriendsCurrentlyPlaying() async {
-        print("DEBUG: fetchFriendsCurrentlyPlaying called")
         let result =
             await bluebirdAccountAPIService.getFriendsCurrentlyPlaying()
         switch result {
         case .success(let userIDTrackMap):
-            print(
-                "DEBUG: Got currently playing data - count: \(userIDTrackMap.friends.count)"
-            )
             friendsCurrentlyPlaying = userIDTrackMap.friends
-            print(
-                "DEBUG: Set friendsCurrentlyPlaying - count now: \(friendsCurrentlyPlaying.count)"
-            )
 
         case .failure(let serviceError):
             let presentationError = AppError(from: serviceError)
@@ -115,19 +108,16 @@ class SocialViewModel: ObservableObject {
         }
     }
 
-    func fetchTrendingTracks() async {
+    func fetchTrendingTracks(forceRefresh: Bool = false) async {
         // Prevent concurrent requests
-        print("fetchTrendingTracks - isLoadingTrending=\(isLoadingTrending)")
+        if !trendingTracks.isEmpty && !forceRefresh {
+            return
+        }
         guard !isLoadingTrending else { return }
-        print(
-            "fetchTrendingTracks - passed guard isLoadingTrending=\(isLoadingTrending)"
-        )
 
         isLoadingTrending = true
         defer { isLoadingTrending = false }
-        print("fetchTrendingTracks - getting result")
         let result = await bluebirdAccountAPIService.getTrendingTracks()
-        print("fetchTrendingTracks - got result")
         switch result {
         case .success(let tracks):
             trendingTracks = tracks
@@ -256,7 +246,7 @@ class SocialViewModel: ObservableObject {
     func clearCache() {
         cacheManager.invalidateSocialCache()
     }
-    
+
     func getReposts(for userId: String) -> [RepostItem] {
         return userRepostsCache[userId] ?? []
     }
@@ -293,7 +283,9 @@ class SocialViewModel: ObservableObject {
     }
 
     func loadMoreUserReposts(userId: String) async {
-        guard !getRepostsCursor(for: userId).isEmpty && !isLoadingReposts else { return }
+        guard !getRepostsCursor(for: userId).isEmpty && !isLoadingReposts else {
+            return
+        }
 
         isLoadingReposts = true
         let result = await bluebirdAccountAPIService.getUserReposts(
@@ -372,7 +364,13 @@ class SocialViewModel: ObservableObject {
             return
         }
 
+        guard !isLoadingUnifiedFeed else {
+            return
+        }
+
         isLoadingUnifiedFeed = true
+        defer { isLoadingUnifiedFeed = false }
+
         let result = await bluebirdAccountAPIService.getUnifiedFeed(
             limit: 20,
             offset: 0,
@@ -386,11 +384,17 @@ class SocialViewModel: ObservableObject {
             unifiedFeedNextOffset = response.next_offset
 
         case .failure(let serviceError):
+            if case .networkError(let error as NSError) = serviceError,
+                error.domain == NSURLErrorDomain,
+                error.code == NSURLErrorCancelled
+            {
+                print("Unified feed fetch cancelled (normal during refresh)")
+                return
+            }
             let presentationError = AppError(from: serviceError)
             print("Error fetching unified feed: \(presentationError)")
             appState.setError(presentationError)
         }
-        isLoadingUnifiedFeed = false
     }
 
     func loadMoreUnifiedFeedItems() async {
@@ -437,9 +441,9 @@ class SocialViewModel: ObservableObject {
             return false
         }
     }
-    
+
     func clearReposts(for userId: String) {
-        guard !getReposts(for: userId).isEmpty && !isLoadingReposts  else{
+        guard !getReposts(for: userId).isEmpty && !isLoadingReposts else {
             return
         }
         userRepostsCache.removeValue(forKey: userId)

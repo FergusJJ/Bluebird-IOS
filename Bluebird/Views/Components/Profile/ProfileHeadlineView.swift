@@ -42,7 +42,7 @@ struct ProfileHeadlineView: View {
         .frame(maxWidth: .infinity, alignment: .center)
         .onAppear {
             Task {
-                await profileViewModel.loadProfile()
+                await profileViewModel.loadProfile(forceRefresh: true)
                 await profileViewModel.loadHeadlineStats()
             }
         }
