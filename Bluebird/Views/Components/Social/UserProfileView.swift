@@ -14,6 +14,8 @@ struct UserProfileView: View {
     @State private var glowOpacity = 0.3
     @State private var showExpandedImage = false
 
+    @State private var currentUserId: String = ""
+
     private var isCurrentlyPlaying: Bool {
         socialViewModel.friendsCurrentlyPlaying[userProfile.user_id] != nil
     }
@@ -33,6 +35,7 @@ struct UserProfileView: View {
                                 .padding(.horizontal)
                             repostsSection()
                                 .padding(.horizontal)
+                                .id("reposts-\(userProfile.user_id)")
                         }
                         .padding(.bottom, 20)
                     }
@@ -47,37 +50,18 @@ struct UserProfileView: View {
         .navigationTitle(userProfile.username)
         .navigationBarTitleDisplayMode(.inline)
         .applyDefaultTabBarStyling()
+        .id(userProfile.user_id)
+        .onAppear {
+            currentUserId = userProfile.user_id
+            Task {
+                await loadUserData(forceRefresh: true)
+            }
+        }
         .refreshable {
             await socialViewModel.fetchUserProfile(
                 userId: userProfile.user_id,
                 forceRefresh: true
             )
-        }
-        .task {
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    await socialViewModel.fetchUserProfile(
-                        userId: userProfile.user_id,
-                        forceRefresh: false
-                    )
-                }
-                group.addTask {
-                    await socialViewModel.fetchUserReposts(
-                        userId: userProfile.user_id,
-                        forceRefresh: false
-                    )
-                }
-                group.addTask {
-                    await socialViewModel.fetchUserMilestones(
-                        userId: userProfile.user_id
-                    )
-                }
-                group.addTask {
-                    await socialViewModel.fetchUserFriends(
-                        userId: userProfile.user_id
-                    )
-                }
-            }
         }
         .alert("Remove Friend", isPresented: $showRemoveFriendAlert) {
             Button("Cancel", role: .cancel) {}
@@ -188,7 +172,8 @@ struct UserProfileView: View {
         .sheet(isPresented: $showExpandedImage) {
             ExpandedImageView(
                 image: nil,
-                imageUrl: userProfile.avatar_url.isEmpty ? nil : URL(string: userProfile.avatar_url)
+                imageUrl: userProfile.avatar_url.isEmpty
+                    ? nil : URL(string: userProfile.avatar_url)
             )
         }
     }
@@ -214,10 +199,13 @@ struct UserProfileView: View {
                                 .foregroundColor(Color.themePrimary)
                         )
                 } else {
-                    CachedAsyncImage(url: URL(string: userProfile.avatar_url)!, contentMode: .fill)
-                        .frame(width: 100, height: 100)
-                        .clipped()
-                        .clipShape(Circle())
+                    CachedAsyncImage(
+                        url: URL(string: userProfile.avatar_url)!,
+                        contentMode: .fill
+                    )
+                    .frame(width: 100, height: 100)
+                    .clipped()
+                    .clipShape(Circle())
                 }
             }
             .overlay(
@@ -299,10 +287,13 @@ struct UserProfileView: View {
                             .foregroundColor(Color.themePrimary)
                     )
             } else {
-                CachedAsyncImage(url: URL(string: userProfile.avatar_url)!, contentMode: .fill)
-                    .frame(width: 96, height: 96)
-                    .clipped()
-                    .clipShape(Circle())
+                CachedAsyncImage(
+                    url: URL(string: userProfile.avatar_url)!,
+                    contentMode: .fill
+                )
+                .frame(width: 96, height: 96)
+                .clipped()
+                .clipShape(Circle())
             }
         }
     }
@@ -585,9 +576,8 @@ struct UserProfileView: View {
                 Spacer()
             }
 
-            if detail.pinned_tracks.isEmpty &&
-                detail.pinned_albums.isEmpty &&
-                detail.pinned_artists.isEmpty
+            if detail.pinned_tracks.isEmpty && detail.pinned_albums.isEmpty
+                && detail.pinned_artists.isEmpty
             {
                 emptyPinsView()
             } else {
@@ -639,7 +629,7 @@ struct UserProfileView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
     }
-    
+
     @ViewBuilder
     fileprivate func emptyRepostsView() -> some View {
         VStack(spacing: 16) {
@@ -686,15 +676,17 @@ struct UserProfileView: View {
                 Spacer()
             }
 
-            if socialViewModel.isLoadingReposts && socialViewModel.userReposts.isEmpty {
+            if socialViewModel.isLoadingReposts
+                && socialViewModel.getReposts(for: userProfile.user_id).isEmpty
+            {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
-            } else if socialViewModel.userReposts.isEmpty {
+            } else if socialViewModel.getReposts(for: userProfile.user_id).isEmpty {
                 emptyRepostsView()
             } else {
                 VStack(spacing: 16) {
-                    ForEach(socialViewModel.userReposts) { repostItem in
+                    ForEach(socialViewModel.getReposts(for: userProfile.user_id)) { repostItem in
                         RepostRowView(
                             repostItem: repostItem,
                             isCurrentUser: false,
@@ -710,10 +702,12 @@ struct UserProfileView: View {
                         )
                     }
 
-                    if !socialViewModel.repostsNextCursor.isEmpty {
+                    if !socialViewModel.getRepostsCursor(for: userProfile.user_id).isEmpty {
                         Button(action: {
                             Task {
-                                await socialViewModel.loadMoreUserReposts(userId: userProfile.user_id)
+                                await socialViewModel.loadMoreUserReposts(
+                                    userId: userProfile.user_id
+                                )
                             }
                         }) {
                             if socialViewModel.isLoadingReposts {
@@ -741,5 +735,36 @@ struct UserProfileView: View {
         } else if let artist = repostItem.artist_detail {
             selectedArtist = artist
         }
+    }
+
+    private func loadUserData(forceRefresh: Bool) async {
+        if forceRefresh {
+            socialViewModel.invalidateCache(for: userProfile.user_id)
+        }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await socialViewModel.fetchUserProfile(
+                    userId: userProfile.user_id,
+                    forceRefresh: false
+                )
+            }
+            group.addTask {
+                await socialViewModel.fetchUserReposts(
+                    userId: userProfile.user_id,
+                    forceRefresh: false
+                )
+            }
+            group.addTask {
+                await socialViewModel.fetchUserMilestones(
+                    userId: userProfile.user_id
+                )
+            }
+            group.addTask {
+                await socialViewModel.fetchUserFriends(
+                    userId: userProfile.user_id
+                )
+            }
+        }
+
     }
 }

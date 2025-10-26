@@ -633,6 +633,7 @@ class ProfileViewModel: ObservableObject {
         case let .success(fetchedFriends):
             friends = fetchedFriends
             friendCount = fetchedFriends.count
+            cacheManager.invalidateProfile()
 
         case let .failure(serviceError):
             let presentationError = AppError(from: serviceError)
@@ -642,6 +643,7 @@ class ProfileViewModel: ObservableObject {
     }
 
     // MARK: - Reposts
+    //TODO : sync reposts
 
     func fetchMyReposts(forceRefresh: Bool = false) async {
         if !forceRefresh && !myReposts.isEmpty {
