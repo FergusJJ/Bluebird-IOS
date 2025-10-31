@@ -163,7 +163,8 @@ class CacheManager: ObservableObject {
             let cached = CachedProfile(
                 username: profile.username,
                 bio: profile.bio,
-                avatarUrl: profile.avatarUrl
+                avatarUrl: profile.avatarUrl,
+                profileVisibility: profile.profileVisibility
             )
             account.profile = cached
             context.insert(cached)
@@ -171,6 +172,7 @@ class CacheManager: ObservableObject {
             account.profile?.username = profile.username
             account.profile?.bio = profile.bio
             account.profile?.avatarUrl = profile.avatarUrl
+            account.profile?.profileVisibility = profile.profileVisibility
             account.profile?.lastUpdated = Date()
         }
 
@@ -194,7 +196,8 @@ class CacheManager: ObservableObject {
             username: cached.username,
             bio: cached.bio,
             avatarUrl: cached.avatarUrl,
-            showTooltips: false
+            showTooltips: false,
+            profileVisibility: cached.profileVisibility ?? "public"
         )
 
         let stats = HeadlineViewStats(

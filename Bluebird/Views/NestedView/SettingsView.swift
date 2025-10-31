@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
     @State private var isConnectingSpotify = false
+    @State private var isUpdatingPrivacy = false
 
     var body: some View {
         ScrollView {
@@ -22,6 +23,36 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                 }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Privacy")
+                        .font(.headline)
+                        .foregroundColor(Color.themePrimary)
+
+                    Text("Control who can view your profile and listening activity")
+                        .font(.caption)
+                        .foregroundColor(Color.themeSecondary)
+
+                    Picker("Profile Visibility", selection: $profileViewModel.profileVisibility) {
+                        Text("Public").tag("public")
+                        Text("Private").tag("private")
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(isUpdatingPrivacy)
+                    .onChange(of: profileViewModel.profileVisibility) { oldValue, newValue in
+                        Task {
+                            isUpdatingPrivacy = true
+                            let success = await profileViewModel.updatePrivacySetting(to: newValue)
+                            if !success {
+                                print("Failed to update privacy setting")
+                            }
+                            isUpdatingPrivacy = false
+                        }
+                    }
+                }
+
+                Divider()
+
                 if appState.isSpotifyConnected != .istrue {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Spotify Connection")

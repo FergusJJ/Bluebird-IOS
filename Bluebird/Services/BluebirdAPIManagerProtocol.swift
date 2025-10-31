@@ -15,8 +15,12 @@ protocol BluebirdAccountAPIService {
     // MARK: - Profile only routes
 
     func getProfile() async -> Result<ProfileInfo, BluebirdAPIError>
-    func updateProfile(username: String?, bio: String?, avatarPath: String?)
-        async -> Result<Void, BluebirdAPIError>
+    func updateProfile(
+        username: String?,
+        bio: String?,
+        avatarPath: String?,
+        profileVisibility: String?
+    ) async -> Result<Void, BluebirdAPIError>
     func getHeadlineStats(for days: Int) async -> Result<
         HeadlineViewStats, BluebirdAPIError
     >

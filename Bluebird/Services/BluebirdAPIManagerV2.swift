@@ -190,10 +190,14 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         return result.map { _ in () }
     }
 
-    func updateProfile(username: String?, bio: String?, avatarPath: String?)
-        async -> Result<Void, BluebirdAPIError>
+    func updateProfile(
+        username: String?,
+        bio: String?,
+        avatarPath: String?,
+        profileVisibility: String?
+    ) async -> Result<Void, BluebirdAPIError>
     {
-        guard username != nil || bio != nil || avatarPath != nil else {
+        guard username != nil || bio != nil || avatarPath != nil || profileVisibility != nil else {
             fatalError("Error: at least one field must be non-nil")
         }
 
@@ -204,7 +208,8 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
                 body: UpdateProfileRequest(
                     username: username,
                     bio: bio,
-                    avatarUrl: avatarPath
+                    avatarUrl: avatarPath,
+                    profileVisibility: profileVisibility
                 )
             )
         return result.map { _ in () }

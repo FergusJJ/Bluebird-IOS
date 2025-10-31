@@ -9,6 +9,7 @@ struct UpdateProfileRequest: Encodable {
     let username: String?
     let bio: String?
     let avatarUrl: String?
+    let profileVisibility: String?
 }
 
 struct ProfileInfo: Decodable {
@@ -17,10 +18,12 @@ struct ProfileInfo: Decodable {
     let bio: String
     let avatarUrl: String
     let showTooltips: Bool
+    let profileVisibility: String
 
     enum CodingKeys: String, CodingKey {
         case message, username, bio, avatarUrl
         case showTooltips = "show_tooltips"
+        case profileVisibility = "profile_visibility"
     }
 }
 

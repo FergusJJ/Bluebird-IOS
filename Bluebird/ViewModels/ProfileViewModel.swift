@@ -15,6 +15,7 @@ class ProfileViewModel: ObservableObject {
     @Published var avatarPath = ""
     @Published var avatarURL: URL?
     @Published var selectedImage: UIImage?
+    @Published var profileVisibility: String = "public"
 
     // MARK: - User stats vars
 
@@ -134,6 +135,7 @@ class ProfileViewModel: ObservableObject {
             username = profileInfo.username
             bio = profileInfo.bio
             avatarURL = URL(string: profileInfo.avatarUrl)
+            profileVisibility = profileInfo.profileVisibility
             // Save to cache
             cacheManager.saveProfile(profileInfo, stats: cachedStats)
         case .failure(let serviceError):
@@ -172,7 +174,8 @@ class ProfileViewModel: ObservableObject {
                         username: username,
                         bio: bio,
                         avatarUrl: avatarURL?.absoluteString ?? "",
-                        showTooltips: false
+                        showTooltips: false,
+                        profileVisibility: profileVisibility
                     ),
                 stats: stats
             )
@@ -193,10 +196,37 @@ class ProfileViewModel: ObservableObject {
         let success = await updateProfile(
             username: nil,
             bio: bio,
-            avatarPath: nil
+            avatarPath: nil,
+            profileVisibility: nil
         )
         if !success {
             self.bio = oldBio
+        }
+        return success
+    }
+
+    func updatePrivacySetting(to visibility: String) async -> Bool {
+        if isLoading {
+            return false
+        }
+
+        guard visibility == "public" || visibility == "private" else {
+            print("Invalid visibility value: \(visibility)")
+            return false
+        }
+
+        let oldVisibility = self.profileVisibility
+        self.profileVisibility = visibility
+
+        let success = await updateProfile(
+            username: nil,
+            bio: nil,
+            avatarPath: nil,
+            profileVisibility: visibility
+        )
+
+        if !success {
+            self.profileVisibility = oldVisibility
         }
         return success
     }
@@ -240,7 +270,8 @@ class ProfileViewModel: ObservableObject {
         let updateSuccess = await updateProfile(
             username: nil,
             bio: nil,
-            avatarPath: fileName
+            avatarPath: fileName,
+            profileVisibility: nil
         )
         if updateSuccess {
             avatarURL = supabaseManager.getAvatarUrl(for: fileName)
@@ -375,16 +406,18 @@ class ProfileViewModel: ObservableObject {
     private func updateProfile(
         username: String?,
         bio: String?,
-        avatarPath: String?
+        avatarPath: String?,
+        profileVisibility: String?
     ) async -> Bool {
-        guard username != nil || bio != nil || avatarPath != nil else {
+        guard username != nil || bio != nil || avatarPath != nil || profileVisibility != nil else {
             print("Error: At least one profile attribute must be provided.")
             return false
         }
         let result = await bluebirdAccountAPIService.updateProfile(
             username: username,
             bio: bio,
-            avatarPath: avatarPath
+            avatarPath: avatarPath,
+            profileVisibility: profileVisibility
         )
         switch result {
         case .success():
