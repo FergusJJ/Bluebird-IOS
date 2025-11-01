@@ -130,12 +130,24 @@ struct SocialView: View {
                     }
             }
             ToolbarItem(placement: .topBarLeading) {
-                Image(systemName: "person.2.fill")
-                    .foregroundStyle(Color.themePrimary)
-                    .onTapGesture {
-                        //open friend requests tab
-                        showFriendRequests = true
-                    }
+                if profileViewModel.incomingRequests.isEmpty {
+                    Image(systemName: "person.2.fill")
+                        .foregroundStyle(Color.themePrimary)
+                        .onTapGesture {
+                            showFriendRequests = true
+                        }
+                } else {
+                    Image(systemName: "person.2.fill")
+                        .foregroundStyle(Color.themePrimary)
+                        .overlay(alignment: .bottomTrailing) {
+                            Circle()
+                                .fill(Color.themeAccent)
+                                .frame(width: 12, height: 12)
+                        }
+                        .onTapGesture {
+                            showFriendRequests = true
+                        }
+                }
             }
         }
         .navigationDestination(isPresented: $showFriendRequests) {
