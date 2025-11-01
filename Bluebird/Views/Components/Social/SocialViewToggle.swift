@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum SocialViewType {
+enum SocialViewType: Hashable {
     case feed
     case trending
 }

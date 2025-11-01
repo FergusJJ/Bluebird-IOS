@@ -29,9 +29,13 @@ struct SocialView: View {
             }
 
             if !isSearching {
-                SocialViewToggle(selectedView: $selectedView)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
+                Picker("Selected View", selection: $selectedView) {
+                    Text("Feed").tag(SocialViewType.feed)
+                    Text("Trending").tag(SocialViewType.trending)
+                }
+                .pickerStyle(.segmented)
+                .padding(16)
+               
             }
 
             ZStack {
