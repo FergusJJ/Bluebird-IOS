@@ -15,7 +15,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         }
         guard
             let dict = NSDictionary(contentsOfFile: path)
-            as? [String: AnyObject]
+                as? [String: AnyObject]
         else {
             throw BluebirdInitializationError.invalidCredentialsFormat
         }
@@ -30,7 +30,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         }
         let cleanedApiURLString =
             apiURLString.hasSuffix("/")
-                ? String(apiURLString.dropLast()) : apiURLString
+            ? String(apiURLString.dropLast()) : apiURLString
 
         guard let validURL = URL(string: cleanedApiURLString) else {
             throw BluebirdInitializationError.invalidAPIURL(cleanedApiURLString)
@@ -69,7 +69,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         // Add authorization
         guard
             let session = try? await SupabaseClientManager.shared.client.auth
-            .session
+                .session
         else {
             return .failure(.notAuthenticated)
         }
@@ -137,7 +137,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
                     .apiError(
                         statusCode: statusCode,
                         message:
-                        "\(errorResponse.errorCode): \(errorResponse.error)"
+                            "\(errorResponse.errorCode): \(errorResponse.error)"
                     )
                 )
             } catch {
@@ -156,17 +156,17 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
     ) async -> Result<T, BluebirdAPIError> {
         let result = await requestBuilder(initialToken)
 
-        if case let .failure(error) = result,
-           case let .apiError(statusCode, message) = error,
-           statusCode == 400,
-           message?.contains("SPOTIFY_AUTH_ERROR") == true
+        if case .failure(let error) = result,
+            case .apiError(let statusCode, let message) = error,
+            statusCode == 400,
+            message?.contains("SPOTIFY_AUTH_ERROR") == true
         {
             let refreshResult = await refreshSpotifyAccessToken()
 
             switch refreshResult {
-            case let .success(newToken):
+            case .success(let newToken):
                 return await requestBuilder(newToken)
-            case let .failure(refreshError):
+            case .failure(let refreshError):
                 return .failure(refreshError)
             }
         }
@@ -195,9 +195,11 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         bio: String?,
         avatarPath: String?,
         profileVisibility: String?
-    ) async -> Result<Void, BluebirdAPIError>
-    {
-        guard username != nil || bio != nil || avatarPath != nil || profileVisibility != nil else {
+    ) async -> Result<Void, BluebirdAPIError> {
+        guard
+            username != nil || bio != nil || avatarPath != nil
+                || profileVisibility != nil
+        else {
             fatalError("Error: at least one field must be non-nil")
         }
 
@@ -228,7 +230,9 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
-    func getOnboardingStatus() async -> Result<OnboardingStatusResponse, BluebirdAPIError> {
+    func getOnboardingStatus() async -> Result<
+        OnboardingStatusResponse, BluebirdAPIError
+    > {
         return await makeRequest(path: "/api/me/onboarding")
     }
 
@@ -281,7 +285,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         return await makeRequest(
             path: "/api/spotify/currently-playing",
             queryItems: [
-                URLQueryItem(name: "accessToken", value: spotifyAccessToken),
+                URLQueryItem(name: "accessToken", value: spotifyAccessToken)
             ]
         )
     }
@@ -302,7 +306,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         return await makeRequest(
             path: "/api/spotify/refresh-song-history",
             queryItems: [
-                URLQueryItem(name: "accessToken", value: spotifyAccessToken),
+                URLQueryItem(name: "accessToken", value: spotifyAccessToken)
             ]
         )
     }
@@ -388,6 +392,11 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         WeeklyPlatformComparison, BluebirdAPIError
     > {
         return await makeRequest(path: "/api/me/weekly-platform-comparison")
+    }
+
+    func getHourlyPlaysMinutes() async -> Result<[HourlyPlay], BluebirdAPIError>
+    {
+        return await makeRequest(path: "/api/me/hourly-plays-minutes")
     }
 
     func getHourlyPlays(for days: Int) async -> Result<
@@ -603,17 +612,18 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
             queryItems: [URLQueryItem(name: "user_id", value: userID)]
         )
     }
-    
+
     func getPendingRequests(for userID: String) async -> Result<
-        [UserProfile], BluebirdAPIError> {
-            return await makeRequest(
-                path: "/api/social/friends",
-                queryItems: [
-                    URLQueryItem(name: "user_id", value: userID),
-                    URLQueryItem(name: "incoming", value: "yes")
-                ]
-            )
-        }
+        [UserProfile], BluebirdAPIError
+    > {
+        return await makeRequest(
+            path: "/api/social/friends",
+            queryItems: [
+                URLQueryItem(name: "user_id", value: userID),
+                URLQueryItem(name: "incoming", value: "yes"),
+            ]
+        )
+    }
 
     func searchUsers(query: String) async -> Result<
         SearchUserResult, BluebirdAPIError
@@ -657,7 +667,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
     }
 
     /*
-
+    
      */
 
     func createRepost(
@@ -683,18 +693,19 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
     }
 
     func deleteRepost(postID: String) async -> Result<Void, BluebirdAPIError> {
-        let result: Result<SuccessResponse, BluebirdAPIError> = await makeRequest(
-            path: "/api/social/posts",
-            method: "POST",
-            body: PostActionBody(
-                action: "delete",
-                post_id: postID,
-                post_type: nil,
-                entity_type: nil,
-                entity_id: nil,
-                caption: ""
+        let result: Result<SuccessResponse, BluebirdAPIError> =
+            await makeRequest(
+                path: "/api/social/posts",
+                method: "POST",
+                body: PostActionBody(
+                    action: "delete",
+                    post_id: postID,
+                    post_type: nil,
+                    entity_type: nil,
+                    entity_id: nil,
+                    caption: ""
+                )
             )
-        )
         return result.map { _ in () }
     }
 
@@ -729,7 +740,7 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         isoDecoder.dateDecodingStrategy = .iso8601
 
         var queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "user_id", value: userID),
+            URLQueryItem(name: "user_id", value: userID)
         ]
         if let cursor = cursor, !cursor.isEmpty {
             queryItems.append(URLQueryItem(name: "cursor", value: cursor))
@@ -757,7 +768,9 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
             queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
         }
         if let offset = offset {
-            queryItems.append(URLQueryItem(name: "offset", value: String(offset)))
+            queryItems.append(
+                URLQueryItem(name: "offset", value: String(offset))
+            )
         }
 
         return await makeRequest(
@@ -780,10 +793,14 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
             queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
         }
         if let offset = offset {
-            queryItems.append(URLQueryItem(name: "offset", value: String(offset)))
+            queryItems.append(
+                URLQueryItem(name: "offset", value: String(offset))
+            )
         }
         if includeHighlights {
-            queryItems.append(URLQueryItem(name: "include_highlights", value: "true"))
+            queryItems.append(
+                URLQueryItem(name: "include_highlights", value: "true")
+            )
         }
 
         return await makeRequest(
@@ -808,13 +825,16 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
         )
     }
 
-    func getTrendingTracks() async -> Result<[TrendingTrack], BluebirdAPIError> {
+    func getTrendingTracks() async -> Result<[TrendingTrack], BluebirdAPIError>
+    {
         return await makeRequest(
             path: "/api/social/trending"
         )
     }
 
-    func getMilestones(userID: String) async -> Result<[UserMilestone], BluebirdAPIError> {
+    func getMilestones(userID: String) async -> Result<
+        [UserMilestone], BluebirdAPIError
+    > {
         let isoDecoder = JSONDecoder()
         isoDecoder.dateDecodingStrategy = .iso8601
 

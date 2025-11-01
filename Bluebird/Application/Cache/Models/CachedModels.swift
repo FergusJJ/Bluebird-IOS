@@ -12,11 +12,13 @@ final class CachedUserAccount {
 
     // Relationships
     @Relationship(deleteRule: .cascade) var profile: CachedProfile?
-    @Relationship(deleteRule: .cascade) var songHistory: [CachedSongHistory] = []
+    @Relationship(deleteRule: .cascade) var songHistory: [CachedSongHistory] =
+        []
     @Relationship(deleteRule: .cascade) var stats: CachedStats?
     @Relationship(deleteRule: .cascade) var pins: CachedPins?
     @Relationship(deleteRule: .cascade) var milestones: CachedMilestone?
-    @Relationship(deleteRule: .cascade) var socialCache: [CachedUserProfile] = []
+    @Relationship(deleteRule: .cascade) var socialCache: [CachedUserProfile] =
+        []
 
     init(userId: String, username: String, email: String) {
         self.userId = userId
@@ -39,9 +41,15 @@ final class CachedProfile {
     var totalUniqueArtists: Int
     var lastUpdated: Date
 
-    @Relationship(inverse: \CachedUserAccount.profile) var account: CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.profile) var account:
+        CachedUserAccount?
 
-    init(username: String, bio: String, avatarUrl: String, profileVisibility: String) {
+    init(
+        username: String,
+        bio: String,
+        avatarUrl: String,
+        profileVisibility: String
+    ) {
         self.username = username
         self.bio = bio
         self.avatarUrl = avatarUrl
@@ -57,19 +65,20 @@ final class CachedProfile {
 
 @Model
 final class CachedSongHistory {
-    @Attribute(.unique) var compositeId: String // userId_timestamp
+    @Attribute(.unique) var compositeId: String  // userId_timestamp
     var timestamp: Int
     var trackId: String
     var albumId: String
     var name: String
-    var artistsData: Data // Encoded [SongDetailArtist]
+    var artistsData: Data  // Encoded [SongDetailArtist]
     var durationMs: Int
     var spotifyUrl: String
     var albumName: String
     var albumImageUrl: String
-    var lastUpdated: Date? // Optional to allow migration of existing data
+    var lastUpdated: Date?  // Optional to allow migration of existing data
 
-    @Relationship(inverse: \CachedUserAccount.songHistory) var account: CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.songHistory) var account:
+        CachedUserAccount?
 
     init(userId: String, song: SongDetail) {
         compositeId = "\(userId)_\(song.listened_at ?? 0)"
@@ -86,7 +95,11 @@ final class CachedSongHistory {
     }
 
     func toSongDetail() -> SongDetail {
-        let artists = (try? JSONDecoder().decode([SongDetailArtist].self, from: artistsData)) ?? []
+        let artists =
+            (try? JSONDecoder().decode(
+                [SongDetailArtist].self,
+                from: artistsData
+            )) ?? []
         return SongDetail(
             track_id: trackId,
             album_id: albumId,
@@ -105,40 +118,67 @@ final class CachedSongHistory {
 
 @Model
 final class CachedStats {
+
+    var hourlyPlaysMinutesData: Data?
+    var hourlyPlaysMinutesHour: Int?
+
     // Time-based stats with expiry
-    var hourlyPlaysData: Data? // Encoded [HourlyPlay]
+    var hourlyPlaysData: Data?  // Encoded [HourlyPlay]
     var hourlyPlaysExpiry: Date?
     var hourlyPlaysDays: Int?
 
-    var dailyPlaysData: Data? // Encoded [DailyPlay]
+    var dailyPlaysData: Data?  // Encoded [DailyPlay]
     var dailyPlaysExpiry: Date?
 
-    var topArtistsData: Data? // Encoded TopArtists
+    var topArtistsData: Data?  // Encoded TopArtists
     var topArtistsExpiry: Date?
     var topArtistsDays: Int?
 
-    var topTracksData: Data? // Encoded TopTracks
+    var topTracksData: Data?  // Encoded TopTracks
     var topTracksExpiry: Date?
     var topTracksDays: Int?
 
-    var topGenresData: Data? // Encoded GenreCounts
+    var topGenresData: Data?  // Encoded GenreCounts
     var topGenresExpiry: Date?
     var topGenresDays: Int?
 
-    var discoveriesData: Data? // Encoded Discoveries
+    var discoveriesData: Data?  // Encoded Discoveries
     var discoveriesExpiry: Date?
 
-    var weeklyComparisonData: Data? // Encoded WeeklyPlatformComparison
+    var weeklyComparisonData: Data?  // Encoded WeeklyPlatformComparison
     var weeklyComparisonExpiry: Date?
 
-    @Relationship(inverse: \CachedUserAccount.stats) var account: CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.stats) var account:
+        CachedUserAccount?
 
     init() {
         // Initialize with nil values
     }
 
+    func setHourlyPlaysMinutes(_ plays: [HourlyPlay]) {
+        hourlyPlaysData = try? JSONEncoder().encode(plays)
+        hourlyPlaysMinutesHour = Calendar.current.component(.hour, from: Date())
+    }
+    
+    func getHourlyPlaysMinutes() -> [HourlyPlay]? {
+        let currentHour = Calendar.current.component(.hour, from: Date())
+        guard let data = hourlyPlaysMinutesData,
+            let cachedHour = hourlyPlaysMinutesHour,
+            cachedHour == currentHour
+        else {
+            hourlyPlaysMinutesData = nil
+            hourlyPlaysMinutesHour = nil
+            return nil
+        }
+        return try? JSONDecoder().decode([HourlyPlay].self, from: data)
+    }
+
     // Helper methods for encoding/decoding
-    func setHourlyPlays(_ plays: [HourlyPlay], days: Int, ttl: TimeInterval = 3600) {
+    func setHourlyPlays(
+        _ plays: [HourlyPlay],
+        days: Int,
+        ttl: TimeInterval = 3600
+    ) {
         hourlyPlaysData = try? JSONEncoder().encode(plays)
         hourlyPlaysDays = days
         hourlyPlaysExpiry = Date().addingTimeInterval(ttl)
@@ -146,14 +186,19 @@ final class CachedStats {
 
     func getHourlyPlays(for days: Int) -> [HourlyPlay]? {
         guard let data = hourlyPlaysData,
-              let expiry = hourlyPlaysExpiry,
-              let cachedDays = hourlyPlaysDays,
-              cachedDays == days,
-              Date() < expiry else { return nil }
+            let expiry = hourlyPlaysExpiry,
+            let cachedDays = hourlyPlaysDays,
+            cachedDays == days,
+            Date() < expiry
+        else { return nil }
         return try? JSONDecoder().decode([HourlyPlay].self, from: data)
     }
 
-    func setTopArtists(_ artists: TopArtists, days: Int, ttl: TimeInterval = 3600) {
+    func setTopArtists(
+        _ artists: TopArtists,
+        days: Int,
+        ttl: TimeInterval = 3600
+    ) {
         topArtistsData = try? JSONEncoder().encode(artists)
         topArtistsDays = days
         topArtistsExpiry = Date().addingTimeInterval(ttl)
@@ -161,14 +206,16 @@ final class CachedStats {
 
     func getTopArtists(for days: Int) -> TopArtists? {
         guard let data = topArtistsData,
-              let expiry = topArtistsExpiry,
-              let cachedDays = topArtistsDays,
-              cachedDays == days,
-              Date() < expiry else { return nil }
+            let expiry = topArtistsExpiry,
+            let cachedDays = topArtistsDays,
+            cachedDays == days,
+            Date() < expiry
+        else { return nil }
         return try? JSONDecoder().decode(TopArtists.self, from: data)
     }
 
-    func setTopTracks(_ tracks: TopTracks, days: Int, ttl: TimeInterval = 3600) {
+    func setTopTracks(_ tracks: TopTracks, days: Int, ttl: TimeInterval = 3600)
+    {
         topTracksData = try? JSONEncoder().encode(tracks)
         topTracksDays = days
         topTracksExpiry = Date().addingTimeInterval(ttl)
@@ -176,14 +223,19 @@ final class CachedStats {
 
     func getTopTracks(for days: Int) -> TopTracks? {
         guard let data = topTracksData,
-              let expiry = topTracksExpiry,
-              let cachedDays = topTracksDays,
-              cachedDays == days,
-              Date() < expiry else { return nil }
+            let expiry = topTracksExpiry,
+            let cachedDays = topTracksDays,
+            cachedDays == days,
+            Date() < expiry
+        else { return nil }
         return try? JSONDecoder().decode(TopTracks.self, from: data)
     }
 
-    func setTopGenres(_ genres: GenreCounts, days: Int, ttl: TimeInterval = 3600) {
+    func setTopGenres(
+        _ genres: GenreCounts,
+        days: Int,
+        ttl: TimeInterval = 3600
+    ) {
         topGenresData = try? JSONEncoder().encode(genres)
         topGenresDays = days
         topGenresExpiry = Date().addingTimeInterval(ttl)
@@ -191,10 +243,11 @@ final class CachedStats {
 
     func getTopGenres(for days: Int) -> GenreCounts? {
         guard let data = topGenresData,
-              let expiry = topGenresExpiry,
-              let cachedDays = topGenresDays,
-              cachedDays == days,
-              Date() < expiry else { return nil }
+            let expiry = topGenresExpiry,
+            let cachedDays = topGenresDays,
+            cachedDays == days,
+            Date() < expiry
+        else { return nil }
         return try? JSONDecoder().decode(GenreCounts.self, from: data)
     }
 
@@ -205,8 +258,9 @@ final class CachedStats {
 
     func getDiscoveries() -> Discoveries? {
         guard let data = discoveriesData,
-              let expiry = discoveriesExpiry,
-              Date() < expiry else { return nil }
+            let expiry = discoveriesExpiry,
+            Date() < expiry
+        else { return nil }
         return try? JSONDecoder().decode(Discoveries.self, from: data)
     }
 
@@ -217,21 +271,29 @@ final class CachedStats {
 
     func getDailyPlays() -> [DailyPlay]? {
         guard let data = dailyPlaysData,
-              let expiry = dailyPlaysExpiry,
-              Date() < expiry else { return nil }
+            let expiry = dailyPlaysExpiry,
+            Date() < expiry
+        else { return nil }
         return try? JSONDecoder().decode([DailyPlay].self, from: data)
     }
 
-    func setWeeklyComparison(_ comparison: WeeklyPlatformComparison, ttl: TimeInterval = 3600) {
+    func setWeeklyComparison(
+        _ comparison: WeeklyPlatformComparison,
+        ttl: TimeInterval = 3600
+    ) {
         weeklyComparisonData = try? JSONEncoder().encode(comparison)
         weeklyComparisonExpiry = Date().addingTimeInterval(ttl)
     }
 
     func getWeeklyComparison() -> WeeklyPlatformComparison? {
         guard let data = weeklyComparisonData,
-              let expiry = weeklyComparisonExpiry,
-              Date() < expiry else { return nil }
-        return try? JSONDecoder().decode(WeeklyPlatformComparison.self, from: data)
+            let expiry = weeklyComparisonExpiry,
+            Date() < expiry
+        else { return nil }
+        return try? JSONDecoder().decode(
+            WeeklyPlatformComparison.self,
+            from: data
+        )
     }
 }
 
@@ -239,17 +301,18 @@ final class CachedStats {
 
 @Model
 final class CachedPins {
-    var trackPins: Data // Encoded [Pin]
-    var albumPins: Data // Encoded [Pin]
-    var artistPins: Data // Encoded [Pin]
+    var trackPins: Data  // Encoded [Pin]
+    var albumPins: Data  // Encoded [Pin]
+    var artistPins: Data  // Encoded [Pin]
 
-    var trackDetails: Data // Encoded [String: SongDetail]
-    var albumDetails: Data // Encoded [String: AlbumDetail]
-    var artistDetails: Data // Encoded [String: ArtistDetail]
+    var trackDetails: Data  // Encoded [String: SongDetail]
+    var albumDetails: Data  // Encoded [String: AlbumDetail]
+    var artistDetails: Data  // Encoded [String: ArtistDetail]
 
     var lastUpdated: Date
 
-    @Relationship(inverse: \CachedUserAccount.pins) var account: CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.pins) var account:
+        CachedUserAccount?
 
     init() {
         trackPins = Data()
@@ -261,7 +324,12 @@ final class CachedPins {
         lastUpdated = Date()
     }
 
-    func setPins(_ pins: [Pin], tracks: [String: SongDetail], albums: [String: AlbumDetail], artists: [String: ArtistDetail]) {
+    func setPins(
+        _ pins: [Pin],
+        tracks: [String: SongDetail],
+        albums: [String: AlbumDetail],
+        artists: [String: ArtistDetail]
+    ) {
         let trackPinsArray = pins.filter { $0.entity_type == .track }
         let albumPinsArray = pins.filter { $0.entity_type == .album }
         let artistPinsArray = pins.filter { $0.entity_type == .artist }
@@ -277,14 +345,32 @@ final class CachedPins {
         lastUpdated = Date()
     }
 
-    func getPins() -> (pins: [Pin], tracks: [String: SongDetail], albums: [String: AlbumDetail], artists: [String: ArtistDetail]) {
-        let tracks = (try? JSONDecoder().decode([String: SongDetail].self, from: trackDetails)) ?? [:]
-        let albums = (try? JSONDecoder().decode([String: AlbumDetail].self, from: albumDetails)) ?? [:]
-        let artists = (try? JSONDecoder().decode([String: ArtistDetail].self, from: artistDetails)) ?? [:]
+    func getPins() -> (
+        pins: [Pin], tracks: [String: SongDetail],
+        albums: [String: AlbumDetail], artists: [String: ArtistDetail]
+    ) {
+        let tracks =
+            (try? JSONDecoder().decode(
+                [String: SongDetail].self,
+                from: trackDetails
+            )) ?? [:]
+        let albums =
+            (try? JSONDecoder().decode(
+                [String: AlbumDetail].self,
+                from: albumDetails
+            )) ?? [:]
+        let artists =
+            (try? JSONDecoder().decode(
+                [String: ArtistDetail].self,
+                from: artistDetails
+            )) ?? [:]
 
-        let trackPinsArray = (try? JSONDecoder().decode([Pin].self, from: trackPins)) ?? []
-        let albumPinsArray = (try? JSONDecoder().decode([Pin].self, from: albumPins)) ?? []
-        let artistPinsArray = (try? JSONDecoder().decode([Pin].self, from: artistPins)) ?? []
+        let trackPinsArray =
+            (try? JSONDecoder().decode([Pin].self, from: trackPins)) ?? []
+        let albumPinsArray =
+            (try? JSONDecoder().decode([Pin].self, from: albumPins)) ?? []
+        let artistPinsArray =
+            (try? JSONDecoder().decode([Pin].self, from: artistPins)) ?? []
 
         let allPins = trackPinsArray + albumPinsArray + artistPinsArray
 
@@ -296,18 +382,20 @@ final class CachedPins {
 
 @Model
 final class CachedUserProfile {
-    @Attribute(.unique) var profileId: String // userId_viewerId composite key
+    @Attribute(.unique) var profileId: String  // userId_viewerId composite key
     var userId: String
     var username: String
     var avatarUrl: String
     var bio: String
-    var profileData: Data // Encoded UserProfileDetail
+    var profileData: Data  // Encoded UserProfileDetail
     var cachedAt: Date
     var expiresAt: Date
 
-    @Relationship(inverse: \CachedUserAccount.socialCache) var account: CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.socialCache) var account:
+        CachedUserAccount?
 
-    init(viewerId: String, profile: UserProfileDetail, ttl: TimeInterval = 300) {
+    init(viewerId: String, profile: UserProfileDetail, ttl: TimeInterval = 300)
+    {
         profileId = "\(viewerId)_\(profile.user_id)"
         userId = profile.user_id
         username = profile.username
@@ -320,7 +408,10 @@ final class CachedUserProfile {
 
     func toUserProfileDetail() -> UserProfileDetail? {
         guard Date() < expiresAt else { return nil }
-        return try? JSONDecoder().decode(UserProfileDetail.self, from: profileData)
+        return try? JSONDecoder().decode(
+            UserProfileDetail.self,
+            from: profileData
+        )
     }
 }
 
@@ -328,21 +419,23 @@ final class CachedUserProfile {
 final class CachedMilestone {
     var milestones: Data
     var lastUpdated: Date
-    
-    @Relationship(inverse: \CachedUserAccount.milestones) var account: CachedUserAccount?
-    
+
+    @Relationship(inverse: \CachedUserAccount.milestones) var account:
+        CachedUserAccount?
+
     init() {
         milestones = Data()
         lastUpdated = Date()
     }
-    
+
     func setMilestones(_ userMilestones: [UserMilestone]) {
         milestones = (try? JSONEncoder().encode(userMilestones)) ?? Data()
         lastUpdated = Date()
     }
     func getMilestones() -> [UserMilestone] {
-        let milestoneCache = (try? JSONDecoder().decode([UserMilestone].self, from: milestones)) ?? []
-        return milestoneCache 
+        let milestoneCache =
+            (try? JSONDecoder().decode([UserMilestone].self, from: milestones))
+            ?? []
+        return milestoneCache
     }
 }
-

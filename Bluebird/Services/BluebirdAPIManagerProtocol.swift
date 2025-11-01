@@ -49,6 +49,9 @@ protocol BluebirdAccountAPIService {
         albumIDs: [String],
         artistIDs: [String]
     ) async -> Result<GetEntityDetailsResponse, BluebirdAPIError>
+    func getHourlyPlaysMinutes() async -> Result<
+            [HourlyPlay], BluebirdAPIError
+    >
     func getHourlyPlays(for days: Int) async -> Result<
         [HourlyPlay], BluebirdAPIError
     >

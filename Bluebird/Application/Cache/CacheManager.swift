@@ -263,6 +263,23 @@ class CacheManager: ObservableObject {
     }
 
     // MARK: - Stats Cache
+    
+    func getHourlyPlaysMinutes() -> [HourlyPlay]? {
+        return getCurrentAccount()?.stats?.getHourlyPlaysMinutes()
+    }
+    
+    func saveHourlyPlaysMinutes(_ plays: [HourlyPlay]) {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+        if account.stats == nil {
+            let stats = CachedStats()
+            account.stats = stats
+            context.insert(stats)
+        }
+        account.stats?.setHourlyPlaysMinutes(plays) // no TTL, cache invalidates itself via a var
+        try? context.save()
+    }
 
     func saveHourlyPlays(_ plays: [HourlyPlay], days: Int) {
         guard let account = getCurrentAccount(), let context = context else {
@@ -278,6 +295,8 @@ class CacheManager: ObservableObject {
         account.stats?.setHourlyPlays(plays, days: days, ttl: 3600) // 1 hour TTL
         try? context.save()
     }
+    
+    
 
     func getHourlyPlays(for days: Int) -> [HourlyPlay]? {
         return getCurrentAccount()?.stats?.getHourlyPlays(for: days)

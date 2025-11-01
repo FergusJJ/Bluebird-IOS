@@ -4,6 +4,7 @@ import SwiftUI
 class StatsViewModel: ObservableObject {
     private var appState: AppState
 
+    @Published var hourlyPlaysMinutes: [Int] = Array(repeating: 0, count: 24)
     @Published var hourlyPlays: [Int] = Array(repeating: 0, count: 24)
     @Published var dailyPlays: [DailyPlay] = []
     @Published var topTracks: TopTracks = .init(tracks: [:])
@@ -20,6 +21,8 @@ class StatsViewModel: ObservableObject {
     @Published var thisWeekTotalPlays: Int = 0
 
     // In-memory session caches (keyed by days where applicable)
+    private var hourlyPlaysMinutesCache: [Int]?
+    private var hourlyPlaysMinutesCacheHour: Int?
     private var hourlyPlaysCache: [Int: [Int]] = [:]
     private var topTracksCache: [Int: TopTracks] = [:]
     private var topArtistsCache: [Int: TopArtists] = [:]
@@ -55,16 +58,46 @@ class StatsViewModel: ObservableObject {
         }
         return percentageChange
     }
+    
+    func fetchHourlyPlaysMinutes() async {
+        let currentHour = Calendar.current.component(.hour, from: Date())
+        if let cached = hourlyPlaysMinutesCache,
+           let cachedLastFetched = hourlyPlaysMinutesCacheHour,
+           cachedLastFetched == currentHour {
+                hourlyPlaysMinutes = cached
+            return
+        }
+        if let cached = cacheManager.getHourlyPlaysMinutes() {
+            let newHourlyPlaysMinutes = cached.map{$0.plays}
+            hourlyPlaysMinutesCache = newHourlyPlaysMinutes
+            hourlyPlaysMinutesCacheHour = currentHour
+            hourlyPlaysMinutes = newHourlyPlaysMinutes
+            return
+        }
+        let result = await bluebirdAccountAPIService.getHourlyPlaysMinutes()
+        switch result {
+        case let .success(result):
+            let newHourlyPlaysMinutes = result.map{$0.plays}
+            hourlyPlaysMinutes = newHourlyPlaysMinutes
+            hourlyPlaysMinutesCache = newHourlyPlaysMinutes
+            hourlyPlaysMinutesCacheHour = currentHour
+            cacheManager.saveHourlyPlaysMinutes(result)
+            print(hourlyPlaysMinutes)
+        case let .failure(serviceError):
+            let presentationError = AppError(from: serviceError)
+            print("❌ [ERROR] Fetching hourly plays minutes: \(presentationError)")
+            hourlyPlays = Array(repeating: 0, count: 24)
+            appState.setError(presentationError)
+        }
+    }
 
     func fetchHourlyPlays(for days: Int) async {
-        // 1. Check in-memory cache first (session cache)
         if let cached = hourlyPlaysCache[days] {
             print("📦 [CACHE HIT - Memory] Hourly plays for \(days) days")
             hourlyPlays = cached
             return
         }
 
-        // 2. Check SwiftData cache (persistent cache)
         if let cached = cacheManager.getHourlyPlays(for: days) {
             print("💾 [CACHE HIT - SwiftData] Hourly plays for \(days) days")
             let playsArray = cached.reduce(into: Array(repeating: 0, count: 24)) {

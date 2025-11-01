@@ -22,15 +22,6 @@ struct StatsView: View {
                             DaysToggleButton(forDays: $statsNumDays)
                         }
                         .padding(.top, 0)
-                        Text("Weekly Plays")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(Color.themePrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        DailyPlaysBarGraph(
-                            dailyPlays: statsViewModel.dailyPlays
-                        )
-                        .frame(height: 250)
 
                         Text("Listening Clock")
                             .font(.headline)
@@ -41,6 +32,36 @@ struct StatsView: View {
                             hourlyPlays: statsViewModel.hourlyPlays
                         )
                         .aspectRatio(1, contentMode: .fit)
+
+                        if !statsViewModel.topArtists.artists.isEmpty {
+                            topArtists()
+                        }
+                        if !statsViewModel.topTracks.tracks.isEmpty {
+                            topTracks()
+                        }
+
+                        Divider()
+
+                        Text("Weekly Plays")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.themePrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        DailyPlaysBarGraph(
+                            dailyPlays: statsViewModel.dailyPlays
+                        )
+                        .frame(height: 250)
+
+                        Text("Last 24 Hours")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.themePrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HourlyPlaysMinutesBarGraph(
+                            hourlyPlaysMinutes: statsViewModel
+                                .hourlyPlaysMinutes
+                        )
+                        .frame(height: 250)
 
                         // MARK: - weekly comparison
 
@@ -66,14 +87,6 @@ struct StatsView: View {
                         }
 
                         // MARK: - top tracks/artists
-
-                        Divider()
-                        if !statsViewModel.topArtists.artists.isEmpty {
-                            topArtists()
-                        }
-                        if !statsViewModel.topTracks.tracks.isEmpty {
-                            topTracks()
-                        }
 
                         Divider()
                             .padding(.vertical, 8)
@@ -142,7 +155,7 @@ struct StatsView: View {
                     await loadAllStats()
                 }
                 .onChange(of: statsNumDays) { _, _ in
-                    Task {await refreshStatsForDays()}
+                    Task { await refreshStatsForDays() }
                 }
                 .onAppear {
                     Task {
@@ -589,12 +602,15 @@ struct StatsView: View {
     }
 
     private func loadAllStats() async {
-        guard !isRefreshing else {return}
+        guard !isRefreshing else { return }
         isRefreshing = true
-        defer { isRefreshing = false}
+        defer { isRefreshing = false }
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 await statsViewModel.fetchHourlyPlays(for: statsNumDays)
+            }
+            group.addTask {
+                await statsViewModel.fetchHourlyPlaysMinutes()
             }
             group.addTask { await statsViewModel.fetchDailyPlays() }
             group.addTask {
@@ -612,15 +628,18 @@ struct StatsView: View {
             group.addTask { await statsViewModel.fetchWeeklyStatsComparison() }
         }
     }
-    
+
     private func refreshStatsForDays() async {
         guard !isRefreshing else { return }
-        
+
         isRefreshing = true
         defer { isRefreshing = false }
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 await statsViewModel.fetchHourlyPlays(for: statsNumDays)
+            }
+            group.addTask {
+                await statsViewModel.fetchHourlyPlaysMinutes()
             }
             group.addTask { await statsViewModel.fetchDailyPlays() }
             group.addTask {
@@ -634,17 +653,17 @@ struct StatsView: View {
             }
         }
     }
-    
+
     private func shouldRefreshStats() -> Bool {
         // Check if any critical data is missing or stale
-        return statsViewModel.dailyPlays.isEmpty ||
-               statsViewModel.topTracks.tracks.isEmpty ||
-               statsViewModel.topArtists.artists.isEmpty
+        return statsViewModel.dailyPlays.isEmpty
+            || statsViewModel.topTracks.tracks.isEmpty
+            || statsViewModel.topArtists.artists.isEmpty
     }
-    
+
     private func refreshAllStats() async {
         guard !isRefreshing else { return }
-        
+
         isRefreshing = true
         defer { isRefreshing = false }
         statsViewModel.clearCaches()
