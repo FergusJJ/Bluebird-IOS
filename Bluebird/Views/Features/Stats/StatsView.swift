@@ -601,7 +601,7 @@ struct StatsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func loadAllStats() async {
+    private func loadAllStats(forceRefresh: Bool = false) async {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
@@ -614,10 +614,10 @@ struct StatsView: View {
             }
             group.addTask { await statsViewModel.fetchDailyPlays() }
             group.addTask {
-                await statsViewModel.fetchTopTracks(for: statsNumDays)
+                await statsViewModel.fetchTopTracks(for: statsNumDays, forceRefresh: forceRefresh)
             }
             group.addTask {
-                await statsViewModel.fetchTopArtists(for: statsNumDays)
+                await statsViewModel.fetchTopArtists(for: statsNumDays, forceRefresh: forceRefresh)
             }
             group.addTask {
                 await statsViewModel.fetchTopGenres(for: statsNumDays)
@@ -666,9 +666,7 @@ struct StatsView: View {
 
         isRefreshing = true
         defer { isRefreshing = false }
-        statsViewModel.clearCaches()
-        CacheManager.shared.invalidateStatsCache()
-        await loadAllStats()
+        await loadAllStats(forceRefresh: true)
         viewID = UUID()
     }
 }

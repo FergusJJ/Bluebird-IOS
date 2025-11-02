@@ -1,7 +1,7 @@
 import SwiftUI
 
 @MainActor
-class StatsViewModel: ObservableObject, TryRequestViewModel {
+class StatsViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
     internal var appState: AppState
 
     @Published var hourlyPlaysMinutes: [Int] = Array(repeating: 0, count: 24)
@@ -20,7 +20,6 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
     @Published var lastWeekTotalPlays: Int = 0
     @Published var thisWeekTotalPlays: Int = 0
 
-    // In-memory session caches (keyed by days where applicable)
     private var hourlyPlaysMinutesCache: [Int]?
     private var hourlyPlaysMinutesCacheHour: Int?
     private var hourlyPlaysCache: [Int: [Int]] = [:]
@@ -33,7 +32,7 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
 
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     private let supabaseManager = SupabaseClientManager.shared
-    private let cacheManager = CacheManager.shared
+    let cacheManager = CacheManager.shared
 
     init(
         appState: AppState,
@@ -54,21 +53,22 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
         } else {
             percentageChange =
                 ((Double(thisWeekTotalPlays) - Double(lastWeekTotalPlays))
-                        / Double(lastWeekTotalPlays)) * 100
+                    / Double(lastWeekTotalPlays)) * 100
         }
         return percentageChange
     }
-    
+
     func fetchHourlyPlaysMinutes() async {
         let currentHour = Calendar.current.component(.hour, from: Date())
         if let cached = hourlyPlaysMinutesCache,
-           let cachedLastFetched = hourlyPlaysMinutesCacheHour,
-           cachedLastFetched == currentHour {
-                hourlyPlaysMinutes = cached
+            let cachedLastFetched = hourlyPlaysMinutesCacheHour,
+            cachedLastFetched == currentHour
+        {
+            hourlyPlaysMinutes = cached
             return
         }
         if let cached = cacheManager.getHourlyPlaysMinutes() {
-            let newHourlyPlaysMinutes = cached.map{$0.plays}
+            let newHourlyPlaysMinutes = cached.map { $0.plays }
             hourlyPlaysMinutesCache = newHourlyPlaysMinutes
             hourlyPlaysMinutesCacheHour = currentHour
             hourlyPlaysMinutes = newHourlyPlaysMinutes
@@ -79,7 +79,7 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
             { await bluebirdAccountAPIService.getHourlyPlaysMinutes() },
             "Error fetching hourly plays minutes"
         ) {
-            let newHourlyPlaysMinutes = result.map{$0.plays}
+            let newHourlyPlaysMinutes = result.map { $0.plays }
             hourlyPlaysMinutes = newHourlyPlaysMinutes
             hourlyPlaysMinutesCache = newHourlyPlaysMinutes
             hourlyPlaysMinutesCacheHour = currentHour
@@ -95,16 +95,6 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
             return
         }
 
-        if let cached = cacheManager.getHourlyPlays(for: days) {
-            let playsArray = cached.reduce(into: Array(repeating: 0, count: 24)) {
-                result, play in
-                result[play.hour] = play.plays
-            }
-            hourlyPlays = playsArray
-            hourlyPlaysCache[days] = playsArray
-            return
-        }
-
         if let hourlyPlaysResponse = await tryRequest(
             { await bluebirdAccountAPIService.getHourlyPlays(for: days) },
             "Error fetching hourly plays"
@@ -117,7 +107,6 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
             }
             hourlyPlays = newPlays
             hourlyPlaysCache[days] = newPlays
-            cacheManager.saveHourlyPlays(hourlyPlaysResponse, days: days)
         } else {
             hourlyPlays = Array(repeating: 0, count: 24)
         }
@@ -151,53 +140,39 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
         }
     }
 
-    func fetchTopArtists(for days: Int) async {
-        if let cached = topArtistsCache[days] {
+    func fetchTopArtists(for days: Int, forceRefresh: Bool = false) async {
+        if !forceRefresh, let cached = topArtistsCache[days] {
             topArtists = cached
             return
         }
 
-        if let cached = cacheManager.getTopArtists(for: days) {
-            topArtists = cached
-            topArtistsCache[days] = cached
-            return
-        }
-
-        if let topArtistsResponse = await tryRequest(
+        if let response = await tryRequest(
             { await bluebirdAccountAPIService.getTopArtists(for: days) },
             "Error fetching top artists"
         ) {
-            if topArtistsResponse.artists.isEmpty {
+            if response.artists.isEmpty {
                 return
             }
-            topArtists = topArtistsResponse
-            topArtistsCache[days] = topArtistsResponse
-            cacheManager.saveTopArtists(topArtistsResponse, days: days)
+            topArtists = response
+            topArtistsCache[days] = response
         }
     }
 
-    func fetchTopTracks(for days: Int) async {
-        if let cached = topTracksCache[days] {
+    func fetchTopTracks(for days: Int, forceRefresh: Bool = false) async {
+        if !forceRefresh, let cached = topTracksCache[days] {
             topTracks = cached
             return
         }
 
-        if let cached = cacheManager.getTopTracks(for: days) {
-            topTracks = cached
-            topTracksCache[days] = cached
-            return
-        }
-
-        if let topTracksResponse = await tryRequest(
+        if let response = await tryRequest(
             { await bluebirdAccountAPIService.getTopTracks(for: days) },
             "Error fetching top tracks"
         ) {
-            if topTracksResponse.tracks.isEmpty {
+            if response.tracks.isEmpty {
                 return
             }
-            topTracks = topTracksResponse
-            topTracksCache[days] = topTracksResponse
-            cacheManager.saveTopTracks(topTracksResponse, days: days)
+            topTracks = response
+            topTracksCache[days] = response
         }
     }
 
@@ -207,7 +182,10 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
         entityType: EntityType
     ) async -> Int? {
         return await tryRequest(
-            { await bluebirdAccountAPIService.getEntityPlays(for: id, forDays: days, entityType: entityType) },
+            {
+                await bluebirdAccountAPIService.getEntityPlays(
+                    for: id, forDays: days, entityType: entityType)
+            },
             "Error fetching entity plays"
         )
     }
@@ -282,7 +260,9 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
             "Error fetching leaderboard"
         ) {
             print("Got \(response.leaderboard.count) entries")
-            print("Current user: \(response.current_user.profile.username) - \(response.current_user.play_count) plays")
+            print(
+                "Current user: \(response.current_user.profile.username) - \(response.current_user.play_count) plays"
+            )
             for (index, entry) in response.leaderboard.enumerated() {
                 print("#\(index + 1): \(entry.profile.username) - \(entry.play_count) plays")
             }
@@ -297,19 +277,12 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
             return
         }
 
-        if let cached = cacheManager.getTopGenres(for: days) {
-            topGenres = cached
-            topGenresCache[days] = cached
-            return
-        }
-
         if let response = await tryRequest(
             { await bluebirdAccountAPIService.getTopGenres(numDays: days) },
             "Error fetching top genres"
         ) {
             topGenres = response
             topGenresCache[days] = response
-            cacheManager.saveTopGenres(response, days: days)
         } else {
             topGenres = GenreCounts()
         }
@@ -383,15 +356,5 @@ class StatsViewModel: ObservableObject, TryRequestViewModel {
             cacheManager.saveWeeklyComparison(comparison)
         }
     }
-    
-    func clearCaches() {
-        hourlyPlaysCache.removeAll()
-        topTracksCache.removeAll()
-        topArtistsCache.removeAll()
-        topGenresCache.removeAll()
-        dailyPlaysCache = nil
-        discoveriesCache = nil
-        weeklyComparisonCache = nil
-        trackTrendCache.removeAll()
-    }
+
 }

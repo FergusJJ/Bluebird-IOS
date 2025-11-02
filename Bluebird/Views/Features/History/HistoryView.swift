@@ -200,7 +200,7 @@ struct HistoryView: View {
                     await spotifyViewModel.loadCurrentlyPlaying()
                 }
                 group.addTask {
-                    await spotifyViewModel.refreshHistory()
+                    await spotifyViewModel.refreshHistory(forceRefresh: true)
                 }
             }
         }

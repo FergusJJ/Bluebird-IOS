@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 @MainActor
-class SpotifyViewModel: ObservableObject, TryRequestViewModel {
+class SpotifyViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
     @Published var currentlyPlaying: SongDetail?
     @Published var songHistory: [Int: SongDetail] = [:]
 
@@ -12,7 +12,7 @@ class SpotifyViewModel: ObservableObject, TryRequestViewModel {
 
     internal var appState: AppState
     private let spotifyAPIService: SpotifyAPIService
-    private let cacheManager = CacheManager.shared
+    let cacheManager = CacheManager.shared
 
     var sortedSongs: [SongDetail] {
         songHistory.values.sorted { $0.listened_at! > $1.listened_at! }
@@ -26,18 +26,15 @@ class SpotifyViewModel: ObservableObject, TryRequestViewModel {
 
     private func loadCachedHistory() {
         songHistory = cacheManager.getSongHistory()
-        print("Loaded \(songHistory.count) songs from cache")
     }
 
     func isCacheStale() -> Bool {
         guard let lastUpdated = cacheManager.getSongHistoryLastUpdated() else {
-            return true // No cache, treat as stale
+            return true  // No cache, treat as stale
         }
-
-        // Cache is stale if older than 1 hour
         let cacheAge = Date().timeIntervalSince(lastUpdated)
-        let oneHour: TimeInterval = 3600
-        return cacheAge > oneHour
+        let tenMins: TimeInterval = 600
+        return cacheAge > tenMins
     }
 
     func loadCurrentlyPlaying() async {
@@ -46,7 +43,6 @@ class SpotifyViewModel: ObservableObject, TryRequestViewModel {
             currentlyPlaying = nil
             return
         }
-
         if let songData = await tryRequest(
             { await spotifyAPIService.getCurrentlyPlaying(spotifyAccessToken: accessToken) },
             "Error fetching currently playing"
@@ -65,27 +61,42 @@ class SpotifyViewModel: ObservableObject, TryRequestViewModel {
         }
     }
 
-    func refreshHistory() async {
+    func refreshHistory(forceRefresh: Bool = false) async {
         guard let accessToken = appState.getSpotifyAccessToken() else {
             print("Refresh failed: Access token is nil.")
             return
         }
 
-        if let songArray = await tryRequest(
-            { await spotifyAPIService.getSongHistory(spotifyAccessToken: accessToken) },
-            "Error fetching song history"
-        ) {
-            guard !songArray.isEmpty else {
-                return
-            }
-
-            let newSongs = Dictionary(
-                songArray.map { ($0.listened_at!, $0) },
-                uniquingKeysWith: { first, _ in first }
-            )
-            songHistory.merge(newSongs) { existing, _ in existing }
-            cacheManager.saveSongHistory(songHistory)
-        }
+        await fetchWithCacheArray(
+            cacheGetter: { [weak self] in
+                Array((self?.cacheManager.getSongHistory() ?? [:]).values)
+            },
+            isCacheStale: { [weak self] in
+                self?.cacheManager.isSongHistoryStale() ?? true
+            },
+            apiFetch: { [weak self] in
+                guard let self = self else { return nil }
+                return await tryRequest(
+                    {
+                        await self.spotifyAPIService.getSongHistory(spotifyAccessToken: accessToken)
+                    },
+                    "Error fetching song history"
+                )
+            },
+            onUpdate: { [weak self] songs in
+                guard let self = self else { return }
+                let newSongs = Dictionary(
+                    songs.map { ($0.listened_at!, $0) },
+                    uniquingKeysWith: { first, _ in first }
+                )
+                self.songHistory.merge(newSongs) { existing, _ in existing }
+            },
+            cacheSetter: { [weak self] _ in
+                guard let self = self else { return }
+                self.cacheManager.saveSongHistory(self.songHistory)
+            },
+            forceRefresh: forceRefresh
+        )
     }
 
     func fetchOlderPlaysHistory() async {
@@ -141,7 +152,10 @@ class SpotifyViewModel: ObservableObject, TryRequestViewModel {
         isLoading = true
 
         return await tryRequest(
-            { await spotifyAPIService.getArtistDetail(spotifyAccessToken: accessToken, id: artistID) },
+            {
+                await spotifyAPIService.getArtistDetail(
+                    spotifyAccessToken: accessToken, id: artistID)
+            },
             "Error fetching artist detail"
         )
     }
@@ -179,7 +193,9 @@ class SpotifyViewModel: ObservableObject, TryRequestViewModel {
         isLoading = true
 
         return await tryRequest(
-            { await spotifyAPIService.getAlbumDetail(spotifyAccessToken: accessToken, id: albumID) },
+            {
+                await spotifyAPIService.getAlbumDetail(spotifyAccessToken: accessToken, id: albumID)
+            },
             "Error fetching album detail"
         )
     }

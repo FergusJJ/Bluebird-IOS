@@ -1,7 +1,7 @@
 import SwiftUI
 
 @MainActor
-class SocialViewModel: ObservableObject, TryRequestViewModel {
+class SocialViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
     @Published var currentUserProfile: UserProfileDetail?
     @Published var friendsCurrentlyPlaying: [String: FriendCurrentlyPlaying] =
         [:]
@@ -32,11 +32,11 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
     @Published var userFriends: [UserProfile] = []
 
     internal var appState: AppState
-    private let cacheManager = CacheManager.shared
+    let cacheManager = CacheManager.shared
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
 
-    private var userProfileDetailCache:
-        [String: (profile: UserProfileDetail, timestamp: Date)] = [:]
+    private var userProfileDetailCache: [String: (profile: UserProfileDetail, timestamp: Date)] =
+        [:]
 
     init(
         appState: AppState,
@@ -46,20 +46,26 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
         self.bluebirdAccountAPIService = bluebirdAccountAPIService
     }
 
-    func fetchUserProfile(userId: String, forceRefresh: Bool) async {
-        if !forceRefresh {
-            if let cached = cacheManager.getUserProfile(userId: userId) {
-                currentUserProfile = cached
-                return
-            }
-        }
-        if let profileDetail = await tryRequest(
-            { await bluebirdAccountAPIService.getUser(userID: userId) },
-            "Error fetching user profile"
-        ) {
-            currentUserProfile = profileDetail
-            cacheManager.saveUserProfile(profileDetail)
-        }
+    func fetchUserProfile(userId: String, forceRefresh: Bool = false) async {
+        await fetchWithCache(
+            cacheGetter: { [weak self] in
+                self?.cacheManager.getUserProfile(userId: userId)
+            },
+            apiFetch: { [weak self] in
+                guard let self = self else { return nil }
+                return await tryRequest(
+                    { await self.bluebirdAccountAPIService.getUser(userID: userId) },
+                    "Error fetching user profile"
+                )
+            },
+            onUpdate: { [weak self] profile in
+                self?.currentUserProfile = profile
+            },
+            cacheSetter: { [weak self] profile in
+                self?.cacheManager.saveUserProfile(profile)
+            },
+            forceRefresh: forceRefresh
+        )
     }
 
     func fetchUserMilestones(userId: String) async {
@@ -95,7 +101,6 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
             return
         }
         guard !isLoadingTrending else { return }
-
         isLoadingTrending = true
         defer { isLoadingTrending = false }
 
@@ -123,7 +128,6 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
                 currentUserProfile = profile
                 userProfileDetailCache[userId] = (profile, Date())
             }
-            invalidateCache(for: userId)
         }
     }
 
@@ -139,17 +143,18 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
                 currentUserProfile = profile
                 userProfileDetailCache[userId] = (profile, Date())
             }
-            invalidateCache(for: userId)
-            if let currentUserId = CacheManager.shared.getCurrentUserId() {
-                invalidateCache(for: currentUserId)
-                CacheManager.shared.invalidateProfile()
-            }
+            CacheManager.shared.expireFriendsCache()
         }
     }
 
     func respondToFriendRequests(to userId: String, accept: Bool) async {
         let result = await tryRequest(
-            { await bluebirdAccountAPIService.respondToFriendRequest(to: userId, accept: accept) },
+            {
+                await bluebirdAccountAPIService.respondToFriendRequest(
+                    to: userId,
+                    accept: accept
+                )
+            },
             "Error responding to friend request"
         )
 
@@ -158,14 +163,10 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
                 profile.display_friendship_status = accept ? .friends : .none
                 currentUserProfile = profile
                 userProfileDetailCache[userId] = (profile, Date())
-
-                if accept {
-                    invalidateCache(for: userId)
-                }
             }
-            if let currentUserId = CacheManager.shared.getCurrentUserId() {
-                invalidateCache(for: currentUserId)
-                CacheManager.shared.invalidateProfile()
+
+            if accept {
+                CacheManager.shared.expireFriendsCache()
             }
         }
     }
@@ -176,19 +177,15 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
         caption: String
     ) async -> PostCreatedResponse? {
         return await tryRequest(
-            { await bluebirdAccountAPIService.createRepost(on: entityType, for: entityID, caption: caption) },
+            {
+                await bluebirdAccountAPIService.createRepost(
+                    on: entityType,
+                    for: entityID,
+                    caption: caption
+                )
+            },
             "Error creating post"
         )
-    }
-
-    // MARK: - Cache Helpers
-
-    func invalidateCache(for userId: String) {
-        cacheManager.invalidateSocialCache(for: userId)
-    }
-
-    func clearCache() {
-        cacheManager.invalidateSocialCache()
     }
 
     func getReposts(for userId: String) -> [RepostItem] {
@@ -209,7 +206,13 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
         isLoadingReposts = true
 
         if let response = await tryRequest(
-            { await bluebirdAccountAPIService.getUserReposts(userID: userId, cursor: nil, limit: 50) },
+            {
+                await bluebirdAccountAPIService.getUserReposts(
+                    userID: userId,
+                    cursor: nil,
+                    limit: 50
+                )
+            },
             "Error fetching user reposts"
         ) {
             userRepostsCache[userId] = response.reposts
@@ -226,7 +229,13 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
         isLoadingReposts = true
 
         if let response = await tryRequest(
-            { await bluebirdAccountAPIService.getUserReposts(userID: userId, cursor: getRepostsCursor(for: userId), limit: 50) },
+            {
+                await bluebirdAccountAPIService.getUserReposts(
+                    userID: userId,
+                    cursor: getRepostsCursor(for: userId),
+                    limit: 50
+                )
+            },
             "Error fetching more user reposts"
         ) {
             userRepostsCache[userId]?.append(contentsOf: response.reposts)
@@ -261,7 +270,12 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
         isLoadingFeed = true
 
         if let response = await tryRequest(
-            { await bluebirdAccountAPIService.getFeed(limit: 20, offset: feedNextOffset) },
+            {
+                await bluebirdAccountAPIService.getFeed(
+                    limit: 20,
+                    offset: feedNextOffset
+                )
+            },
             "Error fetching more feed posts"
         ) {
             feedPosts.append(contentsOf: response.posts)
@@ -286,7 +300,13 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
         defer { isLoadingUnifiedFeed = false }
 
         if let response = await tryRequest(
-            { await bluebirdAccountAPIService.getUnifiedFeed(limit: 20, offset: 0, includeHighlights: true) },
+            {
+                await bluebirdAccountAPIService.getUnifiedFeed(
+                    limit: 20,
+                    offset: 0,
+                    includeHighlights: true
+                )
+            },
             "Error fetching unified feed"
         ) {
             unifiedFeedItems = response.items
@@ -301,7 +321,13 @@ class SocialViewModel: ObservableObject, TryRequestViewModel {
         isLoadingUnifiedFeed = true
 
         if let response = await tryRequest(
-            { await bluebirdAccountAPIService.getUnifiedFeed(limit: 20, offset: unifiedFeedNextOffset, includeHighlights: true) },
+            {
+                await bluebirdAccountAPIService.getUnifiedFeed(
+                    limit: 20,
+                    offset: unifiedFeedNextOffset,
+                    includeHighlights: true
+                )
+            },
             "Error fetching more unified feed items"
         ) {
             unifiedFeedItems.append(contentsOf: response.items)

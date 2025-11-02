@@ -26,7 +26,7 @@ struct TrendingListView: View {
             }
         }
         .refreshable {
-            await socialViewModel.fetchTrendingTracks()
+            await socialViewModel.fetchTrendingTracks(forceRefresh: true)
         }
     }
 

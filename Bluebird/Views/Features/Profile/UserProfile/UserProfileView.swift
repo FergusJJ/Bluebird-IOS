@@ -748,20 +748,17 @@ struct UserProfileView: View {
     }
 
     private func loadUserData(forceRefresh: Bool) async {
-        if forceRefresh {
-            socialViewModel.invalidateCache(for: userProfile.user_id)
-        }
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 await socialViewModel.fetchUserProfile(
                     userId: userProfile.user_id,
-                    forceRefresh: false
+                    forceRefresh: forceRefresh
                 )
             }
             group.addTask {
                 await socialViewModel.fetchUserReposts(
                     userId: userProfile.user_id,
-                    forceRefresh: false
+                    forceRefresh: forceRefresh
                 )
             }
             group.addTask {

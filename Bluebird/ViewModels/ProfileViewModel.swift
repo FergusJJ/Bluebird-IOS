@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class ProfileViewModel: ObservableObject, TryRequestViewModel {
+class ProfileViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
     // may want to add stuff here for all time song plays/number of artists listened to etc.
     // but not sure how/where im going to store that yet
 
@@ -74,7 +74,7 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
     internal var appState: AppState
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     private let supabaseManager = SupabaseClientManager.shared
-    private let cacheManager = CacheManager.shared
+    let cacheManager = CacheManager.shared  // Protocol requirement: non-private
 
     init(
         appState: AppState,
@@ -110,71 +110,63 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
     }
 
     func loadProfile(forceRefresh: Bool = false) async {
-        let (cachedProfile, cachedStats) = cacheManager.getProfile()
-        if let profile = cachedProfile {
-            username = profile.username
-            bio = profile.bio
-            avatarURL = URL(string: profile.avatarUrl)
-        }
-        if let stats = cachedStats {
-            totalPlays = stats.total_plays
-            totalUniqueArtists = stats.unique_artists
-            totalMinutesListened = stats.total_duration_millis / (60 * 1000)
-        }
-
-        guard appState.isLoggedIn == .istrue && forceRefresh
-        else {
-            return
-        }
-
-        if let profileInfo = await tryRequest(
-            { await bluebirdAccountAPIService.getProfile() },
-            "Error fetching profile"
-        ) {
-            username = profileInfo.username
-            bio = profileInfo.bio
-            avatarURL = URL(string: profileInfo.avatarUrl)
-            profileVisibility = profileInfo.profileVisibility
-            // Save to cache
-            cacheManager.saveProfile(profileInfo, stats: cachedStats)
-        }
-    }
-
-    func loadHeadlineStats() async {
-        // Check cache first
-        let (cachedProfile, cachedStats) = cacheManager.getProfile()
-        if let stats = cachedStats {
-            totalPlays = stats.total_plays
-            totalUniqueArtists = stats.unique_artists
-            totalMinutesListened = stats.total_duration_millis / (60 * 1000)
-        }
-
         guard appState.isLoggedIn == .istrue else {
             return
         }
 
-        if let stats = await tryRequest(
-            { await bluebirdAccountAPIService.getHeadlineStats(for: numDays) },
-            "Error fetching headline stats"
-        ) {
-            totalPlays = stats.total_plays
-            totalUniqueArtists = stats.unique_artists
-            totalMinutesListened = (stats.total_duration_millis / (60 * 1000))
+        await fetchWithCache(
+            cacheGetter: { [weak self] in
+                self?.cacheManager.getProfile()
+            },
+            apiFetch: { [weak self] in
+                guard let self = self else { return nil }
 
-            // Save to cache
-            cacheManager.saveProfile(
-                cachedProfile
-                    ?? ProfileInfo(
-                        message: "",
-                        username: username,
-                        bio: bio,
-                        avatarUrl: avatarURL?.absoluteString ?? "",
-                        showTooltips: false,
-                        profileVisibility: profileVisibility
-                    ),
-                stats: stats
-            )
-        }
+                // Fetch profile
+                guard
+                    let profileInfo = await tryRequest(
+                        { await self.bluebirdAccountAPIService.getProfile() },
+                        "Error fetching profile"
+                    )
+                else {
+                    return nil
+                }
+
+                guard
+                    let stats = await tryRequest(
+                        {
+                            await self.bluebirdAccountAPIService.getHeadlineStats(for: self.numDays)
+                        },
+                        "Error fetching headline stats"
+                    )
+                else {
+                    return nil
+                }
+
+                return (profileInfo, stats)
+            },
+            onUpdate: { [weak self] (profile, stats) in
+                guard let self = self else { return }
+                self.username = profile.username
+                self.bio = profile.bio
+                self.avatarURL = URL(string: profile.avatarUrl)
+                self.profileVisibility = profile.profileVisibility
+                self.totalPlays = stats.total_plays
+                self.totalUniqueArtists = stats.unique_artists
+                self.totalMinutesListened = stats.total_duration_millis / (60 * 1000)
+            },
+            cacheSetter: { [weak self] (profile, stats) in
+                self?.cacheManager.saveProfile(profile, stats: stats)
+            },
+            forceRefresh: forceRefresh
+        )
+
+        // Always sync friends (has its own cache logic)
+        await syncFriends(forceRefresh: forceRefresh)
+    }
+
+    func loadHeadlineStats() async {
+        // Stats are loaded with profile, so delegate to loadProfile
+        await loadProfile(forceRefresh: false)
     }
 
     func updateUserBio(with bio: String) async -> Bool {
@@ -283,7 +275,10 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
         }
 
         if let details = await tryRequest(
-            { await bluebirdAccountAPIService.getConnectedAccountDetail(accessToken: spotifyAccessToken) },
+            {
+                await bluebirdAccountAPIService.getConnectedAccountDetail(
+                    accessToken: spotifyAccessToken)
+            },
             "Error fetching connected account details"
         ) {
             connectedAccountDetails = details
@@ -300,8 +295,7 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
 
     // MARK: - Pins
 
-    func updatePin(for id: String, entity: String, isDelete: Bool) async -> Bool
-    {
+    func updatePin(for id: String, entity: String, isDelete: Bool) async -> Bool {
         if isLoading {
             return false
         }
@@ -319,12 +313,14 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
         }
 
         let result: Void? = await tryRequest(
-            { await bluebirdAccountAPIService.updatePin(
-                accessToken: spotifyAccessToken,
-                id: id,
-                entity: entityType,
-                isDelete: isDelete
-            ) },
+            {
+                await bluebirdAccountAPIService.updatePin(
+                    accessToken: spotifyAccessToken,
+                    id: id,
+                    entity: entityType,
+                    isDelete: isDelete
+                )
+            },
             "Error updating pin"
         )
 
@@ -393,12 +389,14 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
             return false
         }
         let result: Void? = await tryRequest(
-            { await bluebirdAccountAPIService.updateProfile(
-                username: username,
-                bio: bio,
-                avatarPath: avatarPath,
-                profileVisibility: profileVisibility
-            ) },
+            {
+                await bluebirdAccountAPIService.updateProfile(
+                    username: username,
+                    bio: bio,
+                    avatarPath: avatarPath,
+                    profileVisibility: profileVisibility
+                )
+            },
             "Error updating profile"
         )
 
@@ -410,27 +408,37 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
 
     // MARK: - Sync Logic
 
-    func syncAllPinnedContent() async {
-        if let cached = cacheManager.getPins() {
-            orderedPins = cached.pins
-            pinnedTrackDetails = cached.tracks
-            pinnedAlbumDetails = cached.albums
-            pinnedArtistDetails = cached.artists
-        }
+    func syncAllPinnedContent(forceRefresh: Bool = false) async {
+        await fetchWithCache(
+            cacheGetter: { [weak self] in
+                self?.cacheManager.getPins()
+            },
+            apiFetch: { [weak self] in
+                guard let self = self else { return nil }
 
-        let success = await getPins(entities: ["artist", "album", "track"])
-        guard success else {
-            print("Failed to fetch pins")
-            return
-        }
-        await syncPinnedTracks()
-        await syncPinnedAlbums()
-        await syncPinnedArtists()
-        cacheManager.savePins(
-            orderedPins,
-            tracks: pinnedTrackDetails,
-            albums: pinnedAlbumDetails,
-            artists: pinnedArtistDetails
+                // Fetch pins from API
+                let success = await getPins(entities: ["artist", "album", "track"])
+                guard success else { return nil }
+
+                // Fetch details for all pins
+                await syncPinnedTracks()
+                await syncPinnedAlbums()
+                await syncPinnedArtists()
+
+                return (orderedPins, pinnedTrackDetails, pinnedAlbumDetails, pinnedArtistDetails)
+            },
+            onUpdate: { [weak self] (pins, tracks, albums, artists) in
+                guard let self = self else { return }
+                self.orderedPins = pins
+                self.pinnedTrackDetails = tracks
+                self.pinnedAlbumDetails = albums
+                self.pinnedArtistDetails = artists
+                self.updateAllUIArrays()
+            },
+            cacheSetter: { [weak self] (pins, tracks, albums, artists) in
+                self?.cacheManager.savePins(pins, tracks: tracks, albums: albums, artists: artists)
+            },
+            forceRefresh: forceRefresh
         )
     }
 
@@ -491,11 +499,13 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
 
     private func fetchAndCacheTrackDetails(trackIDs: [String]) async {
         if let getEntityResponse = await tryRequest(
-            { await bluebirdAccountAPIService.getEntityDetails(
-                trackIDs: trackIDs,
-                albumIDs: [],
-                artistIDs: []
-            ) },
+            {
+                await bluebirdAccountAPIService.getEntityDetails(
+                    trackIDs: trackIDs,
+                    albumIDs: [],
+                    artistIDs: []
+                )
+            },
             "Error fetching track details"
         ) {
             for trackDetail in getEntityResponse.tracks {
@@ -506,11 +516,13 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
 
     private func fetchAndCacheAlbumDetails(albumIDs: [String]) async {
         if let getEntityResponse = await tryRequest(
-            { await bluebirdAccountAPIService.getEntityDetails(
-                trackIDs: [],
-                albumIDs: albumIDs,
-                artistIDs: []
-            ) },
+            {
+                await bluebirdAccountAPIService.getEntityDetails(
+                    trackIDs: [],
+                    albumIDs: albumIDs,
+                    artistIDs: []
+                )
+            },
             "Error fetching album details"
         ) {
             for albumDetail in getEntityResponse.albums {
@@ -521,11 +533,13 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
 
     private func fetchAndCacheArtistDetails(artistIDs: [String]) async {
         if let getEntityResponse = await tryRequest(
-            { await bluebirdAccountAPIService.getEntityDetails(
-                trackIDs: [],
-                albumIDs: [],
-                artistIDs: artistIDs
-            ) },
+            {
+                await bluebirdAccountAPIService.getEntityDetails(
+                    trackIDs: [],
+                    albumIDs: [],
+                    artistIDs: artistIDs
+                )
+            },
             "Error fetching artist details"
         ) {
             for artistDetail in getEntityResponse.artists {
@@ -534,8 +548,7 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
         }
     }
 
-    private func fetchDetailsForNewPin(id: String, entityType: EntityType) async
-    {
+    private func fetchDetailsForNewPin(id: String, entityType: EntityType) async {
         switch entityType {
         case .track:
             await fetchAndCacheTrackDetails(trackIDs: [id])
@@ -598,43 +611,62 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
 
     // MARK: - Milestones
 
-    func syncMilestones() async {
-        // Load from cache first
-        if let cached = cacheManager.getMilestones() {
-            milestones = cached
-        }
-
-        // Fetch fresh data from API
+    func syncMilestones(forceRefresh: Bool = false) async {
         guard let userId = cacheManager.getCurrentUserId() else {
             print("Failed to sync milestones: No user ID")
             return
         }
 
-        if let fetchedMilestones = await tryRequest(
-            { await bluebirdAccountAPIService.getMilestones(userID: userId) },
-            "Error fetching milestones"
-        ) {
-            milestones = fetchedMilestones
-            cacheManager.saveMilestones(fetchedMilestones)
-        }
+        await fetchWithCache(
+            cacheGetter: { [weak self] in
+                self?.cacheManager.getMilestones()
+            },
+            apiFetch: { [weak self] in
+                guard let self = self else { return nil }
+                return await tryRequest(
+                    { await self.bluebirdAccountAPIService.getMilestones(userID: userId) },
+                    "Error fetching milestones"
+                )
+            },
+            onUpdate: { [weak self] milestones in
+                self?.milestones = milestones
+            },
+            cacheSetter: { [weak self] milestones in
+                self?.cacheManager.saveMilestones(milestones)
+            },
+            forceRefresh: forceRefresh
+        )
     }
 
     // MARK: - Friends
 
-    func syncFriends() async {
+    func syncFriends(forceRefresh: Bool = false) async {
         guard let userId = cacheManager.getCurrentUserId() else {
             print("Failed to sync friends: No user ID")
             return
         }
 
-        if let fetchedFriends = await tryRequest(
-            { await bluebirdAccountAPIService.getAllFriends(for: userId) },
-            "Error fetching friends"
-        ) {
-            friends = fetchedFriends
-            friendCount = fetchedFriends.count
-            cacheManager.invalidateProfile()
-        }
+        await fetchWithCache(
+            cacheGetter: { [weak self] in
+                self?.cacheManager.getFriendsList()
+            },
+            apiFetch: { [weak self] in
+                guard let self = self else { return nil }
+                return await tryRequest(
+                    { await self.bluebirdAccountAPIService.getAllFriends(for: userId) },
+                    "Error fetching friends"
+                )
+            },
+            onUpdate: { [weak self] friends in
+                guard let self = self else { return }
+                self.friends = friends
+                self.friendCount = friends.count
+            },
+            cacheSetter: { [weak self] friends in
+                self?.cacheManager.saveFriendsList(friends)
+            },
+            forceRefresh: forceRefresh
+        )
     }
 
     func fetchFriendRequests() async {
@@ -683,7 +715,10 @@ class ProfileViewModel: ObservableObject, TryRequestViewModel {
         defer { isLoadingReposts = false }
 
         if let response = await tryRequest(
-            { await bluebirdAccountAPIService.getCurrentUserReposts(cursor: repostsNextCursor, limit: 50) },
+            {
+                await bluebirdAccountAPIService.getCurrentUserReposts(
+                    cursor: repostsNextCursor, limit: 50)
+            },
             "Error fetching more reposts"
         ) {
             myReposts.append(contentsOf: response.reposts)

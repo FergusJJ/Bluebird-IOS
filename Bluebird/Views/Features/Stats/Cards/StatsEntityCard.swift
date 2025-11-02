@@ -15,6 +15,7 @@ struct StatsEntityCard: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .clipped()
+                        .id(name)
                 }
             } else {
                 Rectangle()

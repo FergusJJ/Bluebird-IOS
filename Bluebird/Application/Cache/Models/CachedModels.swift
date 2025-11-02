@@ -19,6 +19,7 @@ final class CachedUserAccount {
     @Relationship(deleteRule: .cascade) var milestones: CachedMilestone?
     @Relationship(deleteRule: .cascade) var socialCache: [CachedUserProfile] =
         []
+    @Relationship(deleteRule: .cascade) var friendsList: CachedFriendsList?
 
     init(userId: String, username: String, email: String) {
         self.userId = userId
@@ -40,9 +41,9 @@ final class CachedProfile {
     var totalPlays: Int
     var totalUniqueArtists: Int
     var lastUpdated: Date
+    var expiresAt: Date?
 
-    @Relationship(inverse: \CachedUserAccount.profile) var account:
-        CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.profile) var account: CachedUserAccount?
 
     init(
         username: String,
@@ -58,6 +59,7 @@ final class CachedProfile {
         totalPlays = 0
         totalUniqueArtists = 0
         lastUpdated = Date()
+        expiresAt = Date().addingTimeInterval(CacheTTL.profile)  // New entries get expiry
     }
 }
 
@@ -77,8 +79,7 @@ final class CachedSongHistory {
     var albumImageUrl: String
     var lastUpdated: Date?  // Optional to allow migration of existing data
 
-    @Relationship(inverse: \CachedUserAccount.songHistory) var account:
-        CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.songHistory) var account: CachedUserAccount?
 
     init(userId: String, song: SongDetail) {
         compositeId = "\(userId)_\(song.listened_at ?? 0)"
@@ -122,44 +123,27 @@ final class CachedStats {
     var hourlyPlaysMinutesData: Data?
     var hourlyPlaysMinutesHour: Int?
 
-    // Time-based stats with expiry
-    var hourlyPlaysData: Data?  // Encoded [HourlyPlay]
-    var hourlyPlaysExpiry: Date?
-    var hourlyPlaysDays: Int?
-
-    var dailyPlaysData: Data?  // Encoded [DailyPlay]
+    // Non-days-based stats (single value) - these are fine in SwiftData
+    var dailyPlaysData: Data?
     var dailyPlaysExpiry: Date?
 
-    var topArtistsData: Data?  // Encoded TopArtists
-    var topArtistsExpiry: Date?
-    var topArtistsDays: Int?
-
-    var topTracksData: Data?  // Encoded TopTracks
-    var topTracksExpiry: Date?
-    var topTracksDays: Int?
-
-    var topGenresData: Data?  // Encoded GenreCounts
-    var topGenresExpiry: Date?
-    var topGenresDays: Int?
-
-    var discoveriesData: Data?  // Encoded Discoveries
+    var discoveriesData: Data?
     var discoveriesExpiry: Date?
 
-    var weeklyComparisonData: Data?  // Encoded WeeklyPlatformComparison
+    var weeklyComparisonData: Data?
     var weeklyComparisonExpiry: Date?
 
-    @Relationship(inverse: \CachedUserAccount.stats) var account:
-        CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.stats) var account: CachedUserAccount?
 
     init() {
         // Initialize with nil values
     }
 
     func setHourlyPlaysMinutes(_ plays: [HourlyPlay]) {
-        hourlyPlaysData = try? JSONEncoder().encode(plays)
+        hourlyPlaysMinutesData = try? JSONEncoder().encode(plays)
         hourlyPlaysMinutesHour = Calendar.current.component(.hour, from: Date())
     }
-    
+
     func getHourlyPlaysMinutes() -> [HourlyPlay]? {
         let currentHour = Calendar.current.component(.hour, from: Date())
         guard let data = hourlyPlaysMinutesData,
@@ -173,83 +157,7 @@ final class CachedStats {
         return try? JSONDecoder().decode([HourlyPlay].self, from: data)
     }
 
-    // Helper methods for encoding/decoding
-    func setHourlyPlays(
-        _ plays: [HourlyPlay],
-        days: Int,
-        ttl: TimeInterval = 3600
-    ) {
-        hourlyPlaysData = try? JSONEncoder().encode(plays)
-        hourlyPlaysDays = days
-        hourlyPlaysExpiry = Date().addingTimeInterval(ttl)
-    }
-
-    func getHourlyPlays(for days: Int) -> [HourlyPlay]? {
-        guard let data = hourlyPlaysData,
-            let expiry = hourlyPlaysExpiry,
-            let cachedDays = hourlyPlaysDays,
-            cachedDays == days,
-            Date() < expiry
-        else { return nil }
-        return try? JSONDecoder().decode([HourlyPlay].self, from: data)
-    }
-
-    func setTopArtists(
-        _ artists: TopArtists,
-        days: Int,
-        ttl: TimeInterval = 3600
-    ) {
-        topArtistsData = try? JSONEncoder().encode(artists)
-        topArtistsDays = days
-        topArtistsExpiry = Date().addingTimeInterval(ttl)
-    }
-
-    func getTopArtists(for days: Int) -> TopArtists? {
-        guard let data = topArtistsData,
-            let expiry = topArtistsExpiry,
-            let cachedDays = topArtistsDays,
-            cachedDays == days,
-            Date() < expiry
-        else { return nil }
-        return try? JSONDecoder().decode(TopArtists.self, from: data)
-    }
-
-    func setTopTracks(_ tracks: TopTracks, days: Int, ttl: TimeInterval = 3600)
-    {
-        topTracksData = try? JSONEncoder().encode(tracks)
-        topTracksDays = days
-        topTracksExpiry = Date().addingTimeInterval(ttl)
-    }
-
-    func getTopTracks(for days: Int) -> TopTracks? {
-        guard let data = topTracksData,
-            let expiry = topTracksExpiry,
-            let cachedDays = topTracksDays,
-            cachedDays == days,
-            Date() < expiry
-        else { return nil }
-        return try? JSONDecoder().decode(TopTracks.self, from: data)
-    }
-
-    func setTopGenres(
-        _ genres: GenreCounts,
-        days: Int,
-        ttl: TimeInterval = 3600
-    ) {
-        topGenresData = try? JSONEncoder().encode(genres)
-        topGenresDays = days
-        topGenresExpiry = Date().addingTimeInterval(ttl)
-    }
-
-    func getTopGenres(for days: Int) -> GenreCounts? {
-        guard let data = topGenresData,
-            let expiry = topGenresExpiry,
-            let cachedDays = topGenresDays,
-            cachedDays == days,
-            Date() < expiry
-        else { return nil }
-        return try? JSONDecoder().decode(GenreCounts.self, from: data)
-    }
+    // Days-based stats removed - use in-memory caching in ViewModels instead
 
     func setDiscoveries(_ discoveries: Discoveries, ttl: TimeInterval = 3600) {
         discoveriesData = try? JSONEncoder().encode(discoveries)
@@ -310,9 +218,9 @@ final class CachedPins {
     var artistDetails: Data  // Encoded [String: ArtistDetail]
 
     var lastUpdated: Date
+    var expiresAt: Date?  // Optional: No automatic expiry for manual sync
 
-    @Relationship(inverse: \CachedUserAccount.pins) var account:
-        CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.pins) var account: CachedUserAccount?
 
     init() {
         trackPins = Data()
@@ -322,6 +230,7 @@ final class CachedPins {
         albumDetails = Data()
         artistDetails = Data()
         lastUpdated = Date()
+        expiresAt = nil  // No automatic expiry
     }
 
     func setPins(
@@ -389,13 +298,11 @@ final class CachedUserProfile {
     var bio: String
     var profileData: Data  // Encoded UserProfileDetail
     var cachedAt: Date
-    var expiresAt: Date
+    var expiresAt: Date?  // Optional for migration compatibility
 
-    @Relationship(inverse: \CachedUserAccount.socialCache) var account:
-        CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.socialCache) var account: CachedUserAccount?
 
-    init(viewerId: String, profile: UserProfileDetail, ttl: TimeInterval = 300)
-    {
+    init(viewerId: String, profile: UserProfileDetail, ttl: TimeInterval = 300) {
         profileId = "\(viewerId)_\(profile.user_id)"
         userId = profile.user_id
         username = profile.username
@@ -407,7 +314,7 @@ final class CachedUserProfile {
     }
 
     func toUserProfileDetail() -> UserProfileDetail? {
-        guard Date() < expiresAt else { return nil }
+        guard let expiresAt = expiresAt, Date() < expiresAt else { return nil }
         return try? JSONDecoder().decode(
             UserProfileDetail.self,
             from: profileData
@@ -419,23 +326,57 @@ final class CachedUserProfile {
 final class CachedMilestone {
     var milestones: Data
     var lastUpdated: Date
+    var expiresAt: Date?  // Optional for migration compatibility
 
-    @Relationship(inverse: \CachedUserAccount.milestones) var account:
-        CachedUserAccount?
+    @Relationship(inverse: \CachedUserAccount.milestones) var account: CachedUserAccount?
 
     init() {
         milestones = Data()
         lastUpdated = Date()
+        expiresAt = Date().addingTimeInterval(CacheTTL.milestones)
     }
 
     func setMilestones(_ userMilestones: [UserMilestone]) {
         milestones = (try? JSONEncoder().encode(userMilestones)) ?? Data()
         lastUpdated = Date()
+        expiresAt = Date().addingTimeInterval(CacheTTL.milestones)
     }
-    func getMilestones() -> [UserMilestone] {
-        let milestoneCache =
-            (try? JSONDecoder().decode([UserMilestone].self, from: milestones))
-            ?? []
-        return milestoneCache
+
+    func getMilestones() -> [UserMilestone]? {
+        // If expiresAt is nil (legacy data), treat as expired
+        guard let expiresAt = expiresAt, Date() < expiresAt else { return nil }
+        return try? JSONDecoder().decode([UserMilestone].self, from: milestones)
+    }
+}
+
+// MARK: - Friends List
+
+@Model
+final class CachedFriendsList {
+    var friendsData: Data  // Encoded [UserProfile]
+    var friendCount: Int
+    var lastUpdated: Date
+    var expiresAt: Date?  // Optional for consistency (though new model, no legacy data)
+
+    @Relationship(inverse: \CachedUserAccount.friendsList) var account: CachedUserAccount?
+
+    init(friends: [UserProfile]) {
+        self.friendsData = (try? JSONEncoder().encode(friends)) ?? Data()
+        self.friendCount = friends.count
+        self.lastUpdated = Date()
+        self.expiresAt = Date().addingTimeInterval(CacheTTL.friends)
+    }
+
+    func getFriends() -> [UserProfile]? {
+        // If expiresAt is nil, treat as expired
+        guard let expiresAt = expiresAt, Date() < expiresAt else { return nil }
+        return try? JSONDecoder().decode([UserProfile].self, from: friendsData)
+    }
+
+    func updateFriends(_ friends: [UserProfile]) {
+        self.friendsData = (try? JSONEncoder().encode(friends)) ?? Data()
+        self.friendCount = friends.count
+        self.lastUpdated = Date()
+        self.expiresAt = Date().addingTimeInterval(CacheTTL.friends)
     }
 }

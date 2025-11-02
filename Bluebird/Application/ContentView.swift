@@ -46,7 +46,7 @@ struct ContentView: View {
         )
         _songSearchViewModel = StateObject(
             wrappedValue: GenericSearchViewModel(
-                debounceDuration: .milliseconds(100),
+                debounceDuration: .milliseconds(200),
                 appState: appState,
                 searchFunction: apiManager.searchSongs,
                 unwrapFunction: { $0.tracks }

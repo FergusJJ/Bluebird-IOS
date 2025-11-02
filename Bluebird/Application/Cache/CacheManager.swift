@@ -21,7 +21,8 @@ class CacheManager: ObservableObject {
                 CachedStats.self,
                 CachedPins.self,
                 CachedUserProfile.self,
-                CachedMilestone.self
+                CachedMilestone.self,
+                CachedFriendsList.self,
             ])
 
             let modelConfiguration = ModelConfiguration(
@@ -49,7 +50,8 @@ class CacheManager: ObservableObject {
                 CachedStats.self,
                 CachedPins.self,
                 CachedUserProfile.self,
-                CachedMilestone.self
+                CachedMilestone.self,
+                CachedFriendsList.self,
             ])
 
             let modelConfiguration = ModelConfiguration(
@@ -110,7 +112,7 @@ class CacheManager: ObservableObject {
         do {
             let accounts = try context.fetch(descriptor)
             for account in accounts {
-                context.delete(account) // Cascade delete will remove all related data
+                context.delete(account)  // Cascade delete will remove all related data
             }
             try context.save()
         } catch {
@@ -166,6 +168,7 @@ class CacheManager: ObservableObject {
                 avatarUrl: profile.avatarUrl,
                 profileVisibility: profile.profileVisibility
             )
+            // expiresAt is set in init
             account.profile = cached
             context.insert(cached)
         } else {
@@ -174,6 +177,9 @@ class CacheManager: ObservableObject {
             account.profile?.avatarUrl = profile.avatarUrl
             account.profile?.profileVisibility = profile.profileVisibility
             account.profile?.lastUpdated = Date()
+            account.profile?.expiresAt = Date().addingTimeInterval(
+                CacheTTL.profile
+            )
         }
 
         if let stats = stats {
@@ -186,9 +192,14 @@ class CacheManager: ObservableObject {
         try? context.save()
     }
 
-    func getProfile() -> (profile: ProfileInfo?, stats: HeadlineViewStats?) {
+    func getProfile() -> (profile: ProfileInfo, stats: HeadlineViewStats)? {
         guard let cached = getCurrentAccount()?.profile else {
-            return (nil, nil)
+            return nil
+        }
+
+        // Check staleness - if expiresAt is nil (old data), treat as expired
+        guard let expiresAt = cached.expiresAt, Date() < expiresAt else {
+            return nil
         }
 
         let profile = ProfileInfo(
@@ -209,12 +220,48 @@ class CacheManager: ObservableObject {
         return (profile, stats)
     }
 
+    // MARK: - Friends List Cache
+
+    func getFriendsList() -> [UserProfile]? {
+        guard let cached = getCurrentAccount()?.friendsList else {
+            return nil
+        }
+
+        // getFriends() already checks staleness internally
+        return cached.getFriends()
+    }
+
+    func saveFriendsList(_ friends: [UserProfile]) {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+
+        if account.friendsList == nil {
+            let cached = CachedFriendsList(friends: friends)
+            account.friendsList = cached
+            context.insert(cached)
+        } else {
+            account.friendsList?.updateFriends(friends)
+        }
+
+        try? context.save()
+    }
+
+    func expireFriendsCache() {
+        guard let account = getCurrentAccount(), let context = context else {
+            return
+        }
+
+        account.friendsList?.expiresAt = Date().addingTimeInterval(-1)
+        try? context.save()
+    }
+
     // MARK: - Song History Cache
 
     func saveSongHistory(_ songs: [Int: SongDetail]) {
         guard let account = getCurrentAccount(),
-              let context = context,
-              let userId = currentUserId
+            let context = context,
+            let userId = currentUserId
         else { return }
 
         for (_, song) in songs {
@@ -262,12 +309,20 @@ class CacheManager: ObservableObject {
         return account.songHistory.compactMap { $0.lastUpdated }.max()
     }
 
+    func isSongHistoryStale() -> Bool {
+        guard let lastUpdated = getSongHistoryLastUpdated() else {
+            return true  // No cache = stale
+        }
+        let age = Date().timeIntervalSince(lastUpdated)
+        return age > CacheTTL.songHistory
+    }
+
     // MARK: - Stats Cache
-    
+
     func getHourlyPlaysMinutes() -> [HourlyPlay]? {
         return getCurrentAccount()?.stats?.getHourlyPlaysMinutes()
     }
-    
+
     func saveHourlyPlaysMinutes(_ plays: [HourlyPlay]) {
         guard let account = getCurrentAccount(), let context = context else {
             return
@@ -277,87 +332,12 @@ class CacheManager: ObservableObject {
             account.stats = stats
             context.insert(stats)
         }
-        account.stats?.setHourlyPlaysMinutes(plays) // no TTL, cache invalidates itself via a var
+        account.stats?.setHourlyPlaysMinutes(plays)  // no TTL, cache invalidates itself via a var
         try? context.save()
     }
 
-    func saveHourlyPlays(_ plays: [HourlyPlay], days: Int) {
-        guard let account = getCurrentAccount(), let context = context else {
-            return
-        }
-
-        if account.stats == nil {
-            let stats = CachedStats()
-            account.stats = stats
-            context.insert(stats)
-        }
-
-        account.stats?.setHourlyPlays(plays, days: days, ttl: 3600) // 1 hour TTL
-        try? context.save()
-    }
-    
-    
-
-    func getHourlyPlays(for days: Int) -> [HourlyPlay]? {
-        return getCurrentAccount()?.stats?.getHourlyPlays(for: days)
-    }
-
-    func saveTopArtists(_ artists: TopArtists, days: Int) {
-        guard let account = getCurrentAccount(), let context = context else {
-            return
-        }
-
-        if account.stats == nil {
-            let stats = CachedStats()
-            account.stats = stats
-            context.insert(stats)
-        }
-
-        account.stats?.setTopArtists(artists, days: days, ttl: 3600)
-        try? context.save()
-    }
-
-    func getTopArtists(for days: Int) -> TopArtists? {
-        return getCurrentAccount()?.stats?.getTopArtists(for: days)
-    }
-
-    func saveTopTracks(_ tracks: TopTracks, days: Int) {
-        guard let account = getCurrentAccount(), let context = context else {
-            return
-        }
-
-        if account.stats == nil {
-            let stats = CachedStats()
-            account.stats = stats
-            context.insert(stats)
-        }
-
-        account.stats?.setTopTracks(tracks, days: days, ttl: 3600)
-        try? context.save()
-    }
-
-    func getTopTracks(for days: Int) -> TopTracks? {
-        return getCurrentAccount()?.stats?.getTopTracks(for: days)
-    }
-
-    func saveTopGenres(_ genres: GenreCounts, days: Int) {
-        guard let account = getCurrentAccount(), let context = context else {
-            return
-        }
-
-        if account.stats == nil {
-            let stats = CachedStats()
-            account.stats = stats
-            context.insert(stats)
-        }
-
-        account.stats?.setTopGenres(genres, days: days, ttl: 3600)
-        try? context.save()
-    }
-
-    func getTopGenres(for days: Int) -> GenreCounts? {
-        return getCurrentAccount()?.stats?.getTopGenres(for: days)
-    }
+    // Days-based stats (hourlyPlays, topArtists, topTracks, topGenres) removed
+    // These now use in-memory caching in StatsViewModel only
 
     func saveDiscoveries(_ discoveries: Discoveries) {
         guard let account = getCurrentAccount(), let context = context else {
@@ -440,6 +420,7 @@ class CacheManager: ObservableObject {
             albums: albums,
             artists: artists
         )
+        account.pins?.expiresAt = nil  // Reset expiry after manual sync
         try? context.save()
     }
 
@@ -448,11 +429,17 @@ class CacheManager: ObservableObject {
         albums: [String: AlbumDetail], artists: [String: ArtistDetail]
     )? {
         guard let pins = getCurrentAccount()?.pins else { return nil }
+
+        // Check if manually expired (optional expiry for pins)
+        if let expiresAt = pins.expiresAt, Date() >= expiresAt {
+            return nil
+        }
+
         return pins.getPins()
     }
-   
+
     // MARK: - milestones
-    
+
     func saveMilestones(_ milestones: [UserMilestone]) {
         guard let account = getCurrentAccount(), let context = context else {
             return
@@ -465,9 +452,11 @@ class CacheManager: ObservableObject {
         account.milestones?.setMilestones(milestones)
         try? context.save()
     }
-    
+
     func getMilestones() -> ([UserMilestone])? {
-        guard let milestones = getCurrentAccount()?.milestones else { return nil }
+        guard let milestones = getCurrentAccount()?.milestones else {
+            return nil
+        }
         return milestones.getMilestones()
     }
 
@@ -475,8 +464,8 @@ class CacheManager: ObservableObject {
 
     func saveUserProfile(_ profile: UserProfileDetail) {
         guard let account = getCurrentAccount(),
-              let context = context,
-              let viewerId = currentUserId
+            let context = context,
+            let viewerId = currentUserId
         else { return }
 
         let profileId = "\(viewerId)_\(profile.user_id)"
@@ -495,7 +484,7 @@ class CacheManager: ObservableObject {
                 existing.profileData =
                     (try? JSONEncoder().encode(profile)) ?? Data()
                 existing.cachedAt = Date()
-                existing.expiresAt = Date().addingTimeInterval(300) // 5 min TTL
+                existing.expiresAt = Date().addingTimeInterval(300)  // 5 min TTL
             } else {
                 // Create new
                 let cached = CachedUserProfile(
@@ -521,49 +510,10 @@ class CacheManager: ObservableObject {
         )
 
         guard let cached = try? context?.fetch(descriptor).first,
-              Date() < cached.expiresAt
+            let expiry = cached.expiresAt, Date() < expiry
         else { return nil }
 
         return cached.toUserProfileDetail()
     }
 
-    // MARK: - Cache Invalidation
-    
-    func invalidateProfile() {
-        guard let account = getCurrentAccount() else { return }
-        account.profile?.lastUpdated = Date().addingTimeInterval(-3600)
-        try? context?.save()
-    }
-
-    func invalidateStatsCache() {
-        guard let stats = getCurrentAccount()?.stats else { return }
-
-        stats.hourlyPlaysExpiry = Date()
-        stats.dailyPlaysExpiry = Date()
-        stats.topArtistsExpiry = Date()
-        stats.topTracksExpiry = Date()
-        stats.topGenresExpiry = Date()
-        stats.discoveriesExpiry = Date()
-        stats.weeklyComparisonExpiry = Date()
-        
-        try? context?.save()
-    }
-
-    func invalidateSocialCache(for userId: String? = nil) {
-        guard let account = getCurrentAccount() else { return }
-
-        if let userId = userId {
-            // Invalidate specific user
-            for cached in account.socialCache where cached.userId == userId {
-                cached.expiresAt = Date()
-            }
-        } else {
-            // Invalidate all
-            for cached in account.socialCache {
-                cached.expiresAt = Date()
-            }
-        }
-
-        try? context?.save()
-    }
 }
