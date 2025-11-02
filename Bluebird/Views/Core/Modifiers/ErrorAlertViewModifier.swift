@@ -5,6 +5,7 @@ struct ErrorAlertViewModifier: ViewModifier {
 
     private var alertBinding: Binding<AppError?> {
         Binding<AppError?>(get: {
+                                
                                if let error = appState.errorToDisplay, error.presentationStyle == .generic {
                                    return error
                                }

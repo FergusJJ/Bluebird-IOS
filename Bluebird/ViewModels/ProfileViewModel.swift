@@ -121,13 +121,13 @@ class ProfileViewModel: ObservableObject {
             totalUniqueArtists = stats.unique_artists
             totalMinutesListened = stats.total_duration_millis / (60 * 1000)
         }
-        
+
         guard appState.isLoggedIn == .istrue && forceRefresh
         else {
             print("load profile guard failed")
             return
         }
-        
+
         let result = await bluebirdAccountAPIService.getProfile()
         switch result {
         case .success(let profileInfo):
@@ -409,7 +409,10 @@ class ProfileViewModel: ObservableObject {
         avatarPath: String?,
         profileVisibility: String?
     ) async -> Bool {
-        guard username != nil || bio != nil || avatarPath != nil || profileVisibility != nil else {
+        guard
+            username != nil || bio != nil || avatarPath != nil
+                || profileVisibility != nil
+        else {
             print("Error: At least one profile attribute must be provided.")
             return false
         }
@@ -764,21 +767,38 @@ class ProfileViewModel: ObservableObject {
     }
 
     func deleteRepost(postID: String) async -> Bool {
-        let result = await bluebirdAccountAPIService.deleteRepost(
-            postID: postID
+        let result: Void? = await tryRequest(
+            { await bluebirdAccountAPIService.deleteRepost(postID: postID) },
+            "Error deleting repost"
         )
-
-        switch result {
-        case .success():
-            // Remove from local array
-            myReposts.removeAll { $0.repost.post_id == postID }
-            return true
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error deleting repost: \(presentationError)")
-            appState.setError(presentationError)
+        if result == nil {
             return false
+        }
+        myReposts.removeAll { $0.repost.post_id == postID }
+        return true
+    }
+
+    private func tryRequest<T>(
+        _ call: () async -> Result<T, BluebirdAPIError>,
+        _ perrorPrefix: String?
+    ) async -> T? {
+        let result = await call()
+        switch result {
+        case .success(let data):
+            return data
+        case .failure(let serviceError):
+            if case .requestCancelled = serviceError {
+                print("[WARNING] The request was cancelled.")
+            } else {
+                let presentationError = AppError(from: serviceError)
+                let printErrorPrefix =
+                    perrorPrefix == nil
+                    ? "API Error"
+                    : perrorPrefix!.isEmpty ? "API Error" : perrorPrefix!
+                print("\(printErrorPrefix): \(presentationError)")
+                appState.setError(presentationError)
+            }
+            return nil
         }
     }
 }

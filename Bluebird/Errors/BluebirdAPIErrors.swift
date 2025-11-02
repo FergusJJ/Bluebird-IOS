@@ -11,6 +11,7 @@ enum BluebirdAPIError: Error {
     case spotifyAPIError
     case invalidResponse
     case unknownError
+    case requestCancelled
 
     var errorDescription: String? {
         switch self {
@@ -42,6 +43,8 @@ enum BluebirdAPIError: Error {
             return "Invalid response received from server."
         case .unknownError:
             return "An unexpected error occurred. Please try again."
+        case .requestCancelled:
+            return "The request was cancelled."
         }
     }
 }
