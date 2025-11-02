@@ -1,7 +1,7 @@
 import SwiftUI
 
 @MainActor
-class SocialViewModel: ObservableObject {
+class SocialViewModel: ObservableObject, TryRequestViewModel {
     @Published var currentUserProfile: UserProfileDetail?
     @Published var friendsCurrentlyPlaying: [String: FriendCurrentlyPlaying] =
         [:]
@@ -31,7 +31,7 @@ class SocialViewModel: ObservableObject {
     // Friends for viewed user profile
     @Published var userFriends: [UserProfile] = []
 
-    private var appState: AppState
+    internal var appState: AppState
     private let cacheManager = CacheManager.shared
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
 
@@ -53,58 +53,39 @@ class SocialViewModel: ObservableObject {
                 return
             }
         }
-        let result = await bluebirdAccountAPIService.getUser(userID: userId)
-        switch result {
-        case .success(let profileDetail):
+        if let profileDetail = await tryRequest(
+            { await bluebirdAccountAPIService.getUser(userID: userId) },
+            "Error fetching user profile"
+        ) {
             currentUserProfile = profileDetail
             cacheManager.saveUserProfile(profileDetail)
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching user profile: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func fetchUserMilestones(userId: String) async {
-        let result = await bluebirdAccountAPIService.getMilestones(
-            userID: userId
-        )
-        switch result {
-        case .success(let milestones):
+        if let milestones = await tryRequest(
+            { await bluebirdAccountAPIService.getMilestones(userID: userId) },
+            "Error fetching user milestones"
+        ) {
             userMilestones = milestones
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching user milestones: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func fetchUserFriends(userId: String) async {
-        let result = await bluebirdAccountAPIService.getAllFriends(for: userId)
-        switch result {
-        case .success(let friends):
+        if let friends = await tryRequest(
+            { await bluebirdAccountAPIService.getAllFriends(for: userId) },
+            "Error fetching user friends"
+        ) {
             userFriends = friends
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching user friends: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func fetchFriendsCurrentlyPlaying() async {
-        let result =
-            await bluebirdAccountAPIService.getFriendsCurrentlyPlaying()
-        switch result {
-        case .success(let userIDTrackMap):
+        if let userIDTrackMap = await tryRequest(
+            { await bluebirdAccountAPIService.getFriendsCurrentlyPlaying() },
+            "Error fetching friends currently playing"
+        ) {
             friendsCurrentlyPlaying = userIDTrackMap.friends
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error refreshing history: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -117,26 +98,12 @@ class SocialViewModel: ObservableObject {
 
         isLoadingTrending = true
         defer { isLoadingTrending = false }
-        let result = await bluebirdAccountAPIService.getTrendingTracks()
-        switch result {
-        case .success(let tracks):
+
+        if let tracks = await tryRequest(
+            { await bluebirdAccountAPIService.getTrendingTracks() },
+            "Error fetching trending tracks"
+        ) {
             trendingTracks = tracks
-
-        case .failure(let serviceError):
-            // Silently ignore cancellation errors (code -999) - these happen when refresh controls overlap
-            if case .networkError(let error as NSError) = serviceError,
-                error.domain == NSURLErrorDomain,
-                error.code == NSURLErrorCancelled
-            {
-                print(
-                    "Trending fetch cancelled by iOS (refresh control conflict, this is normal)"
-                )
-                return
-            }
-
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching trending tracks: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -145,31 +112,28 @@ class SocialViewModel: ObservableObject {
     }
 
     func sendFriendRequest(to userId: String) async {
-        let result = await bluebirdAccountAPIService.sendFriendRequest(
-            to: userId
+        let result = await tryRequest(
+            { await bluebirdAccountAPIService.sendFriendRequest(to: userId) },
+            "Error sending friend request"
         )
-        switch result {
-        case .success:
+
+        if result != nil {
             if var profile = currentUserProfile, profile.user_id == userId {
                 profile.display_friendship_status = .outgoing
                 currentUserProfile = profile
                 userProfileDetailCache[userId] = (profile, Date())
             }
             invalidateCache(for: userId)
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error sending friend request: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func removeFriend(friend userId: String) async {
-        let result = await bluebirdAccountAPIService.removeFriend(
-            friend: userId
+        let result = await tryRequest(
+            { await bluebirdAccountAPIService.removeFriend(friend: userId) },
+            "Error removing friend"
         )
-        switch result {
-        case .success:
+
+        if result != nil {
             if var profile = currentUserProfile, profile.user_id == userId {
                 profile.display_friendship_status = .none
                 currentUserProfile = profile
@@ -180,20 +144,16 @@ class SocialViewModel: ObservableObject {
                 invalidateCache(for: currentUserId)
                 CacheManager.shared.invalidateProfile()
             }
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error removing friend: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func respondToFriendRequests(to userId: String, accept: Bool) async {
-        let result = await bluebirdAccountAPIService.respondToFriendRequest(
-            to: userId,
-            accept: accept
+        let result = await tryRequest(
+            { await bluebirdAccountAPIService.respondToFriendRequest(to: userId, accept: accept) },
+            "Error responding to friend request"
         )
-        switch result {
-        case .success:
+
+        if result != nil {
             if var profile = currentUserProfile, profile.user_id == userId {
                 profile.display_friendship_status = accept ? .friends : .none
                 currentUserProfile = profile
@@ -202,16 +162,11 @@ class SocialViewModel: ObservableObject {
                 if accept {
                     invalidateCache(for: userId)
                 }
-
             }
             if let currentUserId = CacheManager.shared.getCurrentUserId() {
                 invalidateCache(for: currentUserId)
                 CacheManager.shared.invalidateProfile()
             }
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error responding to friend request: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -220,21 +175,10 @@ class SocialViewModel: ObservableObject {
         for entityID: String,
         caption: String
     ) async -> PostCreatedResponse? {
-        let result = await bluebirdAccountAPIService.createRepost(
-            on: entityType,
-            for: entityID,
-            caption: caption
+        return await tryRequest(
+            { await bluebirdAccountAPIService.createRepost(on: entityType, for: entityID, caption: caption) },
+            "Error creating post"
         )
-        switch result {
-        case .success(let createPostResponse):
-            return createPostResponse
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "Error creating post: \(serviceError.localizedDescription) \(presentationError.localizedDescription)"
-            )
-            return nil
-        }
     }
 
     // MARK: - Cache Helpers
@@ -263,21 +207,13 @@ class SocialViewModel: ObservableObject {
         }
 
         isLoadingReposts = true
-        let result = await bluebirdAccountAPIService.getUserReposts(
-            userID: userId,
-            cursor: nil,
-            limit: 50
-        )
 
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getUserReposts(userID: userId, cursor: nil, limit: 50) },
+            "Error fetching user reposts"
+        ) {
             userRepostsCache[userId] = response.reposts
             repostsCursorCache[userId] = response.next_cursor
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching user reposts: \(presentationError)")
-            appState.setError(presentationError)
         }
         isLoadingReposts = false
     }
@@ -288,21 +224,13 @@ class SocialViewModel: ObservableObject {
         }
 
         isLoadingReposts = true
-        let result = await bluebirdAccountAPIService.getUserReposts(
-            userID: userId,
-            cursor: getRepostsCursor(for: userId),
-            limit: 50
-        )
 
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getUserReposts(userID: userId, cursor: getRepostsCursor(for: userId), limit: 50) },
+            "Error fetching more user reposts"
+        ) {
             userRepostsCache[userId]?.append(contentsOf: response.reposts)
             repostsCursorCache[userId] = response.next_cursor
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading more reposts: \(presentationError)")
-            appState.setError(presentationError)
         }
         isLoadingReposts = false
     }
@@ -315,21 +243,14 @@ class SocialViewModel: ObservableObject {
         }
 
         isLoadingFeed = true
-        let result = await bluebirdAccountAPIService.getFeed(
-            limit: 20,
-            offset: 0
-        )
 
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getFeed(limit: 20, offset: 0) },
+            "Error fetching feed"
+        ) {
             feedPosts = response.posts
             feedHasMore = response.has_more
             feedNextOffset = response.next_offset
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching feed: \(presentationError)")
-            appState.setError(presentationError)
         }
         isLoadingFeed = false
     }
@@ -338,21 +259,14 @@ class SocialViewModel: ObservableObject {
         guard feedHasMore && !isLoadingFeed else { return }
 
         isLoadingFeed = true
-        let result = await bluebirdAccountAPIService.getFeed(
-            limit: 20,
-            offset: feedNextOffset
-        )
 
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getFeed(limit: 20, offset: feedNextOffset) },
+            "Error fetching more feed posts"
+        ) {
             feedPosts.append(contentsOf: response.posts)
             feedHasMore = response.has_more
             feedNextOffset = response.next_offset
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading more feed posts: \(presentationError)")
-            appState.setError(presentationError)
         }
         isLoadingFeed = false
     }
@@ -371,29 +285,13 @@ class SocialViewModel: ObservableObject {
         isLoadingUnifiedFeed = true
         defer { isLoadingUnifiedFeed = false }
 
-        let result = await bluebirdAccountAPIService.getUnifiedFeed(
-            limit: 20,
-            offset: 0,
-            includeHighlights: true
-        )
-
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getUnifiedFeed(limit: 20, offset: 0, includeHighlights: true) },
+            "Error fetching unified feed"
+        ) {
             unifiedFeedItems = response.items
             unifiedFeedHasMore = response.has_more
             unifiedFeedNextOffset = response.next_offset
-
-        case .failure(let serviceError):
-            if case .networkError(let error as NSError) = serviceError,
-                error.domain == NSURLErrorDomain,
-                error.code == NSURLErrorCancelled
-            {
-                print("Unified feed fetch cancelled (normal during refresh)")
-                return
-            }
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching unified feed: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -401,45 +299,32 @@ class SocialViewModel: ObservableObject {
         guard unifiedFeedHasMore && !isLoadingUnifiedFeed else { return }
 
         isLoadingUnifiedFeed = true
-        let result = await bluebirdAccountAPIService.getUnifiedFeed(
-            limit: 20,
-            offset: unifiedFeedNextOffset,
-            includeHighlights: true
-        )
 
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getUnifiedFeed(limit: 20, offset: unifiedFeedNextOffset, includeHighlights: true) },
+            "Error fetching more unified feed items"
+        ) {
             unifiedFeedItems.append(contentsOf: response.items)
             unifiedFeedHasMore = response.has_more
             unifiedFeedNextOffset = response.next_offset
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading more unified feed items: \(presentationError)")
-            appState.setError(presentationError)
         }
         isLoadingUnifiedFeed = false
     }
 
     func deletePost(postID: String) async -> Bool {
-        let result = await bluebirdAccountAPIService.deleteRepost(
-            postID: postID
+        let result: Void? = await tryRequest(
+            { await bluebirdAccountAPIService.deleteRepost(postID: postID) },
+            "Error deleting post"
         )
 
-        switch result {
-        case .success():
+        if result != nil {
             // Remove from regular feed
             feedPosts.removeAll { $0.post.post_id == postID }
             // Remove from unified feed
             unifiedFeedItems.removeAll { $0.post_id == postID }
             return true
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error deleting post: \(presentationError)")
-            appState.setError(presentationError)
-            return false
         }
+        return false
     }
 
     func clearReposts(for userId: String) {
