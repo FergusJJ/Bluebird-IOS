@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-class ProfileViewModel: ObservableObject {
+class ProfileViewModel: ObservableObject, TryRequestViewModel {
     // may want to add stuff here for all time song plays/number of artists listened to etc.
     // but not sure how/where im going to store that yet
 
@@ -71,7 +71,7 @@ class ProfileViewModel: ObservableObject {
     @State var pinsFetched = false
 
     private var cancellables = Set<AnyCancellable>()
-    private var appState: AppState
+    internal var appState: AppState
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
     private let supabaseManager = SupabaseClientManager.shared
     private let cacheManager = CacheManager.shared
@@ -124,24 +124,19 @@ class ProfileViewModel: ObservableObject {
 
         guard appState.isLoggedIn == .istrue && forceRefresh
         else {
-            print("load profile guard failed")
             return
         }
 
-        let result = await bluebirdAccountAPIService.getProfile()
-        switch result {
-        case .success(let profileInfo):
-            print("got profile \(profileInfo.avatarUrl)")
+        if let profileInfo = await tryRequest(
+            { await bluebirdAccountAPIService.getProfile() },
+            "Error fetching profile"
+        ) {
             username = profileInfo.username
             bio = profileInfo.bio
             avatarURL = URL(string: profileInfo.avatarUrl)
             profileVisibility = profileInfo.profileVisibility
             // Save to cache
             cacheManager.saveProfile(profileInfo, stats: cachedStats)
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading profile info: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -157,11 +152,11 @@ class ProfileViewModel: ObservableObject {
         guard appState.isLoggedIn == .istrue else {
             return
         }
-        let result = await bluebirdAccountAPIService.getHeadlineStats(
-            for: numDays
-        )
-        switch result {
-        case .success(let stats):
+
+        if let stats = await tryRequest(
+            { await bluebirdAccountAPIService.getHeadlineStats(for: numDays) },
+            "Error fetching headline stats"
+        ) {
             totalPlays = stats.total_plays
             totalUniqueArtists = stats.unique_artists
             totalMinutesListened = (stats.total_duration_millis / (60 * 1000))
@@ -179,10 +174,6 @@ class ProfileViewModel: ObservableObject {
                     ),
                 stats: stats
             )
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading headline stats info: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -290,18 +281,12 @@ class ProfileViewModel: ObservableObject {
             print("FetchConnectedSpotifyDetails failed: Access token is nil.")
             return
         }
-        let res = await bluebirdAccountAPIService.getConnectedAccountDetail(
-            accessToken: spotifyAccessToken
-        )
-        switch res {
-        case .success(let details):
+
+        if let details = await tryRequest(
+            { await bluebirdAccountAPIService.getConnectedAccountDetail(accessToken: spotifyAccessToken) },
+            "Error fetching connected account details"
+        ) {
             connectedAccountDetails = details
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "An API error occurred: \(presentationError.localizedDescription)"
-            )
-            appState.setError(presentationError)
         }
     }
 
@@ -333,14 +318,17 @@ class ProfileViewModel: ObservableObject {
             return false
         }
 
-        let result = await bluebirdAccountAPIService.updatePin(
-            accessToken: spotifyAccessToken,
-            id: id,
-            entity: entityType,
-            isDelete: isDelete
+        let result: Void? = await tryRequest(
+            { await bluebirdAccountAPIService.updatePin(
+                accessToken: spotifyAccessToken,
+                id: id,
+                entity: entityType,
+                isDelete: isDelete
+            ) },
+            "Error updating pin"
         )
-        switch result {
-        case .success():
+
+        if result != nil {
             guard let entityType = EntityType(safeRawValue: entity) else {
                 print("Invalid entity type received from server: \(entity)")
                 return true
@@ -363,18 +351,11 @@ class ProfileViewModel: ObservableObject {
             // Update UI arrays after pin change
             updateAllUIArrays()
             return true
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "An API error occurred: \(presentationError.localizedDescription)"
-            )
-            appState.setError(presentationError)
-            return false
         }
+        return false
     }
 
     private func getPins(entities: [String]) async -> Bool {
-        print("getting pins")
         if isLoading {
             return false
         }
@@ -383,24 +364,19 @@ class ProfileViewModel: ObservableObject {
             isLoading = false
         }
         let stringQuery = entities.joined(separator: ",")
-        let result = await bluebirdAccountAPIService.getPins(query: stringQuery)
-        switch result {
-        case .success(let getPinsResult):
-            print("Got \(getPinsResult.total) pins")
+
+        if let getPinsResult = await tryRequest(
+            { await bluebirdAccountAPIService.getPins(query: stringQuery) },
+            "Error fetching pins"
+        ) {
             orderedPins.removeAll()
             pinsById.removeAll()
             for pin in getPinsResult.pins {
                 addPin(pin)
             }
             return true
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "An API error occurred fetching pins: \(presentationError.localizedDescription)"
-            )
-            appState.setError(presentationError)
-            return false
         }
+        return false
     }
 
     private func updateProfile(
@@ -416,25 +392,20 @@ class ProfileViewModel: ObservableObject {
             print("Error: At least one profile attribute must be provided.")
             return false
         }
-        let result = await bluebirdAccountAPIService.updateProfile(
-            username: username,
-            bio: bio,
-            avatarPath: avatarPath,
-            profileVisibility: profileVisibility
+        let result: Void? = await tryRequest(
+            { await bluebirdAccountAPIService.updateProfile(
+                username: username,
+                bio: bio,
+                avatarPath: avatarPath,
+                profileVisibility: profileVisibility
+            ) },
+            "Error updating profile"
         )
-        switch result {
-        case .success():
-            print("Successfully update profile info!")
+
+        if result != nil {
             return true
-        // probably want some ui feedback here like a popup
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "An API error occurred: \(presentationError.localizedDescription)"
-            )
-            appState.setError(presentationError)
-            return false
         }
+        return false
     }
 
     // MARK: - Sync Logic
@@ -519,62 +490,47 @@ class ProfileViewModel: ObservableObject {
     // MARK: - Fetch and Cache Methods
 
     private func fetchAndCacheTrackDetails(trackIDs: [String]) async {
-        let res = await bluebirdAccountAPIService.getEntityDetails(
-            trackIDs: trackIDs,
-            albumIDs: [],
-            artistIDs: []
-        )
-
-        switch res {
-        case .success(let getEntityResponse):
+        if let getEntityResponse = await tryRequest(
+            { await bluebirdAccountAPIService.getEntityDetails(
+                trackIDs: trackIDs,
+                albumIDs: [],
+                artistIDs: []
+            ) },
+            "Error fetching track details"
+        ) {
             for trackDetail in getEntityResponse.tracks {
                 pinnedTrackDetails[trackDetail.track_id] = trackDetail
             }
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading track details: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     private func fetchAndCacheAlbumDetails(albumIDs: [String]) async {
-        let res = await bluebirdAccountAPIService.getEntityDetails(
-            trackIDs: [],
-            albumIDs: albumIDs,
-            artistIDs: []
-        )
-
-        switch res {
-        case .success(let getEntityResponse):
+        if let getEntityResponse = await tryRequest(
+            { await bluebirdAccountAPIService.getEntityDetails(
+                trackIDs: [],
+                albumIDs: albumIDs,
+                artistIDs: []
+            ) },
+            "Error fetching album details"
+        ) {
             for albumDetail in getEntityResponse.albums {
                 pinnedAlbumDetails[albumDetail.album_id] = albumDetail
             }
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading album details: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     private func fetchAndCacheArtistDetails(artistIDs: [String]) async {
-        let res = await bluebirdAccountAPIService.getEntityDetails(
-            trackIDs: [],
-            albumIDs: [],
-            artistIDs: artistIDs
-        )
-
-        switch res {
-        case .success(let getEntityResponse):
+        if let getEntityResponse = await tryRequest(
+            { await bluebirdAccountAPIService.getEntityDetails(
+                trackIDs: [],
+                albumIDs: [],
+                artistIDs: artistIDs
+            ) },
+            "Error fetching artist details"
+        ) {
             for artistDetail in getEntityResponse.artists {
                 pinnedArtistDetails[artistDetail.artist_id] = artistDetail
             }
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading artist details: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -654,18 +610,12 @@ class ProfileViewModel: ObservableObject {
             return
         }
 
-        let result = await bluebirdAccountAPIService.getMilestones(
-            userID: userId
-        )
-        switch result {
-        case .success(let fetchedMilestones):
+        if let fetchedMilestones = await tryRequest(
+            { await bluebirdAccountAPIService.getMilestones(userID: userId) },
+            "Error fetching milestones"
+        ) {
             milestones = fetchedMilestones
             cacheManager.saveMilestones(fetchedMilestones)
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching milestones: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -677,17 +627,13 @@ class ProfileViewModel: ObservableObject {
             return
         }
 
-        let result = await bluebirdAccountAPIService.getAllFriends(for: userId)
-        switch result {
-        case .success(let fetchedFriends):
+        if let fetchedFriends = await tryRequest(
+            { await bluebirdAccountAPIService.getAllFriends(for: userId) },
+            "Error fetching friends"
+        ) {
             friends = fetchedFriends
             friendCount = fetchedFriends.count
             cacheManager.invalidateProfile()
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching friends: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -696,19 +642,13 @@ class ProfileViewModel: ObservableObject {
             print("Failed to sync friends: No user ID")
             return
         }
-        let result = await bluebirdAccountAPIService.getPendingRequests(
-            for: userId
-        )
-        switch result {
-        case .success(let requests):
+        if let requests = await tryRequest(
+            { await bluebirdAccountAPIService.getPendingRequests(for: userId) },
+            "Error fetching friend requests"
+        ) {
             incomingRequests = requests
             incomingRequestsCount = requests.count
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching incoming requests: \(presentationError)")
-            appState.setError(presentationError)
         }
-
     }
 
     // MARK: - Reposts
@@ -724,20 +664,13 @@ class ProfileViewModel: ObservableObject {
         }
         isLoadingReposts = true
         defer { isLoadingReposts = false }
-        let result = await bluebirdAccountAPIService.getCurrentUserReposts(
-            cursor: nil,
-            limit: 50
-        )
 
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getCurrentUserReposts(cursor: nil, limit: 50) },
+            "Error fetching reposts"
+        ) {
             myReposts = response.reposts
             repostsNextCursor = response.next_cursor
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching reposts: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -748,22 +681,14 @@ class ProfileViewModel: ObservableObject {
         }
         isLoadingReposts = true
         defer { isLoadingReposts = false }
-        let result = await bluebirdAccountAPIService.getCurrentUserReposts(
-            cursor: repostsNextCursor,
-            limit: 50
-        )
 
-        switch result {
-        case .success(let response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getCurrentUserReposts(cursor: repostsNextCursor, limit: 50) },
+            "Error fetching more reposts"
+        ) {
             myReposts.append(contentsOf: response.reposts)
             repostsNextCursor = response.next_cursor
-
-        case .failure(let serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading more reposts: \(presentationError)")
-            appState.setError(presentationError)
         }
-        isLoadingReposts = false
     }
 
     func deleteRepost(postID: String) async -> Bool {
@@ -778,27 +703,4 @@ class ProfileViewModel: ObservableObject {
         return true
     }
 
-    private func tryRequest<T>(
-        _ call: () async -> Result<T, BluebirdAPIError>,
-        _ perrorPrefix: String?
-    ) async -> T? {
-        let result = await call()
-        switch result {
-        case .success(let data):
-            return data
-        case .failure(let serviceError):
-            if case .requestCancelled = serviceError {
-                print("[WARNING] The request was cancelled.")
-            } else {
-                let presentationError = AppError(from: serviceError)
-                let printErrorPrefix =
-                    perrorPrefix == nil
-                    ? "API Error"
-                    : perrorPrefix!.isEmpty ? "API Error" : perrorPrefix!
-                print("\(printErrorPrefix): \(presentationError)")
-                appState.setError(presentationError)
-            }
-            return nil
-        }
-    }
 }
