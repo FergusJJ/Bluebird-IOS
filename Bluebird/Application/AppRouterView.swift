@@ -27,7 +27,7 @@ struct AppRouterView: View {
                         Label("Social", systemImage: "music.note.house.fill")
                     }
                     NavigationStack {
-                        HomeView()
+                        HistoryView()
                     }
                     .toolbarBackground(Color.themeBackground, for: .tabBar)
                     .toolbarColorScheme(colorScheme, for: .tabBar)
