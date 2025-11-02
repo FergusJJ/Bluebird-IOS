@@ -22,13 +22,14 @@ enum OnboardingStep: Int, CaseIterable {
 }
 
 @MainActor
-class OnboardingManager: ObservableObject {
+class OnboardingManager: ObservableObject, TryRequestViewModel {
     @Published var currentStep: OnboardingStep = .welcome
     @Published var isComplete: Bool = false
 
-    @AppStorage("hasCompletedOnboardingLocally") private var hasCompletedLocally: Bool = false
+    @AppStorage("hasCompletedOnboardingLocally") private
+        var hasCompletedLocally: Bool = false
 
-    private var appState: AppState
+    internal var appState: AppState
     private var apiService: BluebirdAccountAPIService
 
     init(appState: AppState, apiService: BluebirdAccountAPIService) {
@@ -56,7 +57,9 @@ class OnboardingManager: ObservableObject {
             return
         }
 
-        if let nextStepValue = OnboardingStep(rawValue: currentStep.rawValue + 1) {
+        if let nextStepValue = OnboardingStep(
+            rawValue: currentStep.rawValue + 1
+        ) {
             withAnimation {
                 currentStep = nextStepValue
             }
@@ -66,7 +69,9 @@ class OnboardingManager: ObservableObject {
     func previousStep() {
         guard !isFirstStep else { return }
 
-        if let previousStepValue = OnboardingStep(rawValue: currentStep.rawValue - 1) {
+        if let previousStepValue = OnboardingStep(
+            rawValue: currentStep.rawValue - 1
+        ) {
             withAnimation {
                 currentStep = previousStepValue
             }
@@ -87,19 +92,21 @@ class OnboardingManager: ObservableObject {
     }
 
     private func markOnboardingCompleteOnBackend() async {
-        let result = await apiService.completeOnboarding()
-
-        switch result {
-        case .success:
-            print("OnboardingManager: Successfully marked onboarding complete on backend")
+        let result: Void? = await tryRequest(
+            { await apiService.completeOnboarding() },
+            "OnboardingManager: Failed to mark onboarding complete"
+        )
+        if result == nil {
             appState.hasCompletedOnboarding = true
             appState.shouldShowOnboarding = false
-        case .failure(let error):
-            print("OnboardingManager: Failed to mark onboarding complete: \(error.localizedDescription)")
-            // Still mark as complete locally to avoid blocking the user
-            appState.hasCompletedOnboarding = true
-            appState.shouldShowOnboarding = false
+            return
         }
+
+        print(
+            "OnboardingManager: Successfully marked onboarding complete on backend"
+        )
+        appState.hasCompletedOnboarding = true
+        appState.shouldShowOnboarding = false
     }
 
     func reset() {

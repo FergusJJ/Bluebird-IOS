@@ -1,8 +1,8 @@
 import SwiftUI
 
 @MainActor
-class StatsViewModel: ObservableObject {
-    private var appState: AppState
+class StatsViewModel: ObservableObject, TryRequestViewModel {
+    internal var appState: AppState
 
     @Published var hourlyPlaysMinutes: [Int] = Array(repeating: 0, count: 24)
     @Published var hourlyPlays: [Int] = Array(repeating: 0, count: 24)
@@ -74,46 +74,41 @@ class StatsViewModel: ObservableObject {
             hourlyPlaysMinutes = newHourlyPlaysMinutes
             return
         }
-        let result = await bluebirdAccountAPIService.getHourlyPlaysMinutes()
-        switch result {
-        case let .success(result):
+
+        if let result = await tryRequest(
+            { await bluebirdAccountAPIService.getHourlyPlaysMinutes() },
+            "Error fetching hourly plays minutes"
+        ) {
             let newHourlyPlaysMinutes = result.map{$0.plays}
             hourlyPlaysMinutes = newHourlyPlaysMinutes
             hourlyPlaysMinutesCache = newHourlyPlaysMinutes
             hourlyPlaysMinutesCacheHour = currentHour
             cacheManager.saveHourlyPlaysMinutes(result)
-            print(hourlyPlaysMinutes)
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching hourly plays minutes: \(presentationError)")
+        } else {
             hourlyPlays = Array(repeating: 0, count: 24)
-            appState.setError(presentationError)
         }
     }
 
     func fetchHourlyPlays(for days: Int) async {
         if let cached = hourlyPlaysCache[days] {
-            print("📦 [CACHE HIT - Memory] Hourly plays for \(days) days")
             hourlyPlays = cached
             return
         }
 
         if let cached = cacheManager.getHourlyPlays(for: days) {
-            print("💾 [CACHE HIT - SwiftData] Hourly plays for \(days) days")
             let playsArray = cached.reduce(into: Array(repeating: 0, count: 24)) {
                 result, play in
                 result[play.hour] = play.plays
             }
             hourlyPlays = playsArray
-            hourlyPlaysCache[days] = playsArray // Save to memory cache
+            hourlyPlaysCache[days] = playsArray
             return
         }
 
-        // 3. Fetch from API
-        print("🌐 [API CALL] Fetching hourly plays for \(days) days")
-        let result = await bluebirdAccountAPIService.getHourlyPlays(for: days)
-        switch result {
-        case let .success(hourlyPlaysResponse):
+        if let hourlyPlaysResponse = await tryRequest(
+            { await bluebirdAccountAPIService.getHourlyPlays(for: days) },
+            "Error fetching hourly plays"
+        ) {
             var newPlays = Array(repeating: 0, count: 24)
             for play in hourlyPlaysResponse {
                 let hourIndex = play.hour
@@ -121,127 +116,88 @@ class StatsViewModel: ObservableObject {
                 newPlays[hourIndex] = play.plays
             }
             hourlyPlays = newPlays
-            hourlyPlaysCache[days] = newPlays // Save to memory cache
+            hourlyPlaysCache[days] = newPlays
             cacheManager.saveHourlyPlays(hourlyPlaysResponse, days: days)
-            print("✅ [SAVED] Hourly plays cached for \(days) days")
-
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching hourly plays: \(presentationError)")
+        } else {
             hourlyPlays = Array(repeating: 0, count: 24)
-            appState.setError(presentationError)
         }
     }
 
     func fetchDailyPlays() async {
-        // 1. Check in-memory cache first
         if let cached = dailyPlaysCache {
-            print("📦 [CACHE HIT - Memory] Daily plays")
             dailyPlays = cached
             lastWeekTotalPlays = dailyPlays.reduce(0) { $0 + $1.last_week }
             thisWeekTotalPlays = dailyPlays.reduce(0) { $0 + $1.this_week }
             return
         }
 
-        // 2. Check SwiftData cache
         if let cached = cacheManager.getDailyPlays() {
-            print("💾 [CACHE HIT - SwiftData] Daily plays")
             dailyPlays = cached
-            dailyPlaysCache = cached // Save to memory
+            dailyPlaysCache = cached
             lastWeekTotalPlays = dailyPlays.reduce(0) { $0 + $1.last_week }
             thisWeekTotalPlays = dailyPlays.reduce(0) { $0 + $1.this_week }
             return
         }
 
-        // 3. Fetch from API
-        print("🌐 [API CALL] Fetching daily plays")
-        let result = await bluebirdAccountAPIService.getDailyPlays()
-        switch result {
-        case let .success(dailyPlaysResponse):
+        if let dailyPlaysResponse = await tryRequest(
+            { await bluebirdAccountAPIService.getDailyPlays() },
+            "Error fetching daily plays"
+        ) {
             dailyPlays = dailyPlaysResponse
-            dailyPlaysCache = dailyPlaysResponse // Save to memory
+            dailyPlaysCache = dailyPlaysResponse
             lastWeekTotalPlays = dailyPlays.reduce(0) { $0 + $1.last_week }
             thisWeekTotalPlays = dailyPlays.reduce(0) { $0 + $1.this_week }
             cacheManager.saveDailyPlays(dailyPlaysResponse)
-            print("✅ [SAVED] Daily plays cached")
-
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching daily plays: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func fetchTopArtists(for days: Int) async {
-        // 1. Check in-memory cache first
         if let cached = topArtistsCache[days] {
-            print("📦 [CACHE HIT - Memory] Top artists for \(days) days")
             topArtists = cached
             return
         }
 
-        // 2. Check SwiftData cache
         if let cached = cacheManager.getTopArtists(for: days) {
-            print("💾 [CACHE HIT - SwiftData] Top artists for \(days) days")
             topArtists = cached
-            topArtistsCache[days] = cached // Save to memory
+            topArtistsCache[days] = cached
             return
         }
 
-        // 3. Fetch from API
-        print("🌐 [API CALL] Fetching top artists for \(days) days")
-        let result = await bluebirdAccountAPIService.getTopArtists(for: days)
-        switch result {
-        case let .success(topArtistsResponse):
+        if let topArtistsResponse = await tryRequest(
+            { await bluebirdAccountAPIService.getTopArtists(for: days) },
+            "Error fetching top artists"
+        ) {
             if topArtistsResponse.artists.isEmpty {
-                print("⚠️ No top artists found")
                 return
             }
             topArtists = topArtistsResponse
-            topArtistsCache[days] = topArtistsResponse // Save to memory
+            topArtistsCache[days] = topArtistsResponse
             cacheManager.saveTopArtists(topArtistsResponse, days: days)
-            print("✅ [SAVED] Top artists cached for \(days) days")
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching top artists: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func fetchTopTracks(for days: Int) async {
-        // 1. Check in-memory cache first
         if let cached = topTracksCache[days] {
-            print("📦 [CACHE HIT - Memory] Top tracks for \(days) days")
             topTracks = cached
             return
         }
 
-        // 2. Check SwiftData cache
         if let cached = cacheManager.getTopTracks(for: days) {
-            print("💾 [CACHE HIT - SwiftData] Top tracks for \(days) days")
             topTracks = cached
-            topTracksCache[days] = cached // Save to memory
+            topTracksCache[days] = cached
             return
         }
 
-        // 3. Fetch from API
-        print("🌐 [API CALL] Fetching top tracks for \(days) days")
-        let result = await bluebirdAccountAPIService.getTopTracks(for: days)
-        switch result {
-        case let .success(topTracksResponse):
+        if let topTracksResponse = await tryRequest(
+            { await bluebirdAccountAPIService.getTopTracks(for: days) },
+            "Error fetching top tracks"
+        ) {
             if topTracksResponse.tracks.isEmpty {
-                print("⚠️ No top tracks found")
                 return
             }
             topTracks = topTracksResponse
-            topTracksCache[days] = topTracksResponse // Save to memory
+            topTracksCache[days] = topTracksResponse
             cacheManager.saveTopTracks(topTracksResponse, days: days)
-            print("✅ [SAVED] Top tracks cached for \(days) days")
-
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching top tracks: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
@@ -250,20 +206,10 @@ class StatsViewModel: ObservableObject {
         forDays days: Int,
         entityType: EntityType
     ) async -> Int? {
-        let result = await bluebirdAccountAPIService.getEntityPlays(
-            for: id,
-            forDays: days,
-            entityType: entityType
+        return await tryRequest(
+            { await bluebirdAccountAPIService.getEntityPlays(for: id, forDays: days, entityType: entityType) },
+            "Error fetching entity plays"
         )
-        switch result {
-        case let .success(plays):
-            return plays
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error loading user entity listens: \(presentationError)")
-            appState.setError(presentationError)
-            return nil
-        }
     }
 
     func getTrackTrend(for trackID: String) async -> [DailyPlayCount]? {
@@ -271,21 +217,15 @@ class StatsViewModel: ObservableObject {
             return cachedTrend
         }
 
-        let result = await bluebirdAccountAPIService.getTrackTrend(for: trackID)
-        switch result {
-        case let .success(response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getTrackTrend(for: trackID) },
+            "Error fetching track trend for \(trackID)"
+        ) {
             let trendData = fillGaps(in: response.trend)
             trackTrendCache[trackID] = trendData
             return trendData
-
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "Error loading track trend for \(trackID): \(presentationError)"
-            )
-            appState.setError(presentationError)
-            return nil
         }
+        return nil
     }
 
     private func fillGaps(in trend: [DailyPlayCount]) -> [DailyPlayCount] {
@@ -313,40 +253,23 @@ class StatsViewModel: ObservableObject {
     }
 
     func getTrackLastPlayed(for trackID: String) async -> Date? {
-        let result = await bluebirdAccountAPIService.getTrackLastPlayed(
-            for: trackID
-        )
-        switch result {
-        case let .success(response):
-            guard let date = response else {
-                return nil
-            }
-            return date
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "Error loading track last played for \(trackID): \(presentationError)"
-            )
-            appState.setError(presentationError)
-            return nil
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getTrackLastPlayed(for: trackID) },
+            "Error fetching track last played for \(trackID)"
+        ) {
+            return response
         }
+        return nil
     }
 
     func getTrackRank(for trackID: String) async -> Int {
-        let result = await bluebirdAccountAPIService.getTrackRank(
-            for: trackID
-        )
-        switch result {
-        case let .success(response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getTrackRank(for: trackID) },
+            "Error fetching track rank for \(trackID)"
+        ) {
             return response
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print(
-                "Error loading track user percentile for \(trackID): \(presentationError)"
-            )
-            appState.setError(presentationError)
-            return -1
         }
+        return -1
     }
 
     func getLeaderboard(
@@ -354,65 +277,46 @@ class StatsViewModel: ObservableObject {
         id: String,
         scope: LeaderboardScope = .global
     ) async -> LeaderboardResponse? {
-        print("🌐 [API CALL] Fetching leaderboard for \(type.rawValue) \(id) (scope: \(scope.rawValue))")
-        let result = await bluebirdAccountAPIService.getLeaderboard(
-            type: type,
-            id: id,
-            scope: scope
-        )
-        switch result {
-        case let .success(response):
-            print("✅ [LEADERBOARD] Got \(response.leaderboard.count) entries")
-            print("   Current user: \(response.current_user.profile.username) - \(response.current_user.play_count) plays")
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getLeaderboard(type: type, id: id, scope: scope) },
+            "Error fetching leaderboard"
+        ) {
+            print("Got \(response.leaderboard.count) entries")
+            print("Current user: \(response.current_user.profile.username) - \(response.current_user.play_count) plays")
             for (index, entry) in response.leaderboard.enumerated() {
-                print("   #\(index + 1): \(entry.profile.username) - \(entry.play_count) plays")
+                print("#\(index + 1): \(entry.profile.username) - \(entry.play_count) plays")
             }
             return response
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching leaderboard: \(presentationError)")
-            appState.setError(presentationError)
-            return nil
         }
+        return nil
     }
 
     func fetchTopGenres(for days: Int) async {
-        // 1. Check in-memory cache first
         if let cached = topGenresCache[days] {
-            print("📦 [CACHE HIT - Memory] Top genres for \(days) days")
             topGenres = cached
             return
         }
 
-        // 2. Check SwiftData cache
         if let cached = cacheManager.getTopGenres(for: days) {
-            print("💾 [CACHE HIT - SwiftData] Top genres for \(days) days")
             topGenres = cached
-            topGenresCache[days] = cached // Save to memory
+            topGenresCache[days] = cached
             return
         }
 
-        // 3. Fetch from API
-        print("🌐 [API CALL] Fetching top genres for \(days) days")
-        let result = await bluebirdAccountAPIService.getTopGenres(numDays: days)
-        switch result {
-        case let .success(response):
+        if let response = await tryRequest(
+            { await bluebirdAccountAPIService.getTopGenres(numDays: days) },
+            "Error fetching top genres"
+        ) {
             topGenres = response
-            topGenresCache[days] = response // Save to memory
+            topGenresCache[days] = response
             cacheManager.saveTopGenres(response, days: days)
-            print("✅ [SAVED] Top genres cached for \(days) days")
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching top genres: \(presentationError)")
-            appState.setError(presentationError)
+        } else {
             topGenres = GenreCounts()
         }
     }
 
     func fetchDiscoveredTracksArtists() async {
-        // 1. Check in-memory cache first
         if let cached = discoveriesCache {
-            print("📦 [CACHE HIT - Memory] Discoveries")
             discoveredTracks = cached.discovered_tracks
                 .sorted { $0.play_count > $1.play_count }
                 .prefix(3)
@@ -425,10 +329,8 @@ class StatsViewModel: ObservableObject {
             return
         }
 
-        // 2. Check SwiftData cache
         if let cached = cacheManager.getDiscoveries() {
-            print("💾 [CACHE HIT - SwiftData] Discoveries")
-            discoveriesCache = cached // Save to memory
+            discoveriesCache = cached
             discoveredTracks = cached.discovered_tracks
                 .sorted { $0.play_count > $1.play_count }
                 .prefix(3)
@@ -441,12 +343,11 @@ class StatsViewModel: ObservableObject {
             return
         }
 
-        // 3. Fetch from API
-        print("🌐 [API CALL] Fetching discoveries")
-        let result = await bluebirdAccountAPIService.getDiscoveries()
-        switch result {
-        case let .success(discoveries):
-            discoveriesCache = discoveries // Save to memory
+        if let discoveries = await tryRequest(
+            { await bluebirdAccountAPIService.getDiscoveries() },
+            "Error fetching discoveries"
+        ) {
+            discoveriesCache = discoveries
             discoveredTracks = discoveries.discovered_tracks
                 .sorted { $0.play_count > $1.play_count }
                 .prefix(3)
@@ -458,43 +359,28 @@ class StatsViewModel: ObservableObject {
                 .map { $0 }
 
             cacheManager.saveDiscoveries(discoveries)
-            print("✅ [SAVED] Discoveries cached")
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching discoveries: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
 
     func fetchWeeklyStatsComparison() async {
-        // 1. Check in-memory cache first
         if let cached = weeklyComparisonCache {
-            print("📦 [CACHE HIT - Memory] Weekly comparison")
             weeklyComparison = cached
             return
         }
 
-        // 2. Check SwiftData cache
         if let cached = cacheManager.getWeeklyComparison() {
-            print("💾 [CACHE HIT - SwiftData] Weekly comparison")
             weeklyComparison = cached
-            weeklyComparisonCache = cached // Save to memory
+            weeklyComparisonCache = cached
             return
         }
 
-        // 3. Fetch from API
-        print("🌐 [API CALL] Fetching weekly comparison")
-        let result = await bluebirdAccountAPIService.getWeeklyPlatformComparison()
-        switch result {
-        case let .success(comparison):
+        if let comparison = await tryRequest(
+            { await bluebirdAccountAPIService.getWeeklyPlatformComparison() },
+            "Error fetching weekly comparison"
+        ) {
             weeklyComparison = comparison
-            weeklyComparisonCache = comparison // Save to memory
+            weeklyComparisonCache = comparison
             cacheManager.saveWeeklyComparison(comparison)
-            print("✅ [SAVED] Weekly comparison cached")
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("❌ [ERROR] Fetching weekly comparison: \(presentationError)")
-            appState.setError(presentationError)
         }
     }
     

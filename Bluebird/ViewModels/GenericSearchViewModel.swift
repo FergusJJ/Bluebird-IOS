@@ -2,12 +2,14 @@ import Combine
 import Foundation
 
 @MainActor
-class GenericSearchViewModel<T: Decodable & Hashable, V: Decodable>: ObservableObject {
+class GenericSearchViewModel<T: Decodable & Hashable, V: Decodable>:
+    ObservableObject, TryRequestViewModel
+{
     @Published var isSearching = false
     @Published var searchQuery = ""
     @Published var searchResults: [T] = []
 
-    private var appState: AppState
+    internal var appState: AppState
 
     private let searchFunction: (String) async -> Result<V, BluebirdAPIError>
     private let unwrapFunction: (V) -> [T]
@@ -54,16 +56,14 @@ class GenericSearchViewModel<T: Decodable & Hashable, V: Decodable>: ObservableO
     }
 
     func doSearch() async {
-        let result = await searchFunction(searchQuery)
-        switch result {
-        case let .success(response):
-            let items = unwrapFunction(response)
+        let result = await tryRequest({ await searchFunction(searchQuery) })
+        if let searchResult = result {
+            let items = unwrapFunction(searchResult)
             searchResults = items
-        case let .failure(serviceError):
-            searchResults = []
-            let presentationError = AppError(from: serviceError)
-            appState.setError(presentationError)
+            return
         }
+        searchResults = []
+        return
     }
 
     private func clearSearchResults() {

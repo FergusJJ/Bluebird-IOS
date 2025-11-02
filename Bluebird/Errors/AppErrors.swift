@@ -79,6 +79,8 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
 
         case .unknownError:
             self = .unknownError
+        case .requestCancelled:
+            self = .requestCancelled
         }
     }
 
@@ -108,6 +110,7 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
     case decodingError(Error)
 
     case invalidResponse
+    case requestCancelled
     case unknownError // catchall
     case noResponse
 
@@ -179,6 +182,8 @@ enum AppError: Error, LocalizedError, Identifiable, Equatable {
             return "Failed to understand the server's response: \(error.localizedDescription)"
         case .invalidResponse:
             return "An invalid response was received from the server."
+        case .requestCancelled:
+            return "The request was cancelled."
         case .unknownError:
             return "An unexpected error occurred. Please try again later."
         case .noResponse:
