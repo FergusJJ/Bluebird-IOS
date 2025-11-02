@@ -3,14 +3,14 @@ import Foundation
 import SwiftUI
 
 @MainActor
-class SpotifyViewModel: ObservableObject {
+class SpotifyViewModel: ObservableObject, TryRequestViewModel {
     @Published var currentlyPlaying: SongDetail?
     @Published var songHistory: [Int: SongDetail] = [:]
 
     @Published var isLoading: Bool = false
     @Published var canLoadMore: Bool = true
 
-    private var appState: AppState
+    internal var appState: AppState
     private let spotifyAPIService: SpotifyAPIService
     private let cacheManager = CacheManager.shared
 
@@ -47,12 +47,10 @@ class SpotifyViewModel: ObservableObject {
             return
         }
 
-        let result = await spotifyAPIService.getCurrentlyPlaying(
-            spotifyAccessToken: accessToken
-        )
-
-        switch result {
-        case let .success(songData):
+        if let songData = await tryRequest(
+            { await spotifyAPIService.getCurrentlyPlaying(spotifyAccessToken: accessToken) },
+            "Error fetching currently playing"
+        ) {
             if songData.isEmpty {
                 currentlyPlaying = nil
                 return
@@ -62,10 +60,8 @@ class SpotifyViewModel: ObservableObject {
                 separator: ", "
             )
             currentlyPlaying = songData
-        case let .failure(serviceError):
+        } else {
             currentlyPlaying = nil
-            let presentationError = AppError(from: serviceError)
-            print("Error loading currently playing: \(presentationError)")
         }
     }
 
@@ -75,30 +71,20 @@ class SpotifyViewModel: ObservableObject {
             return
         }
 
-        let result = await spotifyAPIService.getSongHistory(
-            spotifyAccessToken: accessToken,
-        )
-
-        switch result {
-        case let .success(songArray):
+        if let songArray = await tryRequest(
+            { await spotifyAPIService.getSongHistory(spotifyAccessToken: accessToken) },
+            "Error fetching song history"
+        ) {
             guard !songArray.isEmpty else {
-                print("Refresh check: No new songs found.")
                 return
             }
 
-            print("Refreshed and found \(songArray.count) new songs.")
-            print("first: \(songArray.first!.name)")
-            print("last: \(songArray.last!.name)")
             let newSongs = Dictionary(
                 songArray.map { ($0.listened_at!, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
             songHistory.merge(newSongs) { existing, _ in existing }
             cacheManager.saveSongHistory(songHistory)
-
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error refreshing user history: \(presentationError)")
         }
     }
 
@@ -118,14 +104,10 @@ class SpotifyViewModel: ObservableObject {
             return
         }
 
-        let result = await spotifyAPIService.getSongHistoryPaginate(
-            before: oldestTimestamp
-        )
-
-        switch result {
-        case let .success(songArray):
-            print("Fetched \(songArray.count) older songs.")
-
+        if let songArray = await tryRequest(
+            { await spotifyAPIService.getSongHistoryPaginate(before: oldestTimestamp) },
+            "Error fetching older song history"
+        ) {
             if songArray.isEmpty {
                 canLoadMore = false
                 return
@@ -136,10 +118,6 @@ class SpotifyViewModel: ObservableObject {
             )
             songHistory.merge(newSongs) { existing, _ in existing }
             cacheManager.saveSongHistory(songHistory)
-
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching older history: \(presentationError)")
         }
     }
 
@@ -161,18 +139,11 @@ class SpotifyViewModel: ObservableObject {
             isLoading = false
         }
         isLoading = true
-        let result = await spotifyAPIService.getArtistDetail(
-            spotifyAccessToken: accessToken,
-            id: artistID
+
+        return await tryRequest(
+            { await spotifyAPIService.getArtistDetail(spotifyAccessToken: accessToken, id: artistID) },
+            "Error fetching artist detail"
         )
-        switch result {
-        case let .success(artistDetail):
-            return artistDetail
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching artist detail: \(presentationError)")
-            return nil
-        }
     }
 
     func fetchSongDetail(for songID: String) async -> SongDetail? {
@@ -187,18 +158,11 @@ class SpotifyViewModel: ObservableObject {
             isLoading = false
         }
         isLoading = true
-        let result = await spotifyAPIService.getSongDetail(
-            spotifyAccessToken: accessToken,
-            id: songID
+
+        return await tryRequest(
+            { await spotifyAPIService.getSongDetail(spotifyAccessToken: accessToken, id: songID) },
+            "Error fetching song detail"
         )
-        switch result {
-        case let .success(artistDetail):
-            return artistDetail
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching song detail: \(presentationError)")
-            return nil
-        }
     }
 
     func fetchAlbumDetail(for albumID: String) async -> AlbumDetail? {
@@ -213,17 +177,10 @@ class SpotifyViewModel: ObservableObject {
             isLoading = false
         }
         isLoading = true
-        let result = await spotifyAPIService.getAlbumDetail(
-            spotifyAccessToken: accessToken,
-            id: albumID
+
+        return await tryRequest(
+            { await spotifyAPIService.getAlbumDetail(spotifyAccessToken: accessToken, id: albumID) },
+            "Error fetching album detail"
         )
-        switch result {
-        case let .success(albumDetail):
-            return albumDetail
-        case let .failure(serviceError):
-            let presentationError = AppError(from: serviceError)
-            print("Error fetching album detail: \(presentationError)")
-            return nil
-        }
     }
 }
