@@ -8,7 +8,7 @@ struct TrendingListView: View {
     var body: some View {
         ScrollView {
             Group {
-                if socialViewModel.isLoadingTrending {
+                if socialViewModel.isLoadingTrending && socialViewModel.trendingTracks.isEmpty {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if socialViewModel.trendingTracks.isEmpty {
