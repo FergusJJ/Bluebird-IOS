@@ -106,7 +106,13 @@ class BluebirdAPIManagerV2: BluebirdAccountAPIService, SpotifyAPIService {
                 decoder: decoder
             )
         } catch let error as URLError {
+            // Handle cancellation separately to avoid showing error popup
+            if error.code == .cancelled {
+                return .failure(.requestCancelled)
+            }
             return .failure(.networkError(error))
+        } catch is CancellationError {
+            return .failure(.requestCancelled)
         } catch {
             return .failure(.unknownError)
         }
