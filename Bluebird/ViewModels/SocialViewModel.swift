@@ -22,8 +22,8 @@ class SocialViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
     @Published private(set) var unifiedFeedNextOffset = 0
 
     @Published var trendingTracks: [TrendingTrack] = []
-    @Published var isLoadingTrending = false
     @Published var showAllTrending = false
+    private var isLoadingTrending = false
 
     // Milestones for viewed user profile
     @Published var userMilestones: [UserMilestone] = []
@@ -35,8 +35,9 @@ class SocialViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
     let cacheManager = CacheManager.shared
     private let bluebirdAccountAPIService: BluebirdAccountAPIService
 
-    private var userProfileDetailCache: [String: (profile: UserProfileDetail, timestamp: Date)] =
-        [:]
+    private var userProfileDetailCache:
+        [String: (profile: UserProfileDetail, timestamp: Date)] =
+            [:]
 
     init(
         appState: AppState,
@@ -54,7 +55,11 @@ class SocialViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
             apiFetch: { [weak self] in
                 guard let self = self else { return nil }
                 return await tryRequest(
-                    { await self.bluebirdAccountAPIService.getUser(userID: userId) },
+                    {
+                        await self.bluebirdAccountAPIService.getUser(
+                            userID: userId
+                        )
+                    },
                     "Error fetching user profile"
                 )
             },
@@ -96,11 +101,13 @@ class SocialViewModel: ObservableObject, TryRequestViewModel, CachedViewModel {
     }
 
     func fetchTrendingTracks(forceRefresh: Bool = false) async {
-        // Prevent concurrent requests
         if !trendingTracks.isEmpty && !forceRefresh {
             return
         }
-        guard !isLoadingTrending else { return }
+        // i'm not sure that refreshable event lets do back-to-back
+        guard !isLoadingTrending else {
+            return
+        }
         isLoadingTrending = true
         defer { isLoadingTrending = false }
 

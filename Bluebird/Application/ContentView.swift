@@ -54,7 +54,7 @@ struct ContentView: View {
         )
         _userSearchViewModel = StateObject(
             wrappedValue: GenericSearchViewModel(
-                debounceDuration: .milliseconds(100),
+                debounceDuration: .milliseconds(200),
                 appState: appState,
                 searchFunction: apiManager.searchUsers,
                 unwrapFunction: {

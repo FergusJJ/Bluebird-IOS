@@ -18,7 +18,8 @@ extension TryRequestViewModel {
             return data
 
         case .failure(let serviceError):
-            if case .requestCancelled = serviceError {
+            if case .requestCancelled = serviceError,
+                case .networkError = serviceError {
                 print("[WARNING] The request was cancelled.")
             } else {
                 let presentationError = AppError(from: serviceError)
